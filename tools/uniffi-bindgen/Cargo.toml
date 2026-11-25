@@ -1,0 +1,17 @@
+[package]
+name = "uniffi-bindgen"
+description = "Générateur des liaisons Swift et Kotlin du cœur HeyWatchlist"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/main.rs"
+
+[dependencies]
+uniffi = { version = "0.32.2", features = ["cli"] }
+
+[lints]
+workspace = true

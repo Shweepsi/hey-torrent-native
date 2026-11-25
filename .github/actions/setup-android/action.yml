@@ -1,0 +1,57 @@
+name: Préparer la compilation Android
+description: Java, Rust (cibles Android), cargo-ndk, NDK de l'image du runner et Gradle.
+
+runs:
+  using: composite
+  steps:
+    - name: Installer Java
+      uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: "17"
+
+    - name: Installer Rust (cibles Android)
+      uses: ./.github/actions/setup-rust
+      with:
+        targets: aarch64-linux-android x86_64-linux-android
+        cache-key: android
+
+    - name: Installer cargo-ndk
+      shell: bash
+      env:
+        # Version 4 ou plus : bibliothèques alignées sur des pages de 16 Ko
+        # (voir scripts/build-android-core.sh).
+        CARGO_NDK_VERSION: "4.1.2"
+      run: |
+        set -euo pipefail
+        # Sans effet si cette version est déjà installée (cache de ~/.cargo/bin).
+        cargo install cargo-ndk --version "$CARGO_NDK_VERSION" --locked
+        cargo ndk --version
+
+    - name: Choisir le NDK
+      shell: bash
+      env:
+        # NDK par défaut de l'image ubuntu-24.04 (README de l'image du 2026-11-16).
+        NDK_VERSION: "27.3.13750724"
+      run: |
+        set -euo pipefail
+        ndk="$ANDROID_HOME/ndk/$NDK_VERSION"
+        if [[ ! -d "$ndk" ]]; then
+          # L'image a changé : on prend le NDK qu'elle déclare par défaut plutôt
+          # que d'échouer pour une simple question de numéro de version.
+          ndk="${ANDROID_NDK_HOME:-}"
+          if [[ -z "$ndk" || ! -d "$ndk" ]]; then
+            echo "::error::NDK $NDK_VERSION absent de l'image du runner et aucun NDK par défaut (ANDROID_NDK_HOME). Voir .github/actions/setup-android/action.yml."
+            exit 1
+          fi
+          echo "::warning::NDK $NDK_VERSION absent de l'image : repli sur $ndk. Mettre à jour NDK_VERSION dans .github/actions/setup-android/action.yml."
+        fi
+        # Lu par scripts/build-android-core.sh et par Gradle.
+        echo "ANDROID_NDK_HOME=$ndk" >>"$GITHUB_ENV"
+
+    - name: Installer Gradle
+      # Cache open source (« basic ») : le mode par défaut de l'action v6 est un
+      # service commercial.
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        cache-provider: basic

@@ -1,0 +1,56 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Android / Gradle (voir aussi android/.gitignore)
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.iml
+.idea/
+.cxx/
+.externalNativeBuild/
+captures/
+
+# Signature et secrets : jamais dans le dépôt
+*.jks
+*.keystore
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+.env
+.env.*
+!.env.example
+.dev.vars
+# Fourni par la CI (secret GitHub GOOGLE_SERVICES_JSON), voir docs/DECISIONS.md
+android/app/google-services.json
+
+# Liaisons UniFFI générées (Kotlin : sous android/app/build/generated/uniffi)
+/ios/Generated/
+/android/app/build/generated/uniffi/
+
+# iOS : tout est produit par scripts/build-ios-xcframework.sh et XcodeGen
+/ios/Frameworks/
+/ios/Config/Version.xcconfig
+/ios/Config/Info.plist
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+xcuserdata/
+*.xcresult
+*.xcarchive
+*.ipa
+*.dSYM.zip
+fastlane/report.xml
+fastlane/test_output/
+
+# Backend Cloudflare (à partir du jalon 2)
+node_modules/
+.wrangler/
+
+# Système et éditeurs
+.DS_Store
+.vscode/
+*.swp

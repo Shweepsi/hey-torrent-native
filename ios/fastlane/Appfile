@@ -1,0 +1,17 @@
+# Appfile : identifiants lus par fastlane quand une action ne les reçoit pas
+# explicitement (match, gym, pilot).
+require "yaml"
+
+# L'identifiant de bundle vient de ios/project.yml, seule source de vérité :
+# il ne s'écrit nulle part ailleurs (ni ici, ni dans le Fastfile).
+project_file = File.expand_path("../project.yml", FastlaneCore::FastlaneFolder.path)
+bundle_id = YAML.load_file(project_file).dig(
+  "targets", "HeyWatchlist", "settings", "base", "PRODUCT_BUNDLE_IDENTIFIER"
+)
+raise "PRODUCT_BUNDLE_IDENTIFIER introuvable dans #{project_file}" if bundle_id.to_s.empty?
+
+app_identifier(bundle_id)
+
+# Identifiant de l'équipe Apple Developer : variable GitHub APPLE_TEAM_ID
+# (pas un secret). Vérifié par les lanes qui en ont besoin.
+team_id(ENV["APPLE_TEAM_ID"])

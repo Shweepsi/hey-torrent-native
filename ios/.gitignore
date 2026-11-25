@@ -1,0 +1,34 @@
+# Produits générés par scripts/build-ios-xcframework.sh et par XcodeGen :
+# jamais versionnés (voir ios/README.md).
+
+# Liaisons Swift générées par UniFFI
+Generated/
+
+# XCFramework du cœur Rust
+Frameworks/
+
+# Projet Xcode généré par XcodeGen à partir de project.yml
+*.xcodeproj
+*.xcworkspace
+
+# Réglages de version lus dans le Cargo.toml racine, et Info.plist généré
+Config/Version.xcconfig
+Config/Info.plist
+
+# Sorties de compilation et de test
+build/
+DerivedData/
+*.xcresult
+*.xcarchive
+*.ipa
+*.dSYM.zip
+
+# Fichiers propres à l'utilisateur
+xcuserdata/
+.DS_Store
+
+# fastlane et Bundler : produits à chaque exécution de la CI
+.bundle/
+fastlane/README.md
+fastlane/report.xml
+fastlane/test_output/

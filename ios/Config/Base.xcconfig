@@ -1,0 +1,12 @@
+// Réglages communs aux configurations Debug et Release (référencé par
+// project.yml).
+
+// Valeurs de repli. Elles sont remplacées par Version.xcconfig, que
+// scripts/build-ios-xcframework.sh écrit à partir du Cargo.toml racine
+// (source unique de la version de l'app : ne jamais la recopier ici).
+MARKETING_VERSION = 0.0.0
+CURRENT_PROJECT_VERSION = 1
+
+// Inclusion facultative (`#include?`) : le fichier n'existe qu'après le script.
+// Elle doit rester en dernier pour l'emporter sur les valeurs de repli.
+#include? "Version.xcconfig"

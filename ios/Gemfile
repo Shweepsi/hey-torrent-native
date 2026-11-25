@@ -1,0 +1,5 @@
+# Outils de la chaîne iOS, utilisés seulement par la CI GitHub Actions (le
+# propriétaire n'a pas de Mac). Installés dans ios/ avec `bundle install`.
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.242"

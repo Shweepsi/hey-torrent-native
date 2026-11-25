@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes de l'interface, en français uniquement. `app_name` est défini par
+     édition (src/public et src/admin). -->
+<resources>
+    <string name="home_subtitle">Les fondations sont en place.</string>
+    <string name="home_core_loading">Chargement du cœur…</string>
+    <string name="home_core_version_label">Version du cœur</string>
+    <string name="home_core_pong_label">Réponse du cœur</string>
+    <string name="home_retry">Réessayer</string>
+
+    <string name="error_core_internal">Le cœur de l’application a rencontré un problème interne.</string>
+    <string name="error_core_unavailable">Impossible de charger le cœur de l’application.</string>
+    <string name="error_unknown">Une erreur inattendue est survenue.</string>
+</resources>

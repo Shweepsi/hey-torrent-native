@@ -1,0 +1,29 @@
+[package]
+name = "heywatchlist-core"
+description = "Cœur Rust partagé de HeyWatchlist, exposé à Swift et Kotlin par UniFFI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "heywatchlist_core"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[features]
+default = []
+# Code d'administration : activé seulement pour l'édition admin Android.
+admin = []
+
+[dependencies]
+thiserror = "2"
+# Le runtime est fourni par UniFFI (feature `tokio`, via async-compat) : on
+# n'a besoin ici que de l'API `tokio::runtime::Handle`.
+tokio = { version = "1", default-features = false, features = ["rt"] }
+uniffi = { version = "0.32.2", features = ["tokio"] }
+
+[dev-dependencies]
+tokio = { version = "1", default-features = false, features = ["macros", "rt"] }
+
+[lints]
+workspace = true

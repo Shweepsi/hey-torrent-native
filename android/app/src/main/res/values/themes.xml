@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Thème système minimal : tout l'habillage vient de HeyTheme (Compose). -->
+    <style name="Theme.HeyWatchlist" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/hey_window_background</item>
+        <item name="android:windowSplashScreenBackground">@color/hey_window_background</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

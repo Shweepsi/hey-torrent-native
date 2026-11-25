@@ -1,0 +1,36 @@
+# Catalogue de versions. Les numéros sont des versions publiées ; un ajout ou
+# une montée de version se fait ici, jamais dans app/build.gradle.kts.
+
+[versions]
+agp = "8.13.0"
+kotlin = "2.2.21"
+# Une seule version pour toute la pile Compose (foundation, ui, runtime...).
+# compose, activity et lifecycle sont alignés sur ce que demande Haze 1.7.1
+# (via ses dépendances JetBrains, qui renvoient vers androidx) : à monter avec
+# lui, sinon Gradle résout des versions mélangées.
+compose = "1.9.4"
+activity = "1.11.0"
+lifecycle = "2.9.4"
+coroutines = "1.10.2"
+haze = "1.7.1"
+jna = "5.18.1"
+junit = "4.13.2"
+
+[libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+# Dépendance requise par le code UniFFI Kotlin. Elle est utilisée sous sa forme
+# `aar` (qui embarque libjnidispatch.so) : voir app/build.gradle.kts.
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

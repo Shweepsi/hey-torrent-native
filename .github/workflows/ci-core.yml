@@ -1,0 +1,116 @@
+# Cœur Rust : format, clippy et tests, avec et sans la fonctionnalité `admin`,
+# plus un contrôle des liaisons UniFFI générées.
+# Tourne sur Linux (le moins cher) quand le cœur, ses outils ou les scripts changent.
+name: CI cœur
+
+on:
+  pull_request:
+    paths:
+      - core/**
+      - tools/**
+      - scripts/**
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - clippy.toml
+      - rustfmt.toml
+      - .github/workflows/ci-core.yml
+      - .github/actions/setup-rust/**
+      - .github/scripts/**
+  push:
+    branches: [main]
+    paths:
+      - core/**
+      - tools/**
+      - scripts/**
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - clippy.toml
+      - rustfmt.toml
+      - .github/workflows/ci-core.yml
+      - .github/actions/setup-rust/**
+      - .github/scripts/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache: "false"
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+  rust:
+    name: Clippy et tests (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: fonctionnalités par défaut
+            key: default
+            features: ""
+          - name: fonctionnalité admin
+            key: admin
+            features: --features heywatchlist-core/admin
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: ${{ matrix.key }}
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked ${{ matrix.features }} -- -D warnings
+      - name: cargo test
+        run: cargo test --workspace --locked ${{ matrix.features }}
+
+  # Génère les liaisons Kotlin et Swift sur Linux et vérifie le contrat du cœur
+  # (admin_ping seulement dans l'édition admin) : une erreur de génération se
+  # voit ici, pas après des minutes macOS.
+  bindings:
+    name: Liaisons UniFFI (Kotlin et Swift)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: bindings
+      - name: Générer et contrôler les liaisons
+        run: .github/scripts/check-bindings.sh
+
+  scripts:
+    name: ShellCheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # shellcheck est préinstallé sur l'image ubuntu-24.04.
+      - name: shellcheck
+        run: shellcheck scripts/*.sh .github/scripts/*.sh

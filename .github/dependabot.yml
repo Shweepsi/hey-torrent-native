@@ -1,0 +1,64 @@
+# Mises à jour automatiques des dépendances, une fois par semaine. Chaque mise à
+# jour arrive en pull request : la CI la teste avant toute fusion. Les versions
+# mineures et correctifs d'un même écosystème sont groupées ; les versions
+# majeures restent séparées pour être relues une à une.
+version: 2
+
+updates:
+  # Cœur Rust (Cargo.toml et Cargo.lock à la racine).
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      cargo-minor-patch:
+        update-types: [minor, patch]
+
+  # Android : plugins et bibliothèques du catalogue android/gradle/libs.versions.toml.
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      gradle-minor-patch:
+        update-types: [minor, patch]
+
+  # Actions des workflows et actions composites de .github/actions/.
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/*
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+
+  # iOS : fastlane (ios/Gemfile et ios/Gemfile.lock).
+  - package-ecosystem: bundler
+    directory: /ios
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      bundler-minor-patch:
+        update-types: [minor, patch]

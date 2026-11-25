@@ -1,0 +1,21 @@
+name: Préparer fastlane
+description: Installe les gems de ios/Gemfile (fastlane), avec un cache.
+
+runs:
+  using: composite
+  steps:
+    - name: Cache des gems
+      uses: actions/cache@v5
+      with:
+        path: ~/.heywatchlist-gems
+        key: gems-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ios/Gemfile.lock') }}
+        restore-keys: gems-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Installer les gems
+      shell: bash
+      working-directory: ios
+      run: |
+        set -euo pipefail
+        bundle config set --local path "$HOME/.heywatchlist-gems"
+        bundle install --jobs 4 --retry 3
+        bundle exec fastlane --version

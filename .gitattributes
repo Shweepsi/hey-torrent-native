@@ -1,0 +1,25 @@
+# Fins de ligne normalisées par git.
+* text=auto
+
+# Les scripts s'exécutent sous Linux et macOS : toujours LF, jamais CRLF.
+*.sh text eol=lf
+android/gradlew text eol=lf
+# Seul le fichier de commandes Windows de Gradle garde CRLF.
+*.bat text eol=crlf
+
+# Binaires : ni conversion de fins de ligne, ni diff texte.
+android/gradle/wrapper/gradle-wrapper.jar binary
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.xcframework binary
+*.a binary
+*.so binary
+*.dylib binary
+
+# Fichiers générés ou verrouillés : exclus des diffs de revue.
+Cargo.lock linguist-generated=true

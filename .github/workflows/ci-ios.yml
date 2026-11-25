@@ -1,0 +1,172 @@
+# iPhone : cœur Rust -> XCFramework, projet XcodeGen, tests sur simulateur, puis,
+# sur main ou un tag et si les secrets existent, envoi sur TestFlight (fastlane).
+#
+# Les minutes macOS coûtent 10 fois celles de Linux : le workflow ne tourne que
+# si le cœur, l'app iOS, les scripts ou les fichiers Cargo changent (pas pour de
+# la documentation), jamais sur une pull request en brouillon, et fait tests et
+# envoi dans un seul job.
+name: CI iOS
+
+on:
+  pull_request:
+    # `ready_for_review` : une PR en brouillon est ignorée ; sans ce type, la
+    # passer en « Ready for review » ne lancerait rien avant le push suivant.
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ios/**
+      - core/**
+      - tools/**
+      # Seuls les scripts que ce workflow lance (pas celui d'Android).
+      - scripts/build-ios-xcframework.sh
+      - scripts/generate-bindings.sh
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - .github/workflows/ci-ios.yml
+      # Seules les actions que ce workflow utilise : modifier celle d'Android ne
+      # doit pas coûter de minutes macOS.
+      - .github/actions/setup-rust/**
+      - .github/actions/setup-fastlane/**
+      - .github/scripts/check-secrets.sh
+      # Documentation : rien à compiler.
+      - "!**/*.md"
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - ios/**
+      - core/**
+      - tools/**
+      - scripts/build-ios-xcframework.sh
+      - scripts/generate-bindings.sh
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - .github/workflows/ci-ios.yml
+      - .github/actions/setup-rust/**
+      - .github/actions/setup-fastlane/**
+      - .github/scripts/check-secrets.sh
+      - "!**/*.md"
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: Envoyer le build sur TestFlight (secrets requis), sinon seulement les tests
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Pas d'annulation sur main et les tags : un envoi TestFlight ne doit pas être
+# interrompu à mi-chemin.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # fastlane : pas de vérification de mise à jour ni de statistiques d'usage.
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+  FASTLANE_OPT_OUT_USAGE: "YES"
+  # xcodebuild -showBuildSettings est parfois lent sur les runners macOS.
+  FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+  FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "4"
+  LC_ALL: en_US.UTF-8
+  LANG: en_US.UTF-8
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  HOMEBREW_NO_INSTALL_CLEANUP: "1"
+  HOMEBREW_NO_ANALYTICS: "1"
+
+jobs:
+  ios:
+    name: Tests et TestFlight
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    # macos-26 (arm64) est ce que « macos-latest » désigne aujourd'hui ; on le
+    # fixe pour que le changement d'image ne casse pas la CI sans prévenir.
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      # Un push (main ou tag) ou un lancement manuel avec la case cochée.
+      ENVOI_TESTFLIGHT: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.testflight) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Dernier Xcode stable de l'image (26.x), qui embarque le SDK iOS 26.
+      - name: Choisir Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Vérifier le SDK iOS 26
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          sdks="$(xcodebuild -showsdks)"
+          if ! grep -Eq 'iphoneos26\.' <<<"$sdks"; then
+            echo "::error::Aucun SDK iOS 26 dans cet Xcode (voir le README de l'image macos-26 de GitHub)."
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          targets: aarch64-apple-ios aarch64-apple-ios-sim
+          cache-key: ios
+
+      - name: Installer XcodeGen
+        run: |
+          set -euo pipefail
+          brew install xcodegen
+          xcodegen --version
+
+      - uses: ./.github/actions/setup-fastlane
+
+      # Produit ios/Frameworks, ios/Generated et ios/Config/Version.xcconfig
+      # (version lue dans Cargo.toml, numéro de build = GITHUB_RUN_NUMBER).
+      - name: Compiler le cœur Rust pour iOS
+        run: scripts/build-ios-xcframework.sh
+
+      - name: Générer le projet Xcode
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Tests sur simulateur iPhone
+        working-directory: ios
+        run: bundle exec fastlane test
+
+      - name: Publier le résultat des tests (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-resultat-des-tests
+          path: ios/build/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Vérifier les secrets d'envoi TestFlight
+        id: secrets
+        if: env.ENVOI_TESTFLIGHT == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+        run: bash .github/scripts/check-secrets.sh ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 MATCH_PASSWORD MATCH_GIT_TOKEN APPLE_TEAM_ID MATCH_GIT_URL
+
+      - name: Signer et envoyer sur TestFlight
+        if: env.ENVOI_TESTFLIGHT == 'true' && steps.secrets.outputs.ready == 'true'
+        working-directory: ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+        run: bundle exec fastlane beta

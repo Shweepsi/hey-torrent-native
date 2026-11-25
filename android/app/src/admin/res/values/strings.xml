@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes réservés à l'édition admin : absents de l'app publique. -->
+<resources>
+    <string name="app_name" translatable="false">HeyWatchlist Admin</string>
+
+    <string name="admin_status_title">Édition administrateur</string>
+    <string name="admin_status_ping_label">Réponse administrateur</string>
+    <string name="admin_status_flag_label">Code d’administration</string>
+    <string name="admin_status_flag_yes">Inclus</string>
+    <string name="admin_status_flag_no">Absent</string>
+    <string name="admin_status_loading">Chargement…</string>
+    <string name="admin_status_error">Le cœur n’a pas répondu.</string>
+</resources>
