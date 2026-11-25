@@ -215,7 +215,7 @@ hey-torrent-native/
 │   └── uniffi-bindgen/   Génère les liaisons Kotlin et Swift
 ├── android/        Projet Gradle (Compose), variantes public et admin
 ├── ios/            Projet décrit par project.yml (XcodeGen), fastlane
-├── backend/        Worker Cloudflare (API, D1, push) : à partir du jalon 2
+├── backend/        Worker Cloudflare (API, D1, push), TypeScript
 ├── scripts/        Compilation du cœur (Android, XCFramework), liaisons
 ├── docs/           PLAN.md, DECISIONS.md, DESIGN.md, CI.md, TODO.md
 ├── .github/        CI GitHub Actions, dependabot
@@ -610,9 +610,9 @@ un **Plex Pass** et **Tautulli**.
 
 Propositions du plan (`docs/PLAN.md`), non contredites jusqu'ici :
 
-1. **Connexion** : Apple sur iPhone, Google sur Android, et Google aussi sur
-   iPhone (Apple reste alors obligatoire à côté) ; un invité garde son compte
-   s'il utilise la même adresse e-mail.
+1. ~~**Connexion**~~ : **décidé le 2026-11-25** (jalon 2) : Apple sur iPhone,
+   Google sur Android et sur iPhone ; même compte pour la même adresse e-mail
+   vérifiée.
 2. **« Sur Plex » pour les invités** : table `library` dans D1, remplie par
    les webhooks et par une synchronisation complète chaque nuit (Cron Trigger
    du Worker vers le Plex de l'administrateur, en HTTPS).
@@ -621,7 +621,7 @@ Propositions du plan (`docs/PLAN.md`), non contredites jusqu'ici :
    `scripts/` ou les fichiers Cargo changent.
 4. **APK admin** : à vérifier au jalon 5 face aux règles Google de
    vérification des développeurs pour les APK installés hors Play Store.
-5. **Backend en TypeScript** (Worker) ; le Rust reste dans le cœur.
+5. ~~**Backend en TypeScript**~~ : **décidé le 2026-11-25** (jalon 2).
 
 ---
 

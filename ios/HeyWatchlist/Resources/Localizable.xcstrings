@@ -2,7 +2,7 @@
   "sourceLanguage" : "fr",
   "strings" : {
     "app.name" : {
-      "comment" : "Nom de l’app, affiché en titre de l’écran d’accueil.",
+      "comment" : "Nom de l’app, en titre de l’accueil.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
@@ -13,20 +13,176 @@
         }
       }
     },
-    "core.error.internal" : {
-      "comment" : "Erreur CoreError.Internal renvoyée par le cœur.",
+    "delete.appleHint" : {
+      "comment" : "Pourquoi Apple est redemandé avant la suppression.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le cœur de l’app a rencontré une erreur interne."
+            "value" : "Pour confirmer, autorisez Apple une dernière fois : la connexion avec Apple sera aussi révoquée."
           }
         }
       }
     },
-    "core.error.unexpected" : {
-      "comment" : "Toute autre erreur venue du pont vers le cœur.",
+    "delete.body" : {
+      "comment" : "Conséquences de la suppression.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre compte, votre watchlist et vos demandes seront effacés définitivement. Vous aurez besoin d’une nouvelle invitation pour revenir."
+          }
+        }
+      }
+    },
+    "delete.cancel" : {
+      "comment" : "Bouton qui garde le compte.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
+          }
+        }
+      }
+    },
+    "delete.confirm" : {
+      "comment" : "Bouton qui supprime le compte.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer définitivement"
+          }
+        }
+      }
+    },
+    "delete.title" : {
+      "comment" : "Titre de la confirmation de suppression.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer votre compte ?"
+          }
+        }
+      }
+    },
+    "discover.comingSoon" : {
+      "comment" : "Onglet Découvrir pas encore construit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les films et séries arrivent dans la prochaine version."
+          }
+        }
+      }
+    },
+    "error.cancelled" : {
+      "comment" : "Connexion fermée par la personne.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connexion annulée."
+          }
+        }
+      }
+    },
+    "error.invalidIdentity" : {
+      "comment" : "Erreur AccountError.InvalidIdentity.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a échoué. Réessayez."
+          }
+        }
+      }
+    },
+    "error.invitationInvalid" : {
+      "comment" : "Erreur AccountError.InvitationInvalid.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce code n’est pas valable : il a peut-être expiré ou déjà servi. Demandez-en un nouveau."
+          }
+        }
+      }
+    },
+    "error.network" : {
+      "comment" : "Erreur AccountError.Network.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas de connexion au serveur. Vérifiez votre réseau et réessayez."
+          }
+        }
+      }
+    },
+    "error.notConfigured" : {
+      "comment" : "Adresse du serveur absente de cette compilation.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette version de l’app ne connaît pas l’adresse du serveur."
+          }
+        }
+      }
+    },
+    "error.providerUnavailable" : {
+      "comment" : "Erreur AccountError.ProviderUnavailable.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion avec Apple ou Google n’est pas disponible pour le moment."
+          }
+        }
+      }
+    },
+    "error.server" : {
+      "comment" : "Erreur AccountError.Server.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur a rencontré un problème. Réessayez plus tard."
+          }
+        }
+      }
+    },
+    "error.signedOut" : {
+      "comment" : "Erreur AccountError.SignedOut.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre session a expiré. Reconnectez-vous."
+          }
+        }
+      }
+    },
+    "error.unexpected" : {
+      "comment" : "Toute autre erreur.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
@@ -37,74 +193,254 @@
         }
       }
     },
-    "home.core.loading" : {
-      "comment" : "Texte à côté de l’indicateur pendant l’appel au cœur.",
+    "invitation.body" : {
+      "comment" : "Explication du code d’invitation.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connexion au cœur…"
+            "value" : "C’est votre première connexion. Saisissez le code que vous a donné la personne qui vous invite."
           }
         }
       }
     },
-    "home.core.pong" : {
-      "comment" : "Libellé de la réponse de l’appel synchrone ping().",
+    "invitation.cancel" : {
+      "comment" : "Bouton qui abandonne l’invitation.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Appel synchrone"
+            "value" : "Annuler"
           }
         }
       }
     },
-    "home.core.pong.async" : {
-      "comment" : "Libellé de la réponse de l’appel asynchrone ping_async().",
+    "invitation.label" : {
+      "comment" : "Libellé d’accessibilité du champ du code.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Appel asynchrone"
+            "value" : "Code d’invitation"
           }
         }
       }
     },
-    "home.core.retry" : {
-      "comment" : "Bouton affiché après une erreur du cœur.",
+    "invitation.placeholder" : {
+      "comment" : "Exemple dans le champ du code.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Réessayer"
+            "value" : "XXXX-XXXX-XXXX"
           }
         }
       }
     },
-    "home.core.title" : {
-      "comment" : "Titre de la carte qui montre la réponse du cœur Rust (jalon 1).",
+    "invitation.submit" : {
+      "comment" : "Bouton qui valide le code.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Réponse du cœur"
+            "value" : "Valider"
           }
         }
       }
     },
-    "home.core.version" : {
-      "comment" : "Libellé de la version du cœur (la valeur vient du cœur).",
+    "invitation.title" : {
+      "comment" : "Titre de l’étape du code d’invitation.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Version du cœur"
+            "value" : "Code d’invitation"
+          }
+        }
+      }
+    },
+    "settings.delete" : {
+      "comment" : "Bouton de suppression du compte.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer mon compte"
+          }
+        }
+      }
+    },
+    "settings.hello %@" : {
+      "comment" : "Salutation avec le prénom du compte.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonjour %@"
+          }
+        }
+      }
+    },
+    "settings.helloAnonymous" : {
+      "comment" : "Salutation sans prénom connu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonjour"
+          }
+        }
+      }
+    },
+    "settings.roleAdmin" : {
+      "comment" : "Rôle administrateur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrateur"
+          }
+        }
+      }
+    },
+    "settings.roleMember" : {
+      "comment" : "Rôle invité.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invité"
+          }
+        }
+      }
+    },
+    "settings.signOut" : {
+      "comment" : "Bouton de déconnexion.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se déconnecter"
+          }
+        }
+      }
+    },
+    "settings.version %@" : {
+      "comment" : "Version de l’app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %@"
+          }
+        }
+      }
+    },
+    "tab.discover" : {
+      "comment" : "Onglet Découvrir.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Découvrir"
+          }
+        }
+      }
+    },
+    "tab.settings" : {
+      "comment" : "Onglet Réglages.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages"
+          }
+        }
+      }
+    },
+    "tab.watchlist" : {
+      "comment" : "Onglet Watchlist.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchlist"
+          }
+        }
+      }
+    },
+    "watchlist.comingSoon" : {
+      "comment" : "Onglet Watchlist pas encore construit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre watchlist et vos demandes arrivent bientôt."
+          }
+        }
+      }
+    },
+    "welcome.body" : {
+      "comment" : "Explication de l’app à l’accueil (exigée pour la revue).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. Découvrez des films et séries, demandez-les-lui et soyez prévenu quand ils sont disponibles."
+          }
+        }
+      }
+    },
+    "welcome.google" : {
+      "comment" : "Bouton de connexion Google.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer avec Google"
+          }
+        }
+      }
+    },
+    "welcome.signingIn" : {
+      "comment" : "Bouton pendant la connexion.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connexion…"
+          }
+        }
+      }
+    },
+    "welcome.title" : {
+      "comment" : "Titre de l’accueil.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bienvenue"
           }
         }
       }

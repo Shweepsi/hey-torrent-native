@@ -6,6 +6,8 @@
 // (source unique de la version de l'app : ne jamais la recopier ici).
 MARKETING_VERSION = 0.0.0
 CURRENT_PROJECT_VERSION = 1
+// Adresse de l'API : vide tant que la CI ne la fournit pas (HEYWATCHLIST_API_URL).
+HEYWATCHLIST_API_URL =
 
 // Inclusion facultative (`#include?`) : le fichier n'existe qu'après le script.
 // Elle doit rester en dernier pour l'emporter sur les valeurs de repli.

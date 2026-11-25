@@ -58,9 +58,10 @@ gros risque (pas de Mac).
 
 - `backend/` : Worker en **TypeScript** (meilleurs outils pour D1 et les
   tests ; le Rust reste dans le cœur), déployé par `wrangler` depuis la CI.
-- Schéma D1 : `users` (rôle), `invitations`, `sessions`,
-  `watchlist_items`, `requests`, `request_followers`, `devices`,
-  `credentials` (chiffrés), `library` (ce qui est sur Plex), `notified`.
+- Schéma D1 : `users` (rôle), `identities`, `invitations`, `sessions`,
+  `used_nonces`. Les autres tables (`watchlist_items`, `requests`,
+  `request_followers`, `devices`, `credentials` chiffrés, `library`,
+  `notified`) arrivent avec leur jalon, en nouvelles migrations.
 - Connexion Apple et Google, vérification des jetons, JWT court et jeton de
   rafraîchissement, **invitations**, suppression de compte.
 - Tests du Worker avec Vitest et l'environnement local de Wrangler.
@@ -126,11 +127,9 @@ validations.
 
 ## Points retenus par défaut (à confirmer)
 
-1. **Connexion Google sur iPhone et Apple sur Android ?** « Se connecter avec
-   Apple » sur Android passe par une page web et demande une configuration
-   en plus. Proposition : Apple sur iPhone, Google sur Android, et Google
-   aussi sur iPhone (Apple reste alors obligatoire à côté). Un même invité
-   garde le même compte s'il utilise le même e-mail.
+1. ~~Connexion Google sur iPhone et Apple sur Android~~ : **décidé** au
+   jalon 2 (`docs/DECISIONS.md`) : Apple sur iPhone, Google sur Android et
+   sur iPhone, même compte pour la même adresse e-mail vérifiée.
 2. **Comment savoir ce qui est « Sur Plex » pour les invités ?** Ils n'ont
    pas accès à ton serveur. Proposition : la table `library` dans D1,
    remplie par les webhooks et par une **synchronisation complète chaque

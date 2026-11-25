@@ -76,6 +76,25 @@ def prepare_match
   setup_ci
 end
 
+# Capacités de l'identifiant d'app dont l'app a besoin. « Se connecter avec
+# Apple » doit être cochée chez Apple et figurer dans le profil, sinon la
+# signature échoue. Renvoie vrai si une capacité vient d'être ajoutée : le
+# profil doit alors être régénéré.
+def ensure_capabilities(api_key, bundle_id)
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
+  bundle = Spaceship::ConnectAPI::BundleId.find(bundle_id)
+  UI.user_error!("Identifiant d'app #{bundle_id} absent chez Apple (docs/CI.md, étape 2).") if bundle.nil?
+  type = Spaceship::ConnectAPI::BundleIdCapability::Type::APPLE_ID_AUTH
+  return false if bundle.get_capabilities.any? { |capability| capability.capability_type == type }
+
+  UI.message("Ajout de la capacité « Se connecter avec Apple » à #{bundle_id}.")
+  bundle.create_capability(
+    type,
+    settings: [{ key: "APPLE_ID_AUTH_APP_CONSENT", options: [{ key: "PRIMARY_APP_CONSENT" }] }]
+  )
+  true
+end
+
 # Nom d'un iPhone disponible sur la machine, pour ne pas dépendre du modèle que
 # l'image macOS installe avec son Xcode. Le plus récent runtime d'abord.
 def default_test_device
@@ -112,8 +131,14 @@ platform :ios do
     api_key = asc_api_key
     prepare_match
     # Lecture seule : le certificat et le profil sont créés une fois pour toutes
-    # par la lane setup_signing.
-    match(type: "appstore", app_identifier: bundle_id, api_key: api_key, readonly: true)
+    # par la lane setup_signing. Exception : une capacité nouvelle (ajoutée par
+    # une version de l'app) impose de régénérer le profil, ce qui se fait ici
+    # sans intervention.
+    if ensure_capabilities(api_key, bundle_id)
+      match(type: "appstore", app_identifier: bundle_id, api_key: api_key, readonly: false, force: true)
+    else
+      match(type: "appstore", app_identifier: bundle_id, api_key: api_key, readonly: true)
+    end
     profile = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING].to_h[bundle_id]
     UI.user_error!("Aucun profil App Store pour #{bundle_id} : lancer d'abord la lane setup_signing.") if profile.to_s.empty?
 
@@ -161,12 +186,13 @@ platform :ios do
     required_env("APPLE_TEAM_ID")
     api_key = asc_api_key
     prepare_match
+    added = ensure_capabilities(api_key, ios_bundle_id)
     match(
       type: "appstore",
       app_identifier: ios_bundle_id,
       api_key: api_key,
       readonly: false,
-      force: options[:force].to_s == "true"
+      force: added || options[:force].to_s == "true"
     )
   end
 end

@@ -12,15 +12,15 @@ Interface en français, style verre dépoli (voir `docs/DESIGN.md`).
 
 ## État du projet
 
-**Jalon 1 en cours : fondations et chaîne de compilation.** L'app est vide
-exprès : un seul écran affiche ce que renvoie le cœur Rust (« pong » et la
-version du cœur). Il n'y a encore ni TMDB, ni connexion, ni backend, ni
-watchlist. L'objectif est une app installable sur iPhone (TestFlight) et sur
-Android (APK), entièrement compilée par GitHub Actions. Le plan complet est
-dans `docs/PLAN.md`, le reste à faire dans `docs/TODO.md`.
+**Jalon 2 en cours : comptes et connexion.** L'app ouvre sur un écran
+d'accueil : « Se connecter avec Apple » (iPhone) ou avec Google (Android et
+iPhone), sur invitation. Une fois connecté, Réglages affiche le prénom, la
+déconnexion et la suppression du compte ; l'APK admin y ajoute la création
+d'invitations. Découvrir et Watchlist sont encore vides (jalons 3 et 4). Le
+plan complet est dans `docs/PLAN.md`, le reste à faire dans `docs/TODO.md`.
 
-À l'écriture de ce fichier, seul le cœur Rust a été compilé et testé ; les
-builds Android et iOS n'ont pas encore tourné sur la CI.
+Le cœur Rust et le Worker sont testés en local ; les apps Android et iOS ne se
+compilent que sur la CI.
 
 ## Architecture
 
@@ -39,10 +39,10 @@ builds Android et iOS n'ont pas encore tourné sur la CI.
 │ core/ : cœur Rust (tokio)                                  │
 │ toute la logique, erreurs typées, aucun texte affiché      │
 └──────────────────────────────┬─────────────────────────────┘
-                               │ HTTPS (à partir du jalon 2)
+                               │ HTTPS
                                ▼
 ┌────────────────────────────────────────────────────────────┐
-│ Backend Cloudflare : Workers + D1 (jalon 2)                │
+│ Backend Cloudflare : Worker heywatchlist-api + D1          │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,7 +52,8 @@ builds Android et iOS n'ont pas encore tourné sur la CI.
 - **UniFFI** génère les liaisons Kotlin et Swift à partir des macros
   `#[uniffi::export]`. Elles ne sont jamais versionnées.
 - **Les interfaces** n'affichent que : aucune règle métier, aucun appel réseau.
-- **Le backend** (jalon 2) n'existe pas encore.
+- **Le backend** (`backend/`, TypeScript) gère les comptes : vérification
+  des jetons Apple et Google, invitations, sessions (`backend/README.md`).
 
 ### Deux apps, un seul projet
 
@@ -65,9 +66,8 @@ builds Android et iOS n'ont pas encore tourné sur la CI.
 
 Le code d'administration n'existe que dans l'édition admin
 (`android/app/src/admin/` et la fonctionnalité Cargo `admin`) : l'app publique
-n'en contient aucun symbole. Au jalon 1, l'édition admin n'ajoute qu'une carte
-d'état : la réponse « admin-pong » du cœur et la présence du code
-d'administration.
+n'en contient aucun symbole. Au jalon 2, l'édition admin n'ajoute que la
+création d'invitations, dans Réglages.
 
 ## Organisation du dépôt
 
@@ -78,6 +78,7 @@ hey-torrent-native/
 ├── tools/uniffi-bindgen/  Génère les liaisons Kotlin et Swift
 ├── android/               Projet Gradle (Compose), éditions public et admin
 ├── ios/                   Interface SwiftUI ; projet Xcode généré (project.yml)
+├── backend/               Worker Cloudflare (TypeScript) et migrations D1
 ├── scripts/               Compilation du cœur, XCFramework, liaisons
 ├── docs/                  PLAN, DECISIONS, DESIGN, CI, TODO
 ├── .github/               CI GitHub Actions
@@ -86,8 +87,6 @@ hey-torrent-native/
 ├── CONTRIBUTING.md        Comment contribuer
 └── CHANGELOG.md
 ```
-
-Le dossier `backend/` (Worker Cloudflare) arrivera au jalon 2.
 
 ## Compiler le cœur
 

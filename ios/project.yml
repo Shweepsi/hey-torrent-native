@@ -73,7 +73,16 @@ targets:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+        # Adresse de l'API, écrite par scripts/build-ios-xcframework.sh
+        # (variable HEYWATCHLIST_API_URL de la CI), jamais dans le dépôt.
+        HeyWatchlistAPIURL: $(HEYWATCHLIST_API_URL)
         # Aucune permission demandée : pas de clé NS...UsageDescription.
+    # « Se connecter avec Apple ». fastlane coche la capacité chez Apple et
+    # régénère le profil si besoin (ios/fastlane/Fastfile, ensure_capabilities).
+    entitlements:
+      path: Config/HeyWatchlist.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
     settings:
       groups: [iphone-arm64]
       base:

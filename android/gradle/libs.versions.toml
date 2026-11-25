@@ -14,6 +14,9 @@ lifecycle = "2.9.4"
 coroutines = "1.10.2"
 haze = "1.7.1"
 jna = "5.18.1"
+# Connexion Google par le Credential Manager du système.
+credentials = "1.6.0"
+googleid = "1.2.1"
 junit = "4.13.2"
 
 [libraries]
@@ -22,6 +25,9 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 # Dépendance requise par le code UniFFI Kotlin. Elle est utilisée sous sa forme
 # `aar` (qui embarque libjnidispatch.so) : voir app/build.gradle.kts.

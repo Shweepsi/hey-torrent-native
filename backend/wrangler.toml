@@ -1,0 +1,21 @@
+# Worker du backend de HeyWatchlist. Le nom est imposé : le Worker
+# `heywatchlist-api` existe déjà et porte le secret FCM_SERVICE_ACCOUNT ; un
+# autre nom créerait un Worker sans ses secrets.
+# Secrets (jamais ici) : voir backend/README.md.
+name = "heywatchlist-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+# Identifiant de l'app iPhone : public, c'est l'audience des jetons Apple.
+APPLE_CLIENT_ID = "io.github.shweepsi.heywatchlist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "heywatchlist"
+database_id = "41769bb4-adeb-41d5-8aeb-7fea6c49ad1f"
+migrations_dir = "migrations"

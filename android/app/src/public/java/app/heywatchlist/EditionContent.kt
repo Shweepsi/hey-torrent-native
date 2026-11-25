@@ -1,12 +1,15 @@
 package app.heywatchlist
 
 import androidx.compose.runtime.Composable
+import app.heywatchlist.core.AccountGateway
 
 /**
- * Point d'extension propre à l'édition, appelé par l'écran d'accueil. L'édition
- * publique n'ajoute rien : l'édition admin définit le même objet dans src/admin.
+ * Points d'extension propres à l'édition. L'édition publique n'ajoute rien :
+ * l'édition admin définit le même objet dans src/admin.
  */
 object EditionContent {
+    /** Sous la carte du compte, dans Réglages. */
     @Composable
-    fun Footer() = Unit
+    @Suppress("UNUSED_PARAMETER")
+    fun SettingsExtras(gateway: AccountGateway, isAdmin: Boolean) = Unit
 }

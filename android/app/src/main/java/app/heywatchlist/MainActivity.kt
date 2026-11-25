@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import app.heywatchlist.ui.home.HomeScreen
+import app.heywatchlist.ui.AppRoot
 import app.heywatchlist.ui.theme.HeyTheme
 
 /** Activité unique : l'interface est entièrement en Compose. */
@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             HeyTheme {
-                HomeScreen()
+                AppRoot()
             }
         }
     }
