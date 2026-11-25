@@ -2,7 +2,7 @@
 # une montée de version se fait ici, jamais dans app/build.gradle.kts.
 
 [versions]
-agp = "8.13.0"
+agp = "9.5.3"
 kotlin = "2.2.21"
 # Une seule version pour toute la pile Compose (foundation, ui, runtime...).
 # compose, activity et lifecycle sont alignés sur ce que demande Haze 1.7.1
