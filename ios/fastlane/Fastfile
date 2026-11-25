@@ -12,7 +12,7 @@
 #                                           dépôt privé des certificats (match)
 #   GITHUB_RUN_NUMBER, GITHUB_REPOSITORY_OWNER
 #                                           fournies par GitHub Actions
-#   IOS_TEST_DEVICE                         facultative : simulateur des tests (défaut : iPhone 17)
+#   IOS_TEST_DEVICE                         facultative : simulateur des tests (défaut : un iPhone de l'image)
 #
 # Aucune de ces valeurs ne doit jamais être affichée dans le journal.
 
@@ -76,10 +76,21 @@ def prepare_match
   setup_ci
 end
 
+# Nom d'un iPhone disponible sur la machine, pour ne pas dépendre du modèle que
+# l'image macOS installe avec son Xcode. Le plus récent runtime d'abord.
+def default_test_device
+  require "json"
+  list = JSON.parse(`xcrun simctl list devices available -j`)["devices"]
+  runtimes = list.keys.select { |k| k.include?("iOS") }.sort.reverse
+  names = runtimes.flat_map { |k| list[k].map { |d| d["name"] } }
+  names.find { |n| n.start_with?("iPhone") && !n.include?("SE") } ||
+    UI.user_error!("Aucun simulateur iPhone disponible : définir IOS_TEST_DEVICE.")
+end
+
 platform :ios do
   desc "Tests unitaires sur un simulateur iPhone"
   lane :test do
-    device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? "iPhone 17" : ENV["IOS_TEST_DEVICE"]
+    device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? default_test_device : ENV["IOS_TEST_DEVICE"]
     run_tests(
       project: xcode_project,
       scheme: app_scheme,

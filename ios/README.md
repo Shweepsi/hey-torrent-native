@@ -48,7 +48,7 @@ signature (`DEVELOPMENT_TEAM`, profils) est fournie par la CI, jamais écrite ic
 
 ```sh
 xcodebuild test -project HeyWatchlist.xcodeproj -scheme HeyWatchlist \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+  -destination 'platform=iOS Simulator,name=<un iPhone de la liste>'
 ```
 
 Le nom du simulateur dépend de l'Xcode installé (`xcrun simctl list devices`).

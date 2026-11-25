@@ -5,6 +5,15 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.1.1] - 2026-11-25
+
+### Modifié
+
+- CI iOS : compilation avec Xcode 27 et le SDK iOS 27 (image `xcode-27`), pour
+  lever l'avertissement Apple ITMS-90725 (SDK iOS 27 exigé à partir d'avril
+  2027). Le simulateur des tests est choisi parmi ceux de la machine au lieu
+  d'un nom figé. La cible de déploiement reste iOS 26.
+
 ## [0.1.0] - 2026-11-25
 
 Jalon 1 : fondations et chaîne de compilation. Une app vide mais installable,

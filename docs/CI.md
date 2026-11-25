@@ -262,7 +262,8 @@ contrôles qui tournent toujours, ou aucun.
 | Envoi refusé : « agreement » / « contrat » à accepter | Un accord Apple est en attente : connectez-vous à App Store Connect et à developer.apple.com avec le compte titulaire, acceptez-le, puis relancez par **Run workflow**. |
 | `fastlane` introuvable ou « Bundler … » à l'installation des gems | Le cache des gems est corrompu : changer la clé dans `.github/actions/setup-fastlane/action.yml` (ou supprimer le cache dans **Actions** > **Caches**). |
 | « Gradle Wrapper Validation Failed » | `android/gradle/wrapper/gradle-wrapper.jar` n'est pas un fichier officiel de Gradle : le régénérer avec `gradle wrapper`, ne jamais le modifier à la main. |
-| Simulateur « iPhone 17 » introuvable | L'image macOS a changé : ajouter `IOS_TEST_DEVICE` (nom d'un iPhone présent dans le README de l'image) dans `env:` de `ci-ios.yml`. |
+| « Aucun simulateur iPhone disponible » | L'image macOS n'a aucun iPhone installé : ajouter `IOS_TEST_DEVICE` (nom d'un iPhone présent dans le README de l'image) dans `env:` de `ci-ios.yml`. Sans cette variable, la lane prend le premier iPhone du runtime le plus récent. |
+| Libellé `xcode-27` refusé (« no runner matching ») | L'image Xcode 27 n'est pas offerte à ce dépôt ou à cette offre : repasser `runs-on` sur `macos-26` (Xcode 26, SDK iOS 26.5, suffisant jusqu'en avril 2027). |
 
 ## Versions utilisées
 
@@ -278,13 +279,14 @@ Les machines sont celles du README des images de GitHub (lu le 2026-11-25) :
 
 | Machine | Image | Ce qu'elle apporte |
 |---|---|---|
-| `macos-26` (arm64) | 20261117 | Xcode 26.6 par défaut (SDK iOS 26.5), simulateurs iPhone 17, Ruby 3.4, Bundler 4.1, fastlane 2.242.0 déjà installé (la CI utilise celui du `Gemfile.lock`), rustup, pas de XcodeGen (installé par Homebrew) |
+| `xcode-27` (arm64, macOS 27) | à relever dans « Set up job » du premier tour | Xcode 27 et SDK iOS 27 ; simulateurs, Ruby et fastlane non vérifiés (la lane de tests choisit l'iPhone au lieu de supposer un nom) |
+| `macos-26` (arm64), encore utilisée par `ios-setup-signing.yml` | 20261117 | Xcode 26.6 par défaut (SDK iOS 26.5), simulateurs iPhone 17, Ruby 3.4, Bundler 4.1, fastlane 2.242.0 déjà installé (la CI utilise celui du `Gemfile.lock`), rustup, pas de XcodeGen (installé par Homebrew) |
 | `ubuntu-24.04` | 20261116 | Java 17 par défaut, SDK Android avec plateforme 36 et build-tools 36.0.0, NDK 27.3.13750724 par défaut, shellcheck 0.9.0, rustup |
 
 Elles sont fixées pour qu'un changement d'image ne casse pas la CI sans prévenir.
 Dependabot propose les mises à jour (`.github/dependabot.yml`).
 
-Non vérifié : la disponibilité du libellé `macos-26` pour un dépôt **privé** sur
+Non vérifié : la disponibilité du libellé `xcode-27` (annoncé par GitHub le 2026-10-15, lu dans son journal des changements) et de `macos-26` pour un dépôt **privé** sur
 votre offre (visible dans le journal du premier tour : « Set up job » > « Runner
 Image »), et la compatibilité de `xcodegen` (Homebrew, dernière version) avec
 `ios/project.yml`.
