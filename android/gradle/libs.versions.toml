@@ -3,7 +3,7 @@
 
 [versions]
 agp = "8.13.0"
-kotlin = "2.2.21"
+kotlin = "2.4.21"
 # Une seule version pour toute la pile Compose (foundation, ui, runtime...).
 # compose, activity et lifecycle sont alignés sur ce que demande Haze 1.7.1
 # (via ses dépendances JetBrains, qui renvoient vers androidx) : à monter avec
@@ -11,9 +11,9 @@ kotlin = "2.2.21"
 compose = "1.9.4"
 activity = "1.11.0"
 lifecycle = "2.9.4"
-coroutines = "1.10.2"
+coroutines = "1.11.0"
 haze = "1.7.1"
-jna = "5.18.1"
+jna = "5.19.1"
 junit = "4.13.2"
 
 [libraries]
