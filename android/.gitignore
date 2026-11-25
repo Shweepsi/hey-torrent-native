@@ -1,0 +1,13 @@
+# Sorties de compilation et caches Gradle (les liaisons UniFFI et les .so
+# générés vivent sous app/build/ : jamais versionnés).
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+*.keystore
+*.jks

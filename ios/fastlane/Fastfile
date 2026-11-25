@@ -1,0 +1,161 @@
+# Fastfile de HeyWatchlist (iPhone) : tests, envoi TestFlight, signature.
+#
+# Lancé uniquement par la CI GitHub Actions (voir docs/CI.md) : le propriétaire
+# n'a pas de Mac. Les lanes `test` et `beta` supposent que le projet Xcode existe
+# déjà (scripts/build-ios-xcframework.sh, puis `xcodegen generate` dans ios/).
+#
+# Variables d'environnement, fournies par les secrets et variables GitHub :
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8   clé d'API App Store Connect
+#                                           (ASC_KEY_P8 : contenu du .p8, brut ou en base64)
+#   APPLE_TEAM_ID                           identifiant de l'équipe Apple Developer
+#   MATCH_GIT_URL, MATCH_GIT_TOKEN, MATCH_PASSWORD
+#                                           dépôt privé des certificats (match)
+#   GITHUB_RUN_NUMBER, GITHUB_REPOSITORY_OWNER
+#                                           fournies par GitHub Actions
+#   IOS_TEST_DEVICE                         facultative : simulateur des tests (défaut : iPhone 17)
+#
+# Aucune de ces valeurs ne doit jamais être affichée dans le journal.
+
+default_platform(:ios)
+
+# Le projet généré par XcodeGen et son unique cible d'app.
+def xcode_project
+  "HeyWatchlist.xcodeproj"
+end
+
+def app_scheme
+  "HeyWatchlist"
+end
+
+# Lit une variable d'environnement obligatoire, sans jamais en montrer la valeur.
+def required_env(name)
+  value = ENV[name].to_s
+  UI.user_error!("Variable d'environnement manquante : #{name} (voir docs/CI.md).") if value.empty?
+  value
+end
+
+# Identifiant de bundle : celui de l'Appfile, lu dans ios/project.yml.
+def ios_bundle_id
+  id = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier).to_s
+  UI.user_error!("Identifiant de bundle introuvable (Appfile, ios/project.yml).") if id.empty?
+  id
+end
+
+# Numéro de build : celui de l'exécution GitHub, un entier qui ne fait que croître
+# (TestFlight refuse un numéro déjà reçu pour la même version).
+def build_number
+  number = required_env("GITHUB_RUN_NUMBER")
+  UI.user_error!("GITHUB_RUN_NUMBER doit être un entier strictement positif.") unless number.match?(/\A[1-9][0-9]*\z/)
+  number
+end
+
+# Clé d'API App Store Connect, construite depuis les secrets. Évite l'identifiant
+# Apple, le mot de passe et la double authentification.
+def asc_api_key
+  key = required_env("ASC_KEY_P8")
+  app_store_connect_api_key(
+    key_id: required_env("ASC_KEY_ID"),
+    issuer_id: required_env("ASC_ISSUER_ID"),
+    key_content: key,
+    # Un .p8 brut commence par « -----BEGIN PRIVATE KEY----- » ; sinon, base64.
+    is_key_content_base64: !key.include?("BEGIN"),
+    duration: 1200,
+    in_house: false
+  )
+end
+
+# Prépare match : trousseau temporaire de la CI et accès au dépôt privé des
+# certificats. match lit MATCH_GIT_BASIC_AUTHORIZATION (« utilisateur:jeton » en
+# base64) ; le jeton est celui du compte propriétaire du dépôt.
+def prepare_match
+  required_env("MATCH_GIT_URL")
+  required_env("MATCH_PASSWORD")
+  token = required_env("MATCH_GIT_TOKEN")
+  owner = required_env("GITHUB_REPOSITORY_OWNER")
+  ENV["MATCH_GIT_BASIC_AUTHORIZATION"] = ["#{owner}:#{token}"].pack("m0")
+  setup_ci
+end
+
+platform :ios do
+  desc "Tests unitaires sur un simulateur iPhone"
+  lane :test do
+    device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? "iPhone 17" : ENV["IOS_TEST_DEVICE"]
+    run_tests(
+      project: xcode_project,
+      scheme: app_scheme,
+      destination: "platform=iOS Simulator,name=#{device},OS=latest",
+      result_bundle: true,
+      output_directory: "build/test-results",
+      # Journal xcodebuild brut : sans Mac, c'est lui qui permet de comprendre
+      # un échec.
+      xcodebuild_formatter: ""
+    )
+  end
+
+  desc "Compile, signe avec match et envoie sur TestFlight"
+  lane :beta do
+    number = build_number
+    team_id = required_env("APPLE_TEAM_ID")
+    bundle_id = ios_bundle_id
+
+    api_key = asc_api_key
+    prepare_match
+    # Lecture seule : le certificat et le profil sont créés une fois pour toutes
+    # par la lane setup_signing.
+    match(type: "appstore", app_identifier: bundle_id, api_key: api_key, readonly: true)
+    profile = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING].to_h[bundle_id]
+    UI.user_error!("Aucun profil App Store pour #{bundle_id} : lancer d'abord la lane setup_signing.") if profile.to_s.empty?
+
+    # Le projet est généré à chaque exécution : on peut le modifier sans risque.
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: xcode_project,
+      team_id: team_id,
+      targets: [app_scheme],
+      build_configurations: ["Release"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile,
+      bundle_identifier: bundle_id
+    )
+
+    build_app(
+      project: xcode_project,
+      scheme: app_scheme,
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: {
+        signingStyle: "manual",
+        teamID: team_id,
+        provisioningProfiles: { bundle_id => profile }
+      },
+      # Même valeur que Config/Version.xcconfig, imposée ici pour ne dépendre
+      # de rien d'autre que GITHUB_RUN_NUMBER.
+      xcargs: "CURRENT_PROJECT_VERSION=#{number}",
+      output_directory: "build",
+      output_name: "HeyWatchlist",
+      xcodebuild_formatter: ""
+    )
+
+    # Inutile d'attendre le traitement par Apple : cela coûterait des minutes
+    # macOS. Le build apparaît dans TestFlight une fois traité (10 à 30 minutes).
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: bundle_id,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Crée ou récupère le certificat et le profil de distribution (match). Option : force:true régénère le profil"
+  lane :setup_signing do |options|
+    required_env("APPLE_TEAM_ID")
+    api_key = asc_api_key
+    prepare_match
+    match(
+      type: "appstore",
+      app_identifier: ios_bundle_id,
+      api_key: api_key,
+      readonly: false,
+      force: options[:force].to_s == "true"
+    )
+  end
+end

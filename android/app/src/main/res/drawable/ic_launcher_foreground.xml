@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Signet de watchlist en verre : verre dépoli, filet clair, triangle de lecture. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M38,28h32a4,4 0,0 1,4 4v50l-20,-13l-20,13v-50a4,4 0,0 1,4 -4z"
+        android:fillColor="#38FFFFFF"
+        android:strokeColor="#4F9CF7"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M49,41l14,9l-14,9z"
+        android:fillColor="#4F9CF7" />
+</vector>

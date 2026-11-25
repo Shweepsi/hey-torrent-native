@@ -1,0 +1,114 @@
+{
+  "sourceLanguage" : "fr",
+  "strings" : {
+    "app.name" : {
+      "comment" : "Nom de l’app, affiché en titre de l’écran d’accueil.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HeyWatchlist"
+          }
+        }
+      }
+    },
+    "core.error.internal" : {
+      "comment" : "Erreur CoreError.Internal renvoyée par le cœur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le cœur de l’app a rencontré une erreur interne."
+          }
+        }
+      }
+    },
+    "core.error.unexpected" : {
+      "comment" : "Toute autre erreur venue du pont vers le cœur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une erreur inattendue est survenue."
+          }
+        }
+      }
+    },
+    "home.core.loading" : {
+      "comment" : "Texte à côté de l’indicateur pendant l’appel au cœur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connexion au cœur…"
+          }
+        }
+      }
+    },
+    "home.core.pong" : {
+      "comment" : "Libellé de la réponse de l’appel synchrone ping().",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appel synchrone"
+          }
+        }
+      }
+    },
+    "home.core.pong.async" : {
+      "comment" : "Libellé de la réponse de l’appel asynchrone ping_async().",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appel asynchrone"
+          }
+        }
+      }
+    },
+    "home.core.retry" : {
+      "comment" : "Bouton affiché après une erreur du cœur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer"
+          }
+        }
+      }
+    },
+    "home.core.title" : {
+      "comment" : "Titre de la carte qui montre la réponse du cœur Rust (jalon 1).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réponse du cœur"
+          }
+        }
+      }
+    },
+    "home.core.version" : {
+      "comment" : "Libellé de la version du cœur (la valeur vient du cœur).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version du cœur"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

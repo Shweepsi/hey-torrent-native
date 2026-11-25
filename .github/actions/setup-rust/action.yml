@@ -1,0 +1,45 @@
+name: Préparer Rust
+description: Installe la chaîne Rust de rust-toolchain.toml (avec les cibles demandées) et active le cache Cargo.
+
+inputs:
+  targets:
+    description: Cibles Rust supplémentaires, séparées par des espaces.
+    required: false
+    default: ""
+  cache-key:
+    description: Suffixe de la clé de cache, un par type de compilation.
+    required: false
+    default: ""
+  cache:
+    description: Mettre "false" pour ne pas utiliser le cache (tâche sans compilation).
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Installer la chaîne Rust
+      shell: bash
+      env:
+        TARGETS: ${{ inputs.targets }}
+      run: |
+        set -euo pipefail
+        # Le canal vient de rust-toolchain.toml : une seule source de vérité.
+        channel="$(sed -n 's/^channel[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' rust-toolchain.toml)"
+        if [[ -z "$channel" ]]; then
+          echo "::error::Canal introuvable dans rust-toolchain.toml"
+          exit 1
+        fi
+        args=(--profile minimal --component rustfmt --component clippy --no-self-update)
+        for target in $TARGETS; do
+          args+=(--target "$target")
+        done
+        rustup toolchain install "$channel" "${args[@]}"
+        rustc --version
+
+    - name: Cache Cargo
+      if: inputs.cache == 'true'
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ inputs.cache-key }}
+        cache-on-failure: true

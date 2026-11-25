@@ -1,0 +1,69 @@
+# Première installation de la signature iPhone : crée (ou récupère) le certificat
+# de distribution et le profil App Store avec fastlane match, via la clé d'API
+# App Store Connect, et les range chiffrés dans un dépôt Git privé.
+# À lancer à la main (onglet Actions > « iOS - configurer la signature ») une
+# fois, puis quand le profil doit être régénéré. Voir docs/CI.md.
+name: iOS - configurer la signature
+
+on:
+  workflow_dispatch:
+    inputs:
+      regenerer:
+        description: Régénérer le profil (après avoir ajouté une capacité à l'identifiant d'app)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-setup-signing
+  cancel-in-progress: false
+
+env:
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+  FASTLANE_OPT_OUT_USAGE: "YES"
+  LC_ALL: en_US.UTF-8
+  LANG: en_US.UTF-8
+
+jobs:
+  signing:
+    name: Certificat et profil de distribution
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Vérifier les secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+        run: bash .github/scripts/check-secrets.sh --strict ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 MATCH_PASSWORD MATCH_GIT_TOKEN APPLE_TEAM_ID MATCH_GIT_URL
+
+      - uses: ./.github/actions/setup-fastlane
+
+      - name: Créer ou récupérer le certificat et le profil
+        working-directory: ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+          REGENERER: ${{ inputs.regenerer }}
+        run: |
+          set -euo pipefail
+          if [[ "$REGENERER" == "true" ]]; then
+            bundle exec fastlane setup_signing force:true
+          else
+            bundle exec fastlane setup_signing
+          fi

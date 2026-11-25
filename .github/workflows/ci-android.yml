@@ -1,0 +1,168 @@
+# Android : tests (buildSrc et édition publique), contrôle de la release publique
+# (R8), APK admin de debug en artefact, puis, sur main ou un tag et si les
+# secrets de signature existent, APK admin signé et AAB public. Linux seulement
+# (aucune minute macOS).
+name: CI Android
+
+on:
+  pull_request:
+    paths:
+      - android/**
+      - core/**
+      - tools/**
+      # Seuls les scripts que ce workflow lance (pas celui d'iOS).
+      - scripts/build-android-core.sh
+      - scripts/generate-bindings.sh
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - .github/workflows/ci-android.yml
+      # Seules les actions que ce workflow utilise.
+      - .github/actions/setup-android/**
+      - .github/actions/setup-rust/**
+      - .github/scripts/check-secrets.sh
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - android/**
+      - core/**
+      - tools/**
+      - scripts/build-android-core.sh
+      - scripts/generate-bindings.sh
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - .github/workflows/ci-android.yml
+      # Seules les actions que ce workflow utilise.
+      - .github/actions/setup-android/**
+      - .github/actions/setup-rust/**
+      - .github/scripts/check-secrets.sh
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Produire aussi l'APK admin signé et l'AAB public (secrets de signature requis)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  build:
+    name: Tests et APK admin de debug
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-android
+
+      # Le code de buildSrc (lecture de la version dans Cargo.toml) a ses propres
+      # tests ; Gradle ne les lance pas avec ceux de l'app.
+      - name: Tests de buildSrc
+        working-directory: android
+        run: ./gradlew -p buildSrc test --stacktrace
+
+      - name: Tests de l'édition publique et APK admin de debug
+        working-directory: android
+        run: ./gradlew testPublicDebugUnitTest assembleAdminDebug --stacktrace
+
+      # R8 (minification) et la lint de release ne tournent que sur les builds de
+      # release : sans cette étape, une règle R8 manquante ne se verrait qu'après
+      # la fusion. Sans keystore (pull request), la release est signée avec la clé
+      # de debug : cet APK n'est pas publié.
+      - name: Vérifier la release de l'édition publique (R8)
+        working-directory: android
+        run: ./gradlew assemblePublicRelease --stacktrace
+
+      - name: Publier l'APK admin de debug
+        uses: actions/upload-artifact@v7
+        with:
+          name: heywatchlist-admin-debug-apk
+          path: android/app/build/outputs/apk/admin/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publier les rapports de tests (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-rapports-de-tests
+          path: |
+            android/app/build/reports/tests
+            android/app/build/test-results
+            android/buildSrc/build/reports/tests
+            android/buildSrc/build/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    name: APK admin signé et AAB public
+    needs: build
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Vérifier les secrets de signature
+        id: secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bash .github/scripts/check-secrets.sh ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD
+
+      - name: Préparer la compilation Android
+        if: steps.secrets.outputs.ready == 'true'
+        uses: ./.github/actions/setup-android
+
+      - name: Compiler les versions signées
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/heywatchlist-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode >"$ANDROID_KEYSTORE_PATH"
+          ./gradlew assembleAdminRelease bundlePublicRelease --stacktrace
+
+      - name: Supprimer le keystore du runner
+        if: always() && steps.secrets.outputs.ready == 'true'
+        run: rm -f "$RUNNER_TEMP/heywatchlist-release.jks"
+
+      - name: Publier l'APK admin signé
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: heywatchlist-admin-release-apk
+          path: android/app/build/outputs/apk/admin/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publier l'AAB public
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: heywatchlist-public-release-aab
+          path: android/app/build/outputs/bundle/publicRelease/*.aab
+          if-no-files-found: error
+          retention-days: 30

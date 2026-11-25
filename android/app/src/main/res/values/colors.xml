@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fond de la fenêtre avant le premier affichage de Compose (jour). -->
+    <color name="hey_window_background">#F3F5FA</color>
+</resources>

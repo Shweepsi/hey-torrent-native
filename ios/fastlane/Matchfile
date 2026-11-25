@@ -1,0 +1,12 @@
+# Matchfile : certificat et profil de distribution, chiffrés dans un dépôt Git
+# privé (voir docs/CI.md).
+#
+# Lus dans l'environnement par match lui-même (jamais écrits ici) :
+#   MATCH_GIT_URL                    URL HTTPS du dépôt privé (variable GitHub)
+#   MATCH_GIT_BASIC_AUTHORIZATION    posé par le Fastfile depuis MATCH_GIT_TOKEN
+#   MATCH_PASSWORD                   phrase secrète de chiffrement (secret GitHub)
+# L'identifiant de l'app et l'équipe viennent de l'Appfile.
+
+storage_mode("git")
+git_branch("main")
+type("appstore")

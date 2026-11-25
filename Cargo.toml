@@ -1,0 +1,31 @@
+# Espace de travail Rust de HeyWatchlist : le cœur partagé et l'outil de liaisons.
+[workspace]
+members = ["core", "tools/uniffi-bindgen"]
+resolver = "3"
+
+[workspace.package]
+# Source unique de la version de l'app : Android (versionName) et iOS
+# (MARKETING_VERSION) la lisent ici, ne jamais la dupliquer.
+version = "0.1.0"
+edition = "2024"
+license = "UNLICENSED"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[profile.release]
+# Réglé pour le mobile. Jamais `panic = "abort"` : UniFFI s'appuie sur le
+# déroulement de la pile pour attraper les paniques à la frontière FFI.
+lto = "thin"
+codegen-units = 1
+# `strip = true` retirerait la table des symboles, où `uniffi-bindgen` lit les
+# métadonnées UniFFI : plus de génération de liaisons depuis la bibliothèque.
+# On ne retire donc que le débogage ; le retrait final des symboles est fait
+# à l'empaquetage par Gradle (.so) et par Xcode (binaire de l'app).
+strip = "debuginfo"
