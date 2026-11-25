@@ -83,7 +83,10 @@ def default_test_device
   list = JSON.parse(`xcrun simctl list devices available -j`)["devices"]
   runtimes = list.keys.select { |k| k.include?("iOS") }.sort.reverse
   names = runtimes.flat_map { |k| list[k].map { |d| d["name"] } }
-  names.find { |n| n.start_with?("iPhone") && !n.include?("SE") } ||
+  # Un iPhone ordinaire (« iPhone 18 », « iPhone 18 Pro »…), le plus récent :
+  # les modèles inhabituels de l'image (pliable, Air…) lancent mal l'app hôte.
+  numbered = names.uniq.select { |n| n =~ /\AiPhone \d+( Pro)?\z/ }
+  numbered.max_by { |n| [n[/\d+/].to_i, n.include?("Pro") ? 0 : 1] } ||
     UI.user_error!("Aucun simulateur iPhone disponible : définir IOS_TEST_DEVICE.")
 end
 
@@ -91,6 +94,7 @@ platform :ios do
   desc "Tests unitaires sur un simulateur iPhone"
   lane :test do
     device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? default_test_device : ENV["IOS_TEST_DEVICE"]
+    UI.message("Simulateur des tests : #{device}")
     run_tests(
       project: xcode_project,
       scheme: app_scheme,
