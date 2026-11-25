@@ -16,7 +16,9 @@ haze = "1.7.1"
 jna = "5.18.1"
 # Connexion Google par le Credential Manager du système.
 credentials = "1.6.0"
-googleid = "1.2.1"
+# googleid 1.2.x est compilé avec Kotlin 2.4, illisible par notre Kotlin 2.2 :
+# rester en 1.1.x tant que le plugin Kotlin n'est pas monté.
+googleid = "1.1.1"
 junit = "4.13.2"
 
 [libraries]
