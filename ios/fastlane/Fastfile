@@ -90,11 +90,23 @@ def default_test_device
     UI.user_error!("Aucun simulateur iPhone disponible : définir IOS_TEST_DEVICE.")
 end
 
+# Démarre le simulateur et attend qu'il soit prêt avant xcodebuild : sur une
+# machine fraîche, le lancer à la volée échoue avec « Invalid device state ».
+def boot_simulator(name)
+  require "json"
+  list = JSON.parse(`xcrun simctl list devices available -j`)["devices"]
+  udid = list.select { |k, _| k.include?("iOS") }.sort.reverse
+             .flat_map { |_, v| v }.find { |d| d["name"] == name }&.fetch("udid", nil)
+  UI.user_error!("Simulateur introuvable : #{name}") unless udid
+  sh("xcrun simctl bootstatus #{udid} -b")
+end
+
 platform :ios do
   desc "Tests unitaires sur un simulateur iPhone"
   lane :test do
     device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? default_test_device : ENV["IOS_TEST_DEVICE"]
     UI.message("Simulateur des tests : #{device}")
+    boot_simulator(device)
     run_tests(
       project: xcode_project,
       scheme: app_scheme,
