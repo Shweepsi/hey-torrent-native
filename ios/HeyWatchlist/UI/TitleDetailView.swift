@@ -14,7 +14,7 @@ extension View {
 
 /// Fiche plein écran d'un film ou d'une série : fond, affiche, titre, durée,
 /// note, genres, synopsis, bande-annonce, plateformes en France, casting,
-/// saisons et titres similaires. Aucun ajout à la watchlist (jalon 4).
+/// saisons et titres similaires, et l'ajout à la watchlist (une demande).
 struct TitleDetailView: View {
     @State private var model: DetailModel
     let zoom: Namespace.ID
@@ -35,6 +35,8 @@ struct TitleDetailView: View {
                     backdrop
                     VStack(alignment: .leading, spacing: 24) {
                         header
+                        // En échec, une série se demande entière ; pendant le chargement, le choix attend.
+                        WatchlistSection(title: model.shownTitle, seasons: watchlistSeasons)
                         sections
                     }
                     .padding(.horizontal, 20)
@@ -50,6 +52,14 @@ struct TitleDetailView: View {
         .task { await model.start() }
         .sheet(item: $model.season) { selection in
             SeasonSheet(model: model, selection: selection)
+        }
+    }
+
+    private var watchlistSeasons: [SeasonEntry]? {
+        switch model.state {
+        case .loading: nil
+        case .failed: []
+        case .loaded(let sheet): sheet.seasons
         }
     }
 
