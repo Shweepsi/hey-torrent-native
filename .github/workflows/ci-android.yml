@@ -77,9 +77,9 @@ jobs:
         working-directory: android
         run: ./gradlew -p buildSrc test --stacktrace
 
-      - name: Tests de l'édition publique et APK admin de debug
+      - name: Tests des deux éditions et APK admin de debug
         working-directory: android
-        run: ./gradlew testPublicDebugUnitTest assembleAdminDebug --stacktrace
+        run: ./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug --stacktrace
 
       # R8 (minification) et la lint de release ne tournent que sur les builds de
       # release : sans cette étape, une règle R8 manquante ne se verrait qu'après

@@ -18,9 +18,15 @@ import uniffi.heywatchlist_core.SessionStore
  *
  * Toute erreur (clé perdue après une restauration, valeur abîmée) vaut
  * « aucune session » : la personne se reconnecte, rien ne plante.
+ *
+ * [file] et [alias] séparent plusieurs coffres (fichier et clé propres à chacun).
  */
-class KeystoreSessionStore(context: Context) : SessionStore {
-    private val preferences = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+class KeystoreSessionStore(
+    context: Context,
+    file: String = SESSION_FILE,
+    private val alias: String = SESSION_ALIAS,
+) : SessionStore {
+    private val preferences = context.applicationContext.getSharedPreferences(file, Context.MODE_PRIVATE)
 
     override fun load(): String? = try {
         preferences.getString(KEY_VALUE, null)?.let(::decrypt)
@@ -43,10 +49,10 @@ class KeystoreSessionStore(context: Context) : SessionStore {
 
     private fun key(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        (keyStore.getKey(alias, null) as? SecretKey)?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
-            KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(256)
@@ -71,9 +77,9 @@ class KeystoreSessionStore(context: Context) : SessionStore {
     }
 
     private companion object {
-        const val FILE = "session"
+        const val SESSION_FILE = "session"
+        const val SESSION_ALIAS = "heywatchlist-session"
         const val KEY_VALUE = "value"
-        const val KEY_ALIAS = "heywatchlist-session"
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_LENGTH = 12

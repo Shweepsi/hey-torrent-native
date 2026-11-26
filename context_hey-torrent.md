@@ -413,7 +413,7 @@ cargo clippy --all-targets --features admin -- -D warnings
 cargo test --features admin
 ```
 
-Android, depuis `android/` : `./gradlew testPublicDebugUnitTest assembleAdminDebug`
+Android, depuis `android/` : `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`
 (deux variantes : les tâches portent le nom de la variante, pas
 `testDebugUnitTest`).
 iOS : **pas de Mac en local**. Tout se compile sur GitHub Actions (voir

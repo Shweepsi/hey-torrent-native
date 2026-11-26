@@ -22,7 +22,7 @@ Kotlin demande Rust (compilation du cœur pour l'hôte).
 
 ```sh
 cd android
-./gradlew testPublicDebugUnitTest assembleAdminDebug   # commande de la CI
+./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug   # commande de la CI
 ./gradlew :app:testPublicDebugUnitTest :app:testAdminDebugUnitTest :buildSrc:test  # tous les tests JVM
 ./gradlew assemblePublicRelease assembleAdminRelease   # APK de release
 ./gradlew bundlePublicRelease                          # AAB pour le Play Store
@@ -37,10 +37,15 @@ cd android
 | Cœur Rust | sans la fonctionnalité Cargo `admin` | avec `admin` |
 | Code propre | `src/public/` | `src/admin/` |
 
-`src/main/` ne référence aucun symbole admin. L'écran d'accueil appelle
-`EditionContent.Footer()`, objet défini dans `src/public/` (vide) et dans
-`src/admin/` (carte `AdminStatus`). Les textes admin ne sont que dans
-`src/admin/res/`.
+`src/main/` ne référence aucun symbole admin. Réglages appelle
+`EditionContent.SettingsExtras()`, objet défini dans `src/public/` (vide) et
+dans `src/admin/`, où il affiche l'entrée de l'espace admin. L'espace admin
+(`src/admin/java/app/heywatchlist/admin/`) est une activité à part,
+`AdminActivity`, déclarée par le manifeste de `src/admin/` : Demandes (fiche,
+recherche dans les sources, envoi à qBittorrent, refus), Suivi des
+téléchargements, Serveurs (réglages chiffrés sur le serveur, copie chiffrée
+par le Keystore sur l'appareil) et Invitations. Les textes admin ne sont que
+dans `src/admin/res/`.
 
 ## Version et signature
 
@@ -172,6 +177,11 @@ aucun test n'appelle un vrai service. Les écrans Compose et la liaison native
 n'ont pas de test automatisé : ni le bandeau, ni l'attribution, ni les icônes
 de la barre d'état, ni le repli d'image de `HeyPoster`, ni l'action
 « Actualiser » ne sont couverts.
+
+`./gradlew testAdminDebugUnitTest` lance en plus les tests de
+`app/src/testAdmin/` : ViewModels de l'espace admin (recherche, envoi, statut
+non enregistré puis nouvel essai, refus, listes, réglages des serveurs), avec
+une passerelle simulée (`FakeAdminGateway`).
 
 ## Règles R8
 

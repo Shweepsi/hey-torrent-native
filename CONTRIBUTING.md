@@ -46,7 +46,7 @@ cargo test --features admin
 Android, depuis `android/` :
 
 ```sh
-./gradlew testPublicDebugUnitTest assembleAdminDebug
+./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug
 ```
 
 iOS n'a pas de vérification locale : le job macOS de la CI compile et teste.
