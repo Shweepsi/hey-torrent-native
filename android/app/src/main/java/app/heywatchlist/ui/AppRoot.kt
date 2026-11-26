@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.heywatchlist.appServices
 import app.heywatchlist.core.CatalogGateway
 import app.heywatchlist.core.WatchlistGateway
+import app.heywatchlist.push.PushRegistrationEffect
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
 import app.heywatchlist.ui.components.AuroraBackground
@@ -40,12 +41,15 @@ fun AppRoot(
                 // Lecture locale très courte : on garde le décor seul.
                 AccountUiState.Starting -> Unit
                 is AccountUiState.SignedOut -> WelcomeScreen(state = current, viewModel = viewModel)
-                is AccountUiState.SignedIn -> MainScreen(
-                    state = current,
-                    accountViewModel = viewModel,
-                    catalog = catalog,
-                    watchlistGateway = watchlist,
-                )
+                is AccountUiState.SignedIn -> {
+                    PushRegistrationEffect()
+                    MainScreen(
+                        state = current,
+                        accountViewModel = viewModel,
+                        catalog = catalog,
+                        watchlistGateway = watchlist,
+                    )
+                }
             }
         }
     }

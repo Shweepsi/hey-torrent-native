@@ -43,6 +43,15 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
   supprime la demande seulement si plus personne ne la suit et qu'elle est
   encore `requested` ou `refused`.
 
+## Ce qu'il fait en plus (jalon 6)
+
+- **Notifications « Disponible sur Plex »** : Plex (webhook Plex Pass,
+  `library.new`) et Tautulli (« Recently Added », en secours) appellent une URL
+  secrète du Worker à chaque ajout. Le Worker reconnaît le média en
+  identifiants TMDB, le note dans `library`, passe la demande en `available`
+  et envoie une push à chaque personne qui l'attend : APNs pour l'iPhone, FCM
+  pour Android. Voir « Notifications » plus bas.
+
 ## Routes
 
 | Méthode et chemin | Accès | Rôle |
@@ -58,6 +67,12 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | `GET /v1/watchlist` | jeton d'accès | `{items}` : ma watchlist, la plus récente d'abord, avec l'état de chaque demande |
 | `PUT /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Ajoute ou met à jour un titre ; `{seasons?}` → `{item}` |
 | `DELETE /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Retire un titre (204) |
+| `PUT /v1/devices` | jeton d'accès | `{platform: "ios"\|"android", token}` : jeton push de cet appareil, rattaché à la session (204) |
+| `DELETE /v1/devices` | jeton d'accès | Oublie l'appareil de cette session (204) |
+| `POST /v1/notifications/test` | jeton d'accès | Push d'essai vers mes appareils → `{devices, sent}` |
+| `GET /v1/notifications/webhook` | administrateur | `{configured, created_at, last_used_at}`, jamais l'URL |
+| `POST /v1/notifications/webhook` | administrateur | Nouvelle URL, l'ancienne est révoquée (201, `{plex_url, tautulli_url, tautulli_body}`, montrées une seule fois) |
+| `POST /v1/hooks/{plex\|tautulli}/<jeton>` | jeton de l'URL | Nouvel ajout sur Plex → `{status}` : `notified`, `grouped`, `duplicate`, `no_request`, `ignored` ou `unknown_media`. Jeton inconnu : `404 not_found` |
 | `GET /v1/tmdb/<chemin>` | jeton d'accès | Relais du catalogue TMDB : liste blanche de chemins et de paramètres (voir « Relais TMDB »), réponse TMDB telle quelle |
 
 Les erreurs sont `{"error": "<code>"}`, avec un code stable que le cœur traduit
@@ -82,6 +97,7 @@ chemins existent ; tout le reste est `404 not_found`, jamais relayé.
 | `search/multi` | `query` (obligatoire), `page` | aucun |
 | `movie/{id}`, `tv/{id}` | | 24 h |
 | `tv/{id}/season/{n}` | | 12 h |
+| `find/{id}` | `external_source` (`imdb_id` ou `tvdb_id`, obligatoire) | 7 j |
 
 - `page` : entier de 1 à 500 (1 par défaut). `with_genres` : 10 identifiants
   au plus, séparés par `,` (et) ou `|` (ou), pas les deux ; le Worker les trie.
@@ -113,6 +129,35 @@ chemins existent ; tout le reste est `404 not_found`, jamais relayé.
   n'est jamais fatale : la réponse de TMDB est servie. Les entrées expirées ne
   sont pas servies en secours (le cœur le fait de son côté, hors ligne).
 
+## Notifications
+
+- **Sources.** Plex envoie un formulaire dont le champ `payload` est du JSON ;
+  seul `event = library.new` compte. Tautulli envoie le corps JSON donné par
+  l'APK admin (`tautulli_body`), avec `event = recently_added`. Tout autre
+  événement, ou une charge illisible, est ignoré (200).
+- **Identifiants.** Film : `tmdb://` (agents Plex récents), sinon IMDb par
+  `find`. Épisode Plex : ses `tmdb://`, `tvdb://`, `imdb://` sont ceux de
+  l'**épisode** ; la série est retrouvée par `find` (TVDB, puis IMDb), saison
+  et épisode par `parentIndex` et `index`. Ancien format
+  `com.plexapp.agents.<agent>://…` et Tautulli : identifiants du film ou de la
+  série.
+- **Dédoublonnage** (table `notified`) : une clé par arrivée (`movie:603`,
+  `tv:95396:s2e1`…). Plex puis Tautulli pour le même ajout : une seule
+  push. Les épisodes d'une même saison arrivés à moins de 6 heures d'écart ne
+  font qu'une push (`grouped`).
+- **Destinataires** : les personnes dont la watchlist contient le titre (et,
+  pour un épisode, la saison, ou la série entière), sur les appareils dont la
+  session est encore ouverte. Un jeton refusé comme périmé par Apple ou Google
+  est oublié.
+- **Texte** : le titre du média, tel que Plex ou Tautulli le donne, et une clé
+  de traduction (`push_available_movie`, `push_available_show`,
+  `push_available_season`, `push_available_episode`, `push_test`) traduite par
+  l'app. Aucun jeton d'appareil, URL ni clé n'est journalisé.
+- **URL secrète** : son jeton est dans le chemin (Plex ne sait pas ajouter
+  d'en-tête) ; seul son condensé est gardé (`webhook_tokens`). Le journal des
+  requêtes de Cloudflare peut voir passer le chemin : régénérer l'URL depuis
+  l'APK admin la révoque.
+
 ## Base D1
 
 Base `heywatchlist` (identifiant dans `wrangler.toml`), migrations dans
@@ -121,9 +166,11 @@ Base `heywatchlist` (identifiant dans `wrangler.toml`), migrations dans
 (`0002_tmdb_cache.sql`), des données publiques sans lien avec `users`. Le
 jalon 4 ajoute `requests` (une demande par titre, son état) et
 `watchlist_items` (rattachées à `users` et à `requests`,
-`0003_watchlist.sql`). Les tables des jalons suivants (appareils,
-bibliothèque Plex…) arriveront avec leur jalon, dans de nouvelles migrations, rattachées à
-`users` par `ON DELETE CASCADE`.
+`0003_watchlist.sql`). Le jalon 6 ajoute `devices` (rattachés à `users` et à
+`sessions`), `library`, `notified` et `webhook_tokens`
+(`0004_notifications.sql`). Les tables des jalons suivants arriveront avec leur
+jalon, dans de nouvelles migrations, rattachées à `users` par
+`ON DELETE CASCADE`.
 
 ## Secrets du Worker
 
@@ -138,7 +185,8 @@ le dépôt.
 | `GOOGLE_IOS_CLIENT_ID` | pour Google sur iPhone | Client OAuth « iOS » |
 | `TMDB_API_KEY` | pour l'onglet Découvrir | Clé d'API v3 (32 caractères hexadécimaux) ou jeton d'accès v4 (`eyJ…`) de TMDB |
 | `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` | avant la publication | Clé « Sign in with Apple » : révocation à la suppression d'un compte |
-| `FCM_SERVICE_ACCOUNT` | jalon 6 | Déjà posé ; pas encore utilisé |
+| `FCM_SERVICE_ACCOUNT` | pour les push Android | Compte de service Google (JSON) limité à FCM ; déjà posé |
+| `APNS_KEY_ID`, `APNS_PRIVATE_KEY` (et `APPLE_TEAM_ID`) | pour les push iPhone | Clé « Apple Push Notifications service » (`.p8`) |
 
 `APPLE_CLIENT_ID` (l'identifiant de l'app iPhone) est une variable publique de
 `wrangler.toml`.
@@ -158,7 +206,8 @@ puis crée sur GitHub le secret `CLOUDFLARE_API_TOKEN` et les variables
 `CLOUDFLARE_ACCOUNT_ID` et `HEYWATCHLIST_API_URL`. Il affiche le code
 administrateur une seule fois et le range dans
 `~/HeyWatchlist-secrets/mots-de-passe.txt`. Il se relance sans risque, par
-exemple pour ajouter plus tard la clé TMDB, les clients Google ou la clé Apple.
+exemple pour ajouter plus tard la clé TMDB, les clients Google, la clé Apple ou
+la clé APNs des notifications (étape 7/7).
 Il ne vérifie pas la clé TMDB auprès de TMDB (format seulement) : une clé
 fausse se corrige dans le tableau de bord Cloudflare.
 

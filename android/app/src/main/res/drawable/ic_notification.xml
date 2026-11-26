@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Petite icône des notifications : le signet de l'icône de l'app, plein, lecture évidée. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <group android:translateX="-26" android:translateY="-27">
+        <path
+            android:fillType="evenOdd"
+            android:pathData="M38,28h32a4,4 0,0 1,4 4v50l-20,-13l-20,13v-50a4,4 0,0 1,4 -4z M49,41l14,9l-14,9z"
+            android:fillColor="#FFFFFF" />
+    </group>
+</vector>

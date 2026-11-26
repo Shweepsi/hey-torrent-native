@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct HeyWatchlistApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model: AccountModel
     private let catalog: any CatalogClient
     private let watchlist: any WatchlistClient
@@ -16,6 +17,7 @@ struct HeyWatchlistApp: App {
         let model = AccountModel(client: LiveAccountClient(source: source))
         catalog = LiveCatalogClient(source: source, onSignedOut: { await model.sessionExpired() })
         watchlist = LiveWatchlistClient(source: source, onSignedOut: { await model.sessionExpired() })
+        PushCenter.shared.configure(source: source)
         _model = State(initialValue: model)
     }
 

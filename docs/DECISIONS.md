@@ -185,6 +185,25 @@ facile.
 - Les invités ne voient jamais de torrent ni de source : seuls l'état et le
   motif de refus remontent.
 
+## Retenu au jalon 6 (2026-11-26, à confirmer par le propriétaire)
+
+- **Une push par arrivée** : film, série, saison ou épisode. Les épisodes d'une
+  même saison arrivés à moins de **6 heures** d'écart ne font qu'une push (une
+  saison entière téléchargée d'un coup ne sonne pas dix fois).
+- Pour une série, seules les personnes qui attendent **cette saison** (ou la
+  série entière) sont prévenues ; la demande passe en `disponible` dès le
+  premier épisode arrivé.
+- **iPhone par APNs directement** (pas de SDK Firebase dans l'app iOS) ;
+  **Android par FCM**, Firebase initialisé par l'app avec les valeurs de
+  `google-services.json` lues à la compilation, sans le plugin Google Services.
+- **Le texte vient des apps** : le serveur envoie le titre du média et une clé
+  de traduction (`push_available_movie`…), traduite par `strings.xml` et
+  `Localizable.xcstrings`.
+- Le jeton secret est dans le chemin de l'URL (Plex ne sait pas envoyer
+  d'en-tête) ; il est régénérable depuis l'APK admin.
+- Un épisode Plex ne porte que les identifiants de **l'épisode** : le Worker
+  retrouve la série par TMDB (`/find`, identifiant TVDB ou IMDb).
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

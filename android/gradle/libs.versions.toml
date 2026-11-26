@@ -23,6 +23,9 @@ googleid = "1.1.1"
 # googleid 1.2.x), illisible par notre Kotlin 2.2 : ne PAS prendre plus récent
 # tant que le plugin Kotlin n'est pas monté.
 coil = "3.3.0"
+# Push « Disponible sur Plex » (FCM), sans le plugin Google Services ni la
+# BoM : l'app initialise Firebase elle-même (app/build.gradle.kts).
+firebase-messaging = "26.0.2"
 junit = "4.13.2"
 
 [libraries]
@@ -37,6 +40,7 @@ compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
 androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebase-messaging" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 # Dépendance requise par le code UniFFI Kotlin. Elle est utilisée sous sa forme
 # `aar` (qui embarque libjnidispatch.so) : voir app/build.gradle.kts.

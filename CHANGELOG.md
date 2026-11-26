@@ -5,6 +5,38 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.6.0] - 2026-11-26
+
+Jalon 6 : notifications « Disponible sur Plex ». Quand un film ou un épisode
+demandé arrive sur Plex, chaque personne qui l'attend reçoit une notification
+sur iPhone (APNs) ou Android (FCM).
+
+### Ajouté
+
+- Worker : webhooks `POST /v1/hooks/plex/<jeton>` (Plex Pass, `library.new`)
+  et `POST /v1/hooks/tautulli/<jeton>` (secours), URL secrète créée et
+  régénérée par l'administrateur (`/v1/notifications/webhook`), dédoublonnage
+  entre les deux sources, épisodes d'une même saison regroupés sur 6 heures,
+  série retrouvée par TMDB (`find`) depuis les identifiants d'un épisode.
+  Passage de la demande en `available`, table `library`, push aux personnes
+  qui attendent ce titre (et cette saison). Migration `0004_notifications.sql`
+  (`devices`, `library`, `notified`, `webhook_tokens`). Tests Vitest.
+- Worker : envoi APNs (jeton ES256) et FCM HTTP v1 (compte de service), jetons
+  d'appareil enregistrés par session (`PUT`/`DELETE /v1/devices`), jetons
+  périmés oubliés, push d'essai (`POST /v1/notifications/test`). Nouveaux
+  secrets `APNS_KEY_ID` et `APNS_PRIVATE_KEY`, posés par l'étape 7/7 de
+  `configurer-backend.mjs`.
+- Cœur : `register_push_device`, `unregister_push_device`, `send_test_push` ;
+  `webhook_status` et `regenerate_webhook` derrière `admin`. Tests `wiremock`.
+- Android : Firebase Messaging, initialisé sans le plugin Google Services
+  (valeurs de `google-services.json` lues à la compilation, secret
+  `GOOGLE_SERVICES_JSON`) ; permission demandée après la connexion, canal
+  « Disponible sur Plex », carte Notifications dans Réglages (notification
+  d'essai). APK admin : carte « Notifications Plex » avec les URL à copier.
+- iPhone : APNs, permission demandée après la connexion, notifications
+  affichées app ouverte, carte Notifications dans Réglages. La CI ajoute la
+  capacité « Notifications push » à l'identifiant d'app.
+
 ## [0.4.0] - 2026-11-26
 
 Jalon 4 : la watchlist. Depuis la fiche d'un film ou d'une série, on l'ajoute

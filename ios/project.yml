@@ -77,12 +77,15 @@ targets:
         # (variable HEYWATCHLIST_API_URL de la CI), jamais dans le dépôt.
         HeyWatchlistAPIURL: $(HEYWATCHLIST_API_URL)
         # Aucune permission demandée : pas de clé NS...UsageDescription.
-    # « Se connecter avec Apple ». fastlane coche la capacité chez Apple et
-    # régénère le profil si besoin (ios/fastlane/Fastfile, ensure_capabilities).
+    # « Se connecter avec Apple » et notifications push (APNs). fastlane coche
+    # les capacités chez Apple et régénère le profil si besoin
+    # (ios/fastlane/Fastfile, ensure_capabilities). Les builds partent tous par
+    # TestFlight : APNs de production.
     entitlements:
       path: Config/HeyWatchlist.entitlements
       properties:
         com.apple.developer.applesignin: [Default]
+        aps-environment: production
     settings:
       groups: [iphone-arm64]
       base:

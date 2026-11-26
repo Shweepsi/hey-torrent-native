@@ -10,4 +10,18 @@
     <string name="admin_invite_expires">Valable jusqu’au %1$s.</string>
     <string name="admin_invite_share">Envoyer le code</string>
     <string name="admin_invite_share_text">Je t’invite sur HeyWatchlist. Installe l’app, connecte-toi, puis saisis ce code : %1$s</string>
+
+    <string name="admin_webhook_title">Notifications Plex</string>
+    <string name="admin_webhook_body">Collez l’adresse Plex dans Plex (Réglages, Webhooks) et l’adresse Tautulli dans un agent « Webhook » de Tautulli (déclencheur « Recently Added », méthode POST, avec le corps JSON). Chaque arrivée prévient les personnes qui l’attendent.</string>
+    <string name="admin_webhook_none">Pas encore d’adresse : créez-la pour activer les notifications.</string>
+    <string name="admin_webhook_never_used">Adresse créée, encore jamais appelée par Plex ou Tautulli.</string>
+    <string name="admin_webhook_last_used">Dernier appel reçu : %1$s.</string>
+    <string name="admin_webhook_once">Copiez-les maintenant : elles ne seront plus affichées.</string>
+    <string name="admin_webhook_plex">Adresse Plex</string>
+    <string name="admin_webhook_tautulli">Adresse Tautulli</string>
+    <string name="admin_webhook_tautulli_body">Corps JSON Tautulli</string>
+    <string name="admin_webhook_copy">Copier : %1$s</string>
+    <string name="admin_webhook_create">Créer l’adresse</string>
+    <string name="admin_webhook_regenerate">Créer une nouvelle adresse (coupe l’ancienne)</string>
+    <string name="admin_webhook_creating">Création…</string>
 </resources>

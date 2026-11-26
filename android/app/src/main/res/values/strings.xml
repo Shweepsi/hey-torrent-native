@@ -149,4 +149,26 @@
     <string name="catalog_error_not_configured">L’adresse du serveur manque dans cette version de l’app : le catalogue ne peut pas se charger.</string>
     <string name="catalog_error_core_unavailable">Le cœur de l’application n’a pas pu démarrer : le catalogue est indisponible.</string>
     <string name="catalog_error_unknown">Le catalogue n’a pas pu se charger (erreur inattendue).</string>
+
+    <!-- Notifications « Disponible sur Plex ». Les clés push_available_* et
+         push_test sont envoyées telles quelles par le serveur (body_loc_key) :
+         ne pas les renommer. Le titre de la notification est celui du média. -->
+    <string name="push_channel_name">Disponible sur Plex</string>
+    <string name="push_channel_description">Un film ou une série de votre watchlist vient d’arriver sur Plex.</string>
+    <string name="push_available_movie">Disponible sur Plex. Bon film !</string>
+    <string name="push_available_show">La série est disponible sur Plex.</string>
+    <string name="push_available_season">La saison %1$s est disponible sur Plex.</string>
+    <string name="push_available_episode">Saison %1$s, épisode %2$s : disponible sur Plex.</string>
+    <string name="push_test">Notification d’essai : tout fonctionne.</string>
+
+    <string name="settings_push_title">Notifications</string>
+    <string name="settings_push_body">Vous êtes prévenu dès qu’un titre de votre watchlist arrive sur Plex.</string>
+    <string name="settings_push_unavailable">Les notifications ne sont pas disponibles dans cette version de l’app.</string>
+    <string name="settings_push_denied">Les notifications sont coupées pour HeyWatchlist dans les réglages du téléphone.</string>
+    <string name="settings_push_open_settings">Ouvrir les réglages</string>
+    <string name="settings_push_test">Envoyer une notification d’essai</string>
+    <string name="settings_push_testing">Envoi…</string>
+    <string name="settings_push_test_sent">Notification envoyée. Elle arrive dans quelques secondes.</string>
+    <string name="settings_push_test_no_device">Ce téléphone n’est pas encore enregistré. Réessayez dans un instant.</string>
+    <string name="settings_push_test_failed">L’envoi a échoué côté serveur. Réessayez plus tard.</string>
 </resources>

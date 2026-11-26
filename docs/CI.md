@@ -66,8 +66,11 @@ Dépôt GitHub > **Settings** > **Secrets and variables** > **Actions**. Les
 | `ANDROID_KEY_ALIAS` | secret | Alias de la clé (`heywatchlist` ci-dessous) |
 | `ANDROID_KEY_PASSWORD` | secret | Mot de passe de la clé (le même que celui du keystore) |
 
-Plus tard (jalon 6, **pas encore utilisé** par les workflows) :
-`GOOGLE_SERVICES_JSON`, le base64 de `google-services.json`.
+Notifications (jalon 6) : `GOOGLE_SERVICES_JSON`, le contenu de
+`google-services.json` encodé en base64 (le JSON brut est aussi accepté). Lu par
+`android/app/build.gradle.kts` ; absent, les APK se compilent sans
+notifications. La CI iOS ajoute aussi la capacité « Notifications push » à
+l'identifiant d'app.
 
 ### Serveur (jalon 2)
 
@@ -116,10 +119,10 @@ changer : fastlane relit l'identifiant dans `ios/project.yml`.
    copier le **Team ID** dans la variable `APPLE_TEAM_ID`.
 2. **Identifiant d'app** : **Certificates, Identifiers & Profiles** >
    **Identifiers** > **+** > **App IDs** > **App** > description `HeyWatchlist`,
-   **Bundle ID** en mode *Explicit* = `<identifiant>`. Aucune capacité pour
-   l'instant. (Quand on ajoutera « Se connecter avec Apple » ou les
-   notifications, cocher la capacité ici, puis relancer l'étape 5 avec
-   « Régénérer le profil ».)
+   **Bundle ID** en mode *Explicit* = `<identifiant>`. Aucune capacité à
+   cocher : la CI ajoute elle-même « Se connecter avec Apple » et
+   « Notifications push » (fastlane, `ensure_capabilities`) et régénère le
+   profil.
 3. **Fiche de l'app** : <https://appstoreconnect.apple.com> > **Apps** > **+** >
    **Nouvelle app** : plateforme iOS, nom `HeyWatchlist`, langue principale
    français, identifiant = `<identifiant>`, UGS `heywatchlist`, accès complet.

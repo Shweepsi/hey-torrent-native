@@ -13,8 +13,11 @@ mod cache;
 mod catalog;
 mod error;
 mod google;
+mod push;
 mod tmdb;
 mod watchlist;
+#[cfg(feature = "admin")]
+mod webhook;
 
 pub use account::{
     Account, AccountError, GoogleClientIds, IdentityProvider, SessionStore, SignInNonce,
@@ -28,7 +31,10 @@ pub use catalog::{
 };
 pub use error::CoreError;
 pub use google::{GoogleAuthorization, begin_google_sign_in, complete_google_sign_in};
+pub use push::{PushPlatform, TestPushResult};
 pub use watchlist::{RequestStatus, Watchlist, WatchlistError, WatchlistItem, WatchlistSnapshot};
+#[cfg(feature = "admin")]
+pub use webhook::{WebhookStatus, WebhookUrls};
 
 uniffi::setup_scaffolding!();
 

@@ -52,6 +52,17 @@ cd android
   `ANDROID_KEY_PASSWORD` quand les quatre sont définies, sinon avec la clé de
   debug (poste de développement seulement).
 
+## Notifications (Firebase)
+
+Les push « Disponible sur Plex » passent par Firebase Cloud Messaging, sans le
+plugin Google Services : `app/build.gradle.kts` lit `google-services.json`
+(secret GitHub `GOOGLE_SERVICES_JSON` en base64, ou `app/google-services.json`
+sur un poste, jamais versionné) et inscrit les valeurs de chaque édition dans
+`BuildConfig.FIREBASE_*` ; `push/PushSetup.kt` initialise Firebase avec. Sans
+ce fichier, l'app se compile et fonctionne, notifications coupées. Le texte
+vient de `strings.xml` (clés `push_*`, envoyées par le serveur : ne pas les
+renommer).
+
 ## Cœur Rust
 
 Gradle lance `scripts/build-android-core.sh` à travers deux tâches par variante :

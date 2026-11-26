@@ -865,6 +865,66 @@
         }
       }
     },
+    "push_available_episode" : {
+      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média. Arguments : saison, épisode.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saison %1$@, épisode %2$@ : disponible sur Plex."
+          }
+        }
+      }
+    },
+    "push_available_movie" : {
+      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disponible sur Plex. Bon film !"
+          }
+        }
+      }
+    },
+    "push_available_season" : {
+      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média. Argument : numéro de saison.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La saison %@ est disponible sur Plex."
+          }
+        }
+      }
+    },
+    "push_available_show" : {
+      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La série est disponible sur Plex."
+          }
+        }
+      }
+    },
+    "push_test" : {
+      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notification d’essai : tout fonctionne."
+          }
+        }
+      }
+    },
     "search.empty.description %@" : {
       "comment" : "Recherche sans résultat ; %@ est le texte saisi.",
       "extractionState" : "manual",
@@ -957,6 +1017,114 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bonjour"
+          }
+        }
+      }
+    },
+    "settings.push.body" : {
+      "comment" : "Réglages, notifications permises.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous êtes prévenu dès qu’un titre de votre watchlist arrive sur Plex."
+          }
+        }
+      }
+    },
+    "settings.push.denied" : {
+      "comment" : "Réglages, notifications refusées.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les notifications sont coupées pour HeyWatchlist dans les réglages de l’iPhone."
+          }
+        }
+      }
+    },
+    "settings.push.openSettings" : {
+      "comment" : "Bouton vers les réglages de notification du système.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir les réglages"
+          }
+        }
+      }
+    },
+    "settings.push.test" : {
+      "comment" : "Bouton de notification d’essai.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer une notification d’essai"
+          }
+        }
+      }
+    },
+    "settings.push.testFailed" : {
+      "comment" : "Apple a refusé ou le serveur n’a pas de clé APNs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’envoi a échoué côté serveur. Réessayez plus tard."
+          }
+        }
+      }
+    },
+    "settings.push.testNoDevice" : {
+      "comment" : "Aucun appareil connu du serveur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cet iPhone n’est pas encore enregistré. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "settings.push.testSent" : {
+      "comment" : "Notification d’essai partie.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notification envoyée. Elle arrive dans quelques secondes."
+          }
+        }
+      }
+    },
+    "settings.push.testing" : {
+      "comment" : "Notification d’essai en cours.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi…"
+          }
+        }
+      }
+    },
+    "settings.push.title" : {
+      "comment" : "Réglages, carte des notifications.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
           }
         }
       }
