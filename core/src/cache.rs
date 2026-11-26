@@ -27,6 +27,20 @@ pub(crate) fn unix_now() -> i64 {
         })
 }
 
+/// Ouvre (ou crée) la base SQLite de `path` ; `None` si le fichier est
+/// inutilisable. Un chemin vide ferait créer à SQLite une base temporaire,
+/// perdue à la fermeture : il donne aussi `None`.
+pub(crate) fn open_connection(path: &str) -> Option<Connection> {
+    if path.trim().is_empty() {
+        return None;
+    }
+    // Pas de `SQLITE_OPEN_URI` : le chemin de l'app n'est jamais interprété.
+    let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
+        | OpenFlags::SQLITE_OPEN_CREATE
+        | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    Connection::open_with_flags(path, flags).ok()
+}
+
 /// Réponse gardée et date de son enregistrement.
 pub(crate) struct Entry {
     pub(crate) body: Vec<u8>,
@@ -49,16 +63,7 @@ impl Cache {
     /// Ouvre (ou crée) le cache à `path` et élague les vieilles entrées.
     /// `None` si le fichier est inutilisable : l'appelant se passe de cache.
     pub(crate) fn open(path: &str, now: i64) -> Option<Self> {
-        // Un chemin vide ferait créer à SQLite une base temporaire, perdue à
-        // la fermeture : mieux vaut pas de cache.
-        if path.trim().is_empty() {
-            return None;
-        }
-        // Pas de `SQLITE_OPEN_URI` : le chemin de l'app n'est jamais interprété.
-        let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_CREATE
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX;
-        let connection = Connection::open_with_flags(path, flags).ok()?;
+        let connection = open_connection(path)?;
         connection
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS responses (
