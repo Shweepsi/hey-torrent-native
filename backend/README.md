@@ -59,11 +59,19 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | `PUT /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Ajoute ou met à jour un titre ; `{seasons?}` → `{item}` |
 | `DELETE /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Retire un titre (204) |
 | `GET /v1/tmdb/<chemin>` | jeton d'accès | Relais du catalogue TMDB : liste blanche de chemins et de paramètres (voir « Relais TMDB »), réponse TMDB telle quelle |
+| `GET /v1/admin/requests?status=open\|all\|requested\|in_progress\|available\|refused` | administrateur | Demandes de tous les comptes, avec leurs abonnés et saisons (`open` par défaut : demandées puis en cours, les plus anciennes d'abord) |
+| `POST /v1/admin/requests/<id>/start` | administrateur | `{release_title, torrent_hash?}` : passe la demande « en cours » |
+| `POST /v1/admin/requests/<id>/refuse` | administrateur | `{reason?}` (200 caractères au plus) : refuse la demande |
+| `POST /v1/admin/requests/<id>/reopen` | administrateur | Remet une demande en cours ou refusée « demandée » |
+| `GET`, `PUT`, `DELETE /v1/admin/settings` | administrateur | Réglages des serveurs de l'administrateur, `{settings}` (texte opaque produit par le cœur), chiffrés avec `CREDENTIALS_KEY` |
+| `GET /v1/admin/invitations` | administrateur | 50 dernières invitations, sans leur code |
+| `DELETE /v1/admin/invitations/<id>` | administrateur | Révoque une invitation inutilisée |
 
 Les erreurs sont `{"error": "<code>"}`, avec un code stable que le cœur traduit
 en type d'erreur : `invalid_request` (400), `invalid_token`,
 `unauthorized`, `session_expired` (401), `invitation_required`,
-`invitation_invalid`, `forbidden` (403), `not_found` (404),
+`invitation_invalid`, `forbidden` (403), `not_found` (404), `conflict` (409,
+la demande a changé entre-temps),
 `provider_unavailable` (503), `internal` (500). Aucun texte affiché.
 
 ## Relais TMDB
@@ -121,8 +129,10 @@ Base `heywatchlist` (identifiant dans `wrangler.toml`), migrations dans
 (`0002_tmdb_cache.sql`), des données publiques sans lien avec `users`. Le
 jalon 4 ajoute `requests` (une demande par titre, son état) et
 `watchlist_items` (rattachées à `users` et à `requests`,
-`0003_watchlist.sql`). Les tables des jalons suivants (appareils,
-bibliothèque Plex…) arriveront avec leur jalon, dans de nouvelles migrations, rattachées à
+`0003_watchlist.sql`). Le jalon 5 (`0005_admin.sql`) ajoute aux demandes la
+release envoyée et crée `credentials`, les réglages chiffrés de
+l'administrateur. Les tables des jalons suivants (appareils, bibliothèque
+Plex…) arriveront avec leur jalon, dans de nouvelles migrations, rattachées à
 `users` par `ON DELETE CASCADE`.
 
 ## Secrets du Worker
@@ -136,6 +146,7 @@ le dépôt.
 | `BOOTSTRAP_CODE` | jusqu'au premier compte | Code qui crée le compte administrateur |
 | `GOOGLE_WEB_CLIENT_ID` | pour Google sur Android | Client OAuth « Application Web » |
 | `GOOGLE_IOS_CLIENT_ID` | pour Google sur iPhone | Client OAuth « iOS » |
+| `CREDENTIALS_KEY` | pour l'espace admin | 32 octets aléatoires en base64 : chiffre (AES-256-GCM) les réglages des serveurs de l'administrateur. Ne jamais la changer : les réglages enregistrés deviendraient illisibles (il faudrait les ressaisir). |
 | `TMDB_API_KEY` | pour l'onglet Découvrir | Clé d'API v3 (32 caractères hexadécimaux) ou jeton d'accès v4 (`eyJ…`) de TMDB |
 | `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` | avant la publication | Clé « Sign in with Apple » : révocation à la suppression d'un compte |
 | `FCM_SERVICE_ACCOUNT` | jalon 6 | Déjà posé ; pas encore utilisé |

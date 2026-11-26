@@ -17,6 +17,8 @@ export default defineConfig({
           GOOGLE_IOS_CLIENT_ID: "ios-client.apps.googleusercontent.com",
           // Fausse clé v3 (32 caractères hexadécimaux) : TMDB est simulé.
           TMDB_API_KEY: "fa4efa4efa4efa4efa4efa4efa4efa4e",
+          // Clé de test des réglages chiffrés (32 octets).
+          CREDENTIALS_KEY: "Y2xlLWRlLXRlc3QtZGVzLXJlZ2xhZ2VzLTMyLW8hISE=",
         },
       },
     })),

@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import app.heywatchlist.ui.theme.HeyTheme
 
@@ -29,6 +30,8 @@ fun HeyTextField(
     modifier: Modifier = Modifier,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
+    /** Par exemple `PasswordVisualTransformation()` pour masquer un secret. */
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val colors = HeyTheme.colors
     val shape = HeyTheme.shapes.button
@@ -40,6 +43,7 @@ fun HeyTextField(
         cursorBrush = SolidColor(colors.primary),
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
+        visualTransformation = visualTransformation,
         modifier = modifier.fillMaxWidth().semantics { contentDescription = label },
         decorationBox = { field ->
             Box(

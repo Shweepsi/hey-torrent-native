@@ -5,6 +5,33 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.5.0] - 2026-11-26
+
+Jalon 5 : l'espace admin, dans l'APK admin seulement. L'administrateur voit
+toutes les demandes, cherche dans ses sources Torznab (Prowlarr), choisit une
+release notée et l'envoie à son qBittorrent ; il peut refuser avec un motif,
+suivre les téléchargements, régler ses serveurs et gérer les invitations.
+
+### Ajouté
+
+- Worker : routes `/v1/admin/requests` (liste, `start`, `refuse`, `reopen`),
+  `/v1/admin/settings` (réglages chiffrés, AES-256-GCM) et
+  `/v1/admin/invitations` (liste, révocation) ; erreur `conflict` (409) ;
+  migration `0005_admin.sql`. Tests Vitest.
+- Cœur, fonctionnalité `admin` : objet `AdminSpace`, recherche Torznab en
+  parallèle (6 s par source, repli sur la recherche simple, résultats au fil
+  de l'eau), lecture des noms de release, tri des releases francophones,
+  client qBittorrent v4 et v5. Tests `wiremock` et jeu de cas de tri.
+- Android, édition admin : `AdminActivity` (Demandes, fiche, Suivi, Serveurs,
+  Invitations), tests des ViewModels dans `src/testAdmin/`, lancés par la CI.
+- `configurer-backend.mjs` pose le secret `CREDENTIALS_KEY`.
+
+### Modifié
+
+- Android : la création d'invitations passe de Réglages à l'espace admin ;
+  `KeystoreSessionStore` accepte un fichier et une clé propres ;
+  `HeyTextField` peut masquer sa saisie.
+
 ## [0.4.0] - 2026-11-26
 
 Jalon 4 : la watchlist. Depuis la fiche d'un film ou d'une série, on l'ajoute

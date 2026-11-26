@@ -90,14 +90,24 @@ appareil.
 
 ## Jalon 5 : espace admin (APK Android)
 
-- [ ] Cœur, derrière `admin` : client Torznab (recherche en parallèle, délai de
-      6 s par source), scoring des releases francophones (cas de test dans
-      `core/tests/fixtures/`), client qBittorrent v4 et v5 avec catégories.
-- [ ] Écrans admin dans `android/app/src/admin/` : file des demandes,
-      résultats notés, envoi à qBittorrent, refus avec motif, suivi, réglages
-      des serveurs (chiffrés sur Cloudflare), invitations.
-- [ ] Vérifier les règles Google de vérification des développeurs pour les APK
-      hors Play Store.
+- [x] Cœur, derrière `admin` : client Torznab (recherche en parallèle, délai de
+      6 s par source, résultats au fil de l'eau), tri des releases
+      francophones (cas de test dans `core/tests/fixtures/`), client
+      qBittorrent v4 et v5 avec catégories et étiquettes.
+- [x] Worker : routes `/v1/admin/…` (demandes, réglages chiffrés,
+      invitations), migration `0005_admin.sql`, secret `CREDENTIALS_KEY`
+      posé par `configurer-backend.mjs`.
+- [x] Écrans admin dans `android/app/src/admin/` : demandes, fiche avec
+      recherche et envoi à qBittorrent, refus avec motif, réouverture, suivi
+      des téléchargements, réglages des serveurs, invitations.
+- [ ] Relancer `configurer-backend.mjs` pour poser `CREDENTIALS_KEY`, puis
+      déployer le Worker (migration 0005).
+- [ ] CI verte, puis essai de bout en bout sur l'APK admin : saisir Prowlarr
+      et qBittorrent dans Serveurs, traiter une demande jusqu'à qBittorrent.
+- [ ] Ajuster les poids du tri après les premiers vrais essais
+      (`core/src/admin/scoring.rs`).
+- [x] Vérification des développeurs Android (point n°4) : voir
+      `docs/DECISIONS.md`, « Décidé au jalon 5 ».
 
 ## Jalon 6 : notifications « Disponible sur Plex »
 
@@ -127,7 +137,8 @@ appareil.
 2. [ ] Comment savoir ce qui est « Sur Plex » pour les invités (table
        `library` et synchronisation nocturne proposées).
 3. [ ] Dépôt privé ou public (minutes macOS de GitHub Actions).
-4. [ ] APK admin et vérification des développeurs Android.
+4. [x] APK admin et vérification des développeurs Android (jalon 5 : rien à
+       faire pour un APK installé par ADB ; compte gratuit si besoin).
 5. [x] Backend en TypeScript.
 
 ## Risques à surveiller

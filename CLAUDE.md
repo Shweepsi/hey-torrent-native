@@ -72,7 +72,7 @@ cargo test --features admin
 App Android (voir `android/README.md`), depuis `android/` :
 
 ```sh
-./gradlew testPublicDebugUnitTest assembleAdminDebug
+./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug
 ```
 
 iOS : compilé uniquement par la CI (`docs/CI.md`), pas de vérification locale.

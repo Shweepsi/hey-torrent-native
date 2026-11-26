@@ -1,12 +1,13 @@
 package app.heywatchlist
 
 import androidx.compose.runtime.Composable
+import app.heywatchlist.admin.AdminEntryCard
 import app.heywatchlist.core.AccountGateway
 
-/** Édition admin : ajoute la création d'invitations dans Réglages. */
+/** Édition admin : ajoute dans Réglages l'entrée de l'espace admin. */
 object EditionContent {
     @Composable
     fun SettingsExtras(gateway: AccountGateway, isAdmin: Boolean) {
-        if (isAdmin) InvitationCard(gateway)
+        if (isAdmin) AdminEntryCard()
     }
 }

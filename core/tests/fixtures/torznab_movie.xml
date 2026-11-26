@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Flux Torznab inventé, à la forme de celui d'un indexeur de Prowlarr.
+     Aucune source réelle : adresses en .invalid, empreintes fictives. -->
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <title>Indexeur de test</title>
+    <item>
+      <title>Dune.Deuxieme.Partie.2024.MULTi.VFF.1080p.BluRay.x265-GRP</title>
+      <guid>https://indexer.invalid/details/1</guid>
+      <prowlarrindexer id="1">Indexeur A</prowlarrindexer>
+      <pubDate>Mon, 10 Jun 2024 18:00:00 +0200</pubDate>
+      <size>12884901888</size>
+      <link>https://indexer.invalid/download/1?apikey=CLE-SECRETE</link>
+      <enclosure url="https://indexer.invalid/download/1?apikey=CLE-SECRETE" length="12884901888" type="application/x-bittorrent" />
+      <torznab:attr name="seeders" value="120" />
+      <torznab:attr name="peers" value="130" />
+      <torznab:attr name="infohash" value="1111111111111111111111111111111111111111" />
+      <torznab:attr name="magneturl" value="magnet:?xt=urn:btih:1111111111111111111111111111111111111111&amp;dn=Dune" />
+    </item>
+    <item>
+      <title>Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.HDR.H265-GRP</title>
+      <guid>https://indexer.invalid/details/2</guid>
+      <pubDate>Tue, 16 Apr 2024 08:00:00 +0000</pubDate>
+      <enclosure url="https://indexer.invalid/download/2?apikey=CLE-SECRETE" length="21474836480" type="application/x-bittorrent" />
+      <torznab:attr name="seeders" value="300" />
+      <torznab:attr name="peers" value="320" />
+    </item>
+    <item>
+      <title>Dune.Deuxieme.Partie.2024.FRENCH.720p.WEB.H264-GRP</title>
+      <guid>https://indexer.invalid/details/3</guid>
+      <pubDate>Wed, 17 Apr 2024 08:00:00 +0000</pubDate>
+      <enclosure url="https://indexer.invalid/download/3?apikey=CLE-SECRETE" length="2147483648" type="application/x-bittorrent" />
+      <torznab:attr name="seeders" value="15" />
+    </item>
+    <item>
+      <title>Dune.2021.MULTi.1080p.BluRay.x264-GRP</title>
+      <guid>https://indexer.invalid/details/4</guid>
+      <enclosure url="https://indexer.invalid/download/4" length="10737418240" type="application/x-bittorrent" />
+      <torznab:attr name="seeders" value="500" />
+    </item>
+    <item>
+      <title>Dune.Deuxieme.Partie.2024.FRENCH.HDCAM.x264</title>
+      <guid>https://indexer.invalid/details/5</guid>
+      <enclosure url="https://indexer.invalid/download/5" length="1073741824" type="application/x-bittorrent" />
+      <torznab:attr name="seeders" value="40" />
+    </item>
+    <item>
+      <guid>https://indexer.invalid/details/6</guid>
+      <enclosure url="https://indexer.invalid/download/6" length="1" type="application/x-bittorrent" />
+    </item>
+    <item>
+      <title>Dune Deuxieme Partie 2024 artbook PDF</title>
+      <guid>https://indexer.invalid/details/7</guid>
+      <enclosure url="https://indexer.invalid/download/7" length="1000" type="application/x-bittorrent" />
+    </item>
+    <item>
+      <title>Dune.Deuxieme.Partie.2024.MULTi.1080p.WEB.H264-GRP</title>
+      <guid>https://indexer.invalid/details/8</guid>
+      <enclosure url="javascript:alert(1)" length="1000" type="application/x-bittorrent" />
+    </item>
+  </channel>
+</rss>

@@ -11,6 +11,7 @@ export type ErrorCode =
   | "forbidden"
   | "session_expired"
   | "not_found"
+  | "conflict"
   | "provider_unavailable"
   | "internal";
 
@@ -23,6 +24,7 @@ const STATUS: Record<ErrorCode, number> = {
   forbidden: 403,
   session_expired: 401,
   not_found: 404,
+  conflict: 409,
   provider_unavailable: 503,
   internal: 500,
 };
