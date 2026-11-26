@@ -92,6 +92,10 @@ import app.heywatchlist.ui.components.TitleCard
 import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.components.rememberSkeletonPulse
 import app.heywatchlist.ui.theme.HeyTheme
+import app.heywatchlist.ui.watchlist.WatchlistPanel
+import app.heywatchlist.ui.watchlist.WatchlistUiState
+import app.heywatchlist.ui.watchlist.WatchlistViewModel
+import app.heywatchlist.ui.watchlist.watchlistKey
 
 private val BackdropHeight = 300.dp
 private val BackdropHeightWithoutImage = 190.dp
@@ -106,26 +110,38 @@ private const val EXPANDED_CHEVRON_DEGREES = 180f
  * soit le thème : le fond du titre se fond dans un dégradé sombre, sous le texte.
  */
 @Composable
-fun DetailScreen(viewModel: DetailViewModel, onBack: () -> Unit, onOpenTitle: (Title) -> Unit) {
+fun DetailScreen(
+    viewModel: DetailViewModel,
+    watchlist: WatchlistViewModel,
+    onBack: () -> Unit,
+    onOpenTitle: (Title) -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val watchlistState by watchlist.uiState.collectAsStateWithLifecycle()
     DetailContent(
         state = state,
+        watchlist = watchlistState,
         onBack = onBack,
         onOpenTitle = onOpenTitle,
         onRetry = viewModel::retry,
         onToggleSeason = viewModel::toggleSeason,
         onRetrySeason = viewModel::retrySeason,
+        onAddToWatchlist = { seasons -> watchlist.add(state.preview, seasons) },
+        onRemoveFromWatchlist = { watchlist.remove(state.preview.kind, state.preview.id) },
     )
 }
 
 @Composable
 internal fun DetailContent(
     state: DetailUiState,
+    watchlist: WatchlistUiState,
     onBack: () -> Unit,
     onOpenTitle: (Title) -> Unit,
     onRetry: () -> Unit,
     onToggleSeason: (Int) -> Unit,
     onRetrySeason: (Int) -> Unit,
+    onAddToWatchlist: (seasons: List<Int>?) -> Unit,
+    onRemoveFromWatchlist: () -> Unit,
 ) {
     HeyTheme(darkTheme = true) {
         LightStatusBarIcons()
@@ -147,7 +163,16 @@ internal fun DetailContent(
                         .graphicsLayer { alpha = enter }
                         .background(HeyTheme.colors.background),
                 ) {
-                    DetailList(state, onOpenTitle, onRetry, onToggleSeason, onRetrySeason)
+                    DetailList(
+                        state = state,
+                        watchlist = watchlist,
+                        onOpenTitle = onOpenTitle,
+                        onRetry = onRetry,
+                        onToggleSeason = onToggleSeason,
+                        onRetrySeason = onRetrySeason,
+                        onAddToWatchlist = onAddToWatchlist,
+                        onRemoveFromWatchlist = onRemoveFromWatchlist,
+                    )
                     HeyIconButton(
                         icon = HeyIcons.Back,
                         contentDescription = stringResource(R.string.action_back),
@@ -188,10 +213,13 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 private fun DetailList(
     state: DetailUiState,
+    watchlist: WatchlistUiState,
     onOpenTitle: (Title) -> Unit,
     onRetry: () -> Unit,
     onToggleSeason: (Int) -> Unit,
     onRetrySeason: (Int) -> Unit,
+    onAddToWatchlist: (seasons: List<Int>?) -> Unit,
+    onRemoveFromWatchlist: () -> Unit,
 ) {
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
@@ -200,6 +228,23 @@ private fun DetailList(
     ) {
         item(key = "header") {
             DetailHeader(title = state.preview, detail = (state as? DetailUiState.Loaded)?.detail)
+        }
+        item(key = "watchlist") {
+            val title = state.preview
+            WatchlistPanel(
+                title = title,
+                entry = watchlist.entryFor(title.kind, title.id),
+                // En échec, la série se demande entière ; pendant le chargement, le choix attend.
+                seasons = when (state) {
+                    is DetailUiState.Loaded -> state.detail.seasons
+                    is DetailUiState.Failed -> emptyList()
+                    is DetailUiState.Loading -> null
+                },
+                busy = watchlistKey(title.kind, title.id) in watchlist.busy,
+                onAdd = onAddToWatchlist,
+                onRemove = onRemoveFromWatchlist,
+                modifier = Modifier.screenPadding().padding(top = SectionGap),
+            )
         }
         when (state) {
             is DetailUiState.Loading -> item(key = "loading") { DetailSkeleton() }

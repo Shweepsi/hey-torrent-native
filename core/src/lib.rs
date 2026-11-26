@@ -14,6 +14,7 @@ mod catalog;
 mod error;
 mod google;
 mod tmdb;
+mod watchlist;
 
 pub use account::{
     Account, AccountError, GoogleClientIds, IdentityProvider, SessionStore, SignInNonce,
@@ -27,6 +28,7 @@ pub use catalog::{
 };
 pub use error::CoreError;
 pub use google::{GoogleAuthorization, begin_google_sign_in, complete_google_sign_in};
+pub use watchlist::{RequestStatus, Watchlist, WatchlistError, WatchlistItem, WatchlistSnapshot};
 
 uniffi::setup_scaffolding!();
 

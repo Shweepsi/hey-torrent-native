@@ -242,16 +242,31 @@ async function writeCache(env: Env, key: string, body: string, ttl: number, now:
 export async function relayTmdb(request: Request, env: Env, fetcher: FetchLike, now: number): Promise<Response> {
   await authenticate(request, env, now);
   const url = new URL(request.url);
-  const found = resolve(url.pathname.slice(TMDB_PREFIX.length));
+  return jsonText(await cachedTmdb(env, fetcher, url.pathname.slice(TMDB_PREFIX.length), url.searchParams, now));
+}
+
+/**
+ * Corps TMDB d'un chemin de la liste blanche (après `/v1/tmdb/`), lu dans le
+ * cache ou chez TMDB. Sert au relais et au Worker lui-même (fiche d'un titre
+ * demandé), avec les mêmes clés de cache.
+ */
+export async function cachedTmdb(
+  env: Env,
+  fetcher: FetchLike,
+  path: string,
+  query: URLSearchParams,
+  now: number,
+): Promise<string> {
+  const found = resolve(path);
   if (!found) throw new ApiError("not_found");
 
-  const params = upstreamParams(found, url.searchParams);
+  const params = upstreamParams(found, query);
   const cacheKey = `${found.path}?${params.toString()}`;
   if (found.ttl > 0) {
     const cached = await readCache(env, cacheKey, now);
-    if (cached !== null) return jsonText(cached);
+    if (cached !== null) return cached;
   }
   const body = await fetchTmdb(env, fetcher, found.path, params);
   if (found.ttl > 0) await writeCache(env, cacheKey, body, found.ttl, now);
-  return jsonText(body);
+  return body;
 }

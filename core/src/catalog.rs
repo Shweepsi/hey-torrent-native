@@ -20,22 +20,30 @@ const MAX_PAGE: u32 = 500;
 /// Longueur maximale d'une recherche acceptée par le Worker, en caractères.
 const MAX_QUERY_CHARS: usize = 100;
 /// Plus grand identifiant accepté par le Worker (10 chiffres).
-const MAX_ID: u64 = 9_999_999_999;
+pub(crate) const MAX_ID: u64 = 9_999_999_999;
 /// Plus grand numéro de saison accepté par le Worker.
-const MAX_SEASON: u32 = 99;
+pub(crate) const MAX_SEASON: u32 = 99;
 
 /// Film ou série.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, uniffi::Enum)]
 pub enum MediaType {
     Movie,
     Tv,
 }
 
 impl MediaType {
-    fn wire(self) -> &'static str {
+    pub(crate) fn wire(self) -> &'static str {
         match self {
             Self::Movie => "movie",
             Self::Tv => "tv",
+        }
+    }
+
+    pub(crate) fn from_wire(raw: &str) -> Option<Self> {
+        match raw {
+            "movie" => Some(Self::Movie),
+            "tv" => Some(Self::Tv),
+            _ => None,
         }
     }
 }
@@ -235,7 +243,8 @@ impl From<ApiFailure> for CatalogError {
             ApiFailure::NotFound => Self::NotFound,
             ApiFailure::Unavailable => Self::Unavailable,
             ApiFailure::Server => Self::Server,
-            ApiFailure::Unexpected => Self::Unexpected,
+            // Le catalogue n'envoie que des requêtes valides : un refus est imprévu.
+            ApiFailure::Rejected | ApiFailure::Unexpected => Self::Unexpected,
             ApiFailure::Internal => Self::Internal,
         }
     }

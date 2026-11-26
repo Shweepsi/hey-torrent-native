@@ -5,6 +5,34 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.4.0] - 2026-11-26
+
+Jalon 4 : la watchlist. Depuis la fiche d'un film ou d'une série, on l'ajoute
+à sa watchlist, ce qui crée la demande ou rattache la personne à celle qui
+existe déjà. L'onglet Watchlist montre l'état de chaque demande (demandée, en
+cours, disponible, refusée). Une série se demande entière ou par saisons.
+
+### Ajouté
+
+- Worker : routes `GET /v1/watchlist`, `PUT` et `DELETE
+  /v1/watchlist/{movie|tv}/{id}`, tables `requests` et `watchlist_items`
+  (migration `0003_watchlist.sql`), une demande par titre, titre et affiche lus
+  chez TMDB par le Worker, saisons vérifiées, suppression des demandes que plus
+  personne ne suit. Tests Vitest.
+- Cœur : objet `Watchlist` (liste, ajout, retrait, rafraîchissement), copie
+  locale SQLite et file d'attente hors ligne d'un changement par titre, envoyée
+  au retour du réseau ; erreurs typées `WatchlistError`. Tests `wiremock`.
+- Android et iPhone : bouton « Ajouter à ma watchlist » sur la fiche, choix
+  « série entière » ou saisons, état de la demande, retrait ; onglet Watchlist
+  avec tirer pour rafraîchir et bandeau hors ligne.
+
+### Modifié
+
+- Cœur : `ApiFailure::Rejected` pour les refus `invalid_request` et
+  `forbidden` du Worker.
+- Worker : le relais TMDB expose sa lecture en cache (`cachedTmdb`) pour la
+  watchlist.
+
 ## [0.3.0] - 2026-11-26
 
 Jalon 3 : Découvrir. L'onglet Découvrir parcourt le catalogue TMDB en
