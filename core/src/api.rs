@@ -1,0 +1,263 @@
+//! Client HTTP de l'API du Worker (`backend/`) : requêtes, réponses et
+//! traduction des codes d'erreur du serveur en [`AccountError`].
+
+use std::time::Duration;
+
+use serde::Deserialize;
+use serde::de::DeserializeOwned;
+
+use crate::account::{AccountError, UserProfile, UserRole};
+
+/// Délai maximal d'une requête complète.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const USER_AGENT: &str = concat!("HeyWatchlist/", env!("CARGO_PKG_VERSION"));
+
+/// Client HTTPS commun. Sur Android, les racines de confiance de Mozilla sont
+/// embarquées : le vérificateur du système (`rustls-platform-verifier`)
+/// demanderait une initialisation JNI par l'app, sans quoi chaque requête
+/// HTTPS échouerait.
+pub(crate) fn http_client() -> Result<reqwest::Client, AccountError> {
+    let builder = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(REQUEST_TIMEOUT)
+        // Jamais de redirection : une API ne redirige pas, et un jeton ne doit
+        // pas partir ailleurs.
+        .redirect(reqwest::redirect::Policy::none());
+    #[cfg(target_os = "android")]
+    let builder = builder.tls_certs_only(embedded_roots());
+    builder.build().map_err(|_| AccountError::Internal)
+}
+
+#[cfg(any(target_os = "android", test))]
+fn embedded_roots() -> Vec<reqwest::Certificate> {
+    webpki_root_certs::TLS_SERVER_ROOT_CERTS
+        .iter()
+        .filter_map(|der| reqwest::Certificate::from_der(der).ok())
+        .collect()
+}
+
+/// Adresse de base de l'API, validée : HTTPS obligatoire, sauf sur la boucle
+/// locale (tests et développement).
+#[derive(Debug, Clone)]
+pub(crate) struct BaseUrl(url::Url);
+
+impl BaseUrl {
+    pub(crate) fn parse(raw: &str) -> Result<Self, AccountError> {
+        let url = url::Url::parse(raw.trim()).map_err(|_| AccountError::InvalidConfiguration)?;
+        let loopback = matches!(url.host_str(), Some("127.0.0.1" | "localhost" | "[::1]"));
+        let secure = url.scheme() == "https" || (url.scheme() == "http" && loopback);
+        if !secure
+            || url.host_str().is_none()
+            || url.query().is_some()
+            || !url.username().is_empty()
+        {
+            return Err(AccountError::InvalidConfiguration);
+        }
+        Ok(Self(url))
+    }
+
+    /// `chemin` est absolu (`/v1/...`) ; un éventuel préfixe de la base est gardé.
+    pub(crate) fn join(&self, path: &str) -> String {
+        let base = self.0.as_str().trim_end_matches('/');
+        format!("{base}{path}")
+    }
+}
+
+#[derive(Deserialize)]
+struct ErrorBody {
+    error: String,
+}
+
+/// Code d'erreur du serveur (ou statut sans corps lisible) → erreur typée.
+fn server_error(status: u16, code: Option<&str>) -> AccountError {
+    match code {
+        Some("invalid_token") => AccountError::InvalidIdentity,
+        Some("invitation_required") => AccountError::InvitationRequired,
+        Some("invitation_invalid") => AccountError::InvitationInvalid,
+        Some("unauthorized" | "session_expired") => AccountError::SignedOut,
+        Some("provider_unavailable") => AccountError::ProviderUnavailable,
+        Some("forbidden") => AccountError::Forbidden,
+        _ if status == 401 => AccountError::SignedOut,
+        _ if status >= 500 => AccountError::Server,
+        _ => AccountError::Unexpected,
+    }
+}
+
+/// Échec de transport (pas de réseau, délai dépassé…).
+pub(crate) fn transport_error(_error: reqwest::Error) -> AccountError {
+    // Le détail n'est pas gardé : il peut contenir l'adresse du serveur.
+    AccountError::Network
+}
+
+/// Lit une réponse : corps JSON si succès, erreur typée sinon.
+pub(crate) async fn read<T: DeserializeOwned>(
+    response: reqwest::Response,
+) -> Result<T, AccountError> {
+    let status = response.status().as_u16();
+    let bytes = response.bytes().await.map_err(transport_error)?;
+    if (200..300).contains(&status) {
+        return serde_json::from_slice(&bytes).map_err(|_| AccountError::Unexpected);
+    }
+    let code = serde_json::from_slice::<ErrorBody>(&bytes)
+        .ok()
+        .map(|b| b.error);
+    Err(server_error(status, code.as_deref()))
+}
+
+/// Comme [`read`], pour une réponse sans corps attendu.
+pub(crate) async fn read_empty(response: reqwest::Response) -> Result<(), AccountError> {
+    let status = response.status().as_u16();
+    if (200..300).contains(&status) {
+        return Ok(());
+    }
+    let bytes = response.bytes().await.map_err(transport_error)?;
+    let code = serde_json::from_slice::<ErrorBody>(&bytes)
+        .ok()
+        .map(|b| b.error);
+    Err(server_error(status, code.as_deref()))
+}
+
+/// Compte tel que l'API le renvoie.
+#[derive(Debug, Clone, Deserialize, serde::Serialize, PartialEq, Eq)]
+pub(crate) struct WireUser {
+    pub id: String,
+    pub role: String,
+    pub display_name: Option<String>,
+    /// Fournisseurs rattachés (`apple`, `google`) ; absent d'un vieux serveur.
+    #[serde(default)]
+    pub providers: Vec<String>,
+}
+
+impl WireUser {
+    pub(crate) fn profile(&self) -> UserProfile {
+        UserProfile {
+            id: self.id.clone(),
+            display_name: self
+                .display_name
+                .clone()
+                .filter(|name| !name.trim().is_empty()),
+            has_apple: self.providers.iter().any(|p| p == "apple"),
+            // Rôle inconnu (version future du serveur) : le moins de droits.
+            role: if self.role == "admin" {
+                UserRole::Admin
+            } else {
+                UserRole::Member
+            },
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub(crate) struct TokenPair {
+    pub access_token: String,
+    pub access_expires_in: u64,
+    pub refresh_token: String,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct SignInResponse {
+    #[serde(flatten)]
+    pub tokens: TokenPair,
+    pub user: WireUser,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct MeResponse {
+    pub user: WireUser,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct ConfigResponse {
+    pub google_web_client_id: Option<String>,
+    pub google_ios_client_id: Option<String>,
+}
+
+#[cfg(feature = "admin")]
+#[derive(Deserialize)]
+pub(crate) struct InvitationResponse {
+    pub code: String,
+    pub expires_at: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn embedded_roots_are_all_readable() {
+        let roots = embedded_roots();
+        assert!(roots.len() > 100);
+        assert_eq!(roots.len(), webpki_root_certs::TLS_SERVER_ROOT_CERTS.len());
+        reqwest::Client::builder()
+            .tls_certs_only(roots)
+            .build()
+            .expect("client construit avec les seules racines embarquées");
+    }
+
+    #[test]
+    fn base_url_requires_https_outside_loopback() {
+        assert!(BaseUrl::parse("https://api.example.com").is_ok());
+        assert!(BaseUrl::parse("http://127.0.0.1:8787").is_ok());
+        assert!(BaseUrl::parse("http://api.example.com").is_err());
+        assert!(BaseUrl::parse("ftp://api.example.com").is_err());
+        assert!(BaseUrl::parse("https://user@api.example.com").is_err());
+        assert!(BaseUrl::parse("https://api.example.com/?k=v").is_err());
+        assert!(BaseUrl::parse("pas une url").is_err());
+        assert!(BaseUrl::parse("").is_err());
+    }
+
+    #[test]
+    fn base_url_joins_paths_without_double_slash() {
+        let base = BaseUrl::parse("https://api.example.com/").unwrap();
+        assert_eq!(base.join("/v1/me"), "https://api.example.com/v1/me");
+        let prefixed = BaseUrl::parse("https://example.com/api").unwrap();
+        assert_eq!(prefixed.join("/v1/me"), "https://example.com/api/v1/me");
+    }
+
+    #[test]
+    fn server_codes_map_to_typed_errors() {
+        assert!(matches!(
+            server_error(403, Some("invitation_required")),
+            AccountError::InvitationRequired
+        ));
+        assert!(matches!(
+            server_error(403, Some("invitation_invalid")),
+            AccountError::InvitationInvalid
+        ));
+        assert!(matches!(
+            server_error(401, Some("invalid_token")),
+            AccountError::InvalidIdentity
+        ));
+        assert!(matches!(
+            server_error(401, Some("session_expired")),
+            AccountError::SignedOut
+        ));
+        assert!(matches!(server_error(401, None), AccountError::SignedOut));
+        assert!(matches!(
+            server_error(503, Some("provider_unavailable")),
+            AccountError::ProviderUnavailable
+        ));
+        assert!(matches!(server_error(502, None), AccountError::Server));
+        assert!(matches!(
+            server_error(418, Some("inconnu")),
+            AccountError::Unexpected
+        ));
+    }
+
+    #[test]
+    fn unknown_role_gets_member_rights() {
+        let user = WireUser {
+            id: "u".into(),
+            role: "superuser".into(),
+            display_name: Some("  ".into()),
+            providers: vec!["google".into()],
+        };
+        let profile = user.profile();
+        assert_eq!(profile.role, UserRole::Member);
+        assert_eq!(profile.display_name, None);
+        assert!(!profile.has_apple);
+        assert!(!profile.has_apple);
+    }
+}

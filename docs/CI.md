@@ -10,6 +10,9 @@ quel ordre, et où lire les résultats**.
 > local sur Linux ; `cargo-ndk` 4.1.2 a été compilé ; les tests de `buildSrc`
 > ont tourné ; le `Fastfile` a été chargé par fastlane 2.242 et la lane `beta`
 > déroulée avec de fausses clés jusqu'à `match` (aucun secret dans son journal).
+> Le backend (`backend/`) : `npm run check` et ses 35 tests Vitest ont tourné en
+> local dans `workerd` ; `configurer-backend.mjs` a été déroulé contre une API
+> Cloudflare et un `gh` simulés, jamais contre les vrais services.
 > **Rien n'a encore tourné sur GitHub, sur macOS ni chez Apple, et aucune
 > compilation Android ou Xcode n'a eu lieu** (ni SDK Android ni Xcode dans
 > l'environnement de développement) : les premiers tours de CI serviront à
@@ -23,6 +26,7 @@ quel ordre, et où lire les résultats**.
 | `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests de `buildSrc`, `./gradlew testPublicDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié), APK admin de debug ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé et AAB public |
 | `ci-ios.yml` | PR (hors brouillons), `main`, tags `v*`, si iOS, le cœur, `build-ios-xcframework.sh`, `generate-bindings.sh` ou Cargo changent (jamais pour un `.md`) | **macOS** | XCFramework du cœur, XcodeGen, tests sur simulateur iPhone ; sur `main`, un tag ou un lancement manuel, **si les secrets iOS existent** : signature et envoi TestFlight |
 | `ios-setup-signing.yml` | À la main seulement | **macOS** | Crée le certificat et le profil de distribution (fastlane match) |
+| `ci-backend.yml` | PR et `main`, si `backend/` change | Linux | TypeScript et tests du Worker (Vitest dans `workerd`, rien n'appelle Cloudflare) ; sur `main`, **si les réglages Cloudflare existent** : migrations D1 puis déploiement du Worker `heywatchlist-api` |
 
 Sans les secrets, rien n'échoue : l'étape d'envoi est ignorée et le journal
 liste les noms manquants. Une PR ne reçoit jamais d'envoi TestFlight ni de
@@ -62,8 +66,23 @@ Dépôt GitHub > **Settings** > **Secrets and variables** > **Actions**. Les
 | `ANDROID_KEY_ALIAS` | secret | Alias de la clé (`heywatchlist` ci-dessous) |
 | `ANDROID_KEY_PASSWORD` | secret | Mot de passe de la clé (le même que celui du keystore) |
 
-Plus tard (jalons 2 et 6, **pas encore utilisé** par les workflows) :
+Plus tard (jalon 6, **pas encore utilisé** par les workflows) :
 `GOOGLE_SERVICES_JSON`, le base64 de `google-services.json`.
+
+### Serveur (jalon 2)
+
+Tous créés par `node backend/scripts/configurer-backend.mjs`, qui pose aussi
+les secrets du Worker (`backend/README.md`).
+
+| Nom | Type | Contenu |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | secret | Jeton d'API Cloudflare : Workers Scripts (Edit), D1 (Edit), Account Settings (Read) |
+| `CLOUDFLARE_ACCOUNT_ID` | variable | Identifiant du compte Cloudflare |
+| `HEYWATCHLIST_API_URL` | variable | Adresse du Worker, `https://heywatchlist-api.<sous-domaine>.workers.dev`, inscrite dans les apps Android et iPhone à la compilation |
+
+Sans `HEYWATCHLIST_API_URL`, les apps se compilent quand même, mais la connexion
+répond « Cette version de l'app ne connaît pas l'adresse du serveur ». La CI iOS ajoute toute seule la capacité « Sign in
+with Apple » à l'identifiant d'app chez Apple et régénère le profil si besoin.
 
 ## Première installation, dans l'ordre
 

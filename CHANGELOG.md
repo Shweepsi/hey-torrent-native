@@ -5,6 +5,45 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.2.0] - 2026-11-25
+
+Jalon 2 : comptes et connexion. On se connecte avec Apple (iPhone) ou Google
+(Android et iPhone), sur invitation, et Réglages affiche son prénom.
+
+### Ajouté
+
+- `backend/` : Worker Cloudflare `heywatchlist-api` en TypeScript, base D1
+  `heywatchlist` (tables des comptes seulement). Vérification des jetons
+  d'identité Apple et Google (signature, émetteur, audience, nonce à usage
+  unique), comptes sur invitation, premier compte administrateur par code
+  d'amorçage, même compte pour la même adresse e-mail vérifiée, jeton d'accès
+  de 15 minutes et jeton de rafraîchissement renouvelé (réutilisation
+  détectée), création d'invitations par l'administrateur, suppression du
+  compte avec révocation chez Apple. 35 tests Vitest dans `workerd`.
+- CI `ci-backend.yml` : TypeScript et tests sur chaque PR ; sur `main`,
+  migrations D1 et déploiement si les réglages Cloudflare existent.
+- `backend/scripts/configurer-backend.mjs` : réglage en une commande sur le PC
+  du propriétaire (jeton Cloudflare, secrets du Worker, secret et variables
+  GitHub), sans afficher de secret.
+- Cœur : objet `Account` (connexion, profil, rafraîchissement automatique et
+  sérialisé des jetons, déconnexion, suppression), session gardée par l'app
+  (Keychain, Keystore) via `SessionStore`, jeton d'accès en mémoire seulement ;
+  connexion Google sur iPhone par OAuth avec PKCE ; client HTTPS `reqwest` +
+  `rustls` ; `create_invitation` dans l'édition admin. Tests `wiremock`.
+- Android : accueil avec Google (Credential Manager), saisie du code
+  d'invitation, onglets Découvrir · Watchlist · Réglages, Réglages avec prénom,
+  déconnexion et suppression du compte ; carte « Inviter quelqu'un » dans
+  l'APK admin.
+- iPhone : accueil avec « Se connecter avec Apple » et Google, mêmes écrans ;
+  suppression d'un compte Apple précédée d'une nouvelle autorisation Apple.
+- CI iOS : capacité « Sign in with Apple » ajoutée à l'identifiant d'app et
+  profil régénéré si besoin ; adresse du serveur lue dans la variable GitHub
+  `HEYWATCHLIST_API_URL`, comme sur Android.
+
+### Retiré
+
+- L'écran « pong » du jalon 1 et la carte d'état de l'édition admin.
+
 ## [0.1.1] - 2026-11-25
 
 ### Modifié

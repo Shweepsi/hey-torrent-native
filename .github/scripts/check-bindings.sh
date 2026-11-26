@@ -2,9 +2,11 @@
 # Génère les liaisons Kotlin et Swift du cœur sur Linux, avec puis sans la
 # fonctionnalité Cargo `admin`, et vérifie le contrat entre le cœur et les
 # deux apps :
-#   - core_version, ping, ping_async et has_admin sont exportées ;
-#   - admin_ping n'existe que dans la compilation admin : ni l'édition publique
-#     d'Android ni l'app iPhone ne doivent en avoir la moindre trace.
+#   - core_version, ping, ping_async, has_admin et les fonctions du compte
+#     sont exportées ;
+#   - admin_ping et create_invitation n'existent que dans la compilation
+#     admin : ni l'édition publique d'Android ni l'app iPhone ne doivent en
+#     avoir la moindre trace.
 #
 # Il ne faut ni NDK ni Xcode. Une erreur de génération (version d'UniFFI,
 # macro mal posée) se repère ainsi sur Linux, avant de dépenser des minutes
@@ -71,18 +73,19 @@ check_edition() {
   done
 
   local name
-  for name in coreVersion ping pingAsync hasAdmin; do
+  for name in coreVersion ping pingAsync hasAdmin newSignInNonce beginGoogleSignIn completeGoogleSignIn signIn deleteAccount; do
     expect_function "$kotlin_file" "$name"
     expect_function "$swift_file" "$name"
   done
 
   if [[ "$edition" == "admin" ]]; then
     expect_function "$kotlin_file" adminPing
-    echo "    admin_ping présente (attendu pour l'édition admin)."
-  elif grep -Eqi 'adminPing|admin_ping' "$kotlin_file" "$swift_file" "$header_file"; then
-    fail "l'édition publique expose du code d'administration (admin_ping)."
+    expect_function "$kotlin_file" createInvitation
+    echo "    admin_ping et create_invitation présentes (attendu pour l'édition admin)."
+  elif grep -Eqi 'adminPing|admin_ping|createInvitation|create_invitation' "$kotlin_file" "$swift_file" "$header_file"; then
+    fail "l'édition publique expose du code d'administration (admin_ping ou create_invitation)."
   else
-    echo "    aucune trace d'admin_ping (attendu pour l'édition publique)."
+    echo "    aucune trace du code d'administration (attendu pour l'édition publique)."
   fi
 }
 

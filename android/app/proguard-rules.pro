@@ -8,3 +8,7 @@
 # Liaisons générées par UniFFI : classes, structures de rappel, erreurs. Leurs
 # noms servent à la résolution des symboles natifs, R8 ne doit pas les toucher.
 -keep class uniffi.** { *; }
+
+# Credential Manager : l'implémentation Play Services est chargée par réflexion.
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** { *; }

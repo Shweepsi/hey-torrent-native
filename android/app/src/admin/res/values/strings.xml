@@ -3,11 +3,11 @@
 <resources>
     <string name="app_name" translatable="false">HeyWatchlist Admin</string>
 
-    <string name="admin_status_title">Édition administrateur</string>
-    <string name="admin_status_ping_label">Réponse administrateur</string>
-    <string name="admin_status_flag_label">Code d’administration</string>
-    <string name="admin_status_flag_yes">Inclus</string>
-    <string name="admin_status_flag_no">Absent</string>
-    <string name="admin_status_loading">Chargement…</string>
-    <string name="admin_status_error">Le cœur n’a pas répondu.</string>
+    <string name="admin_invite_title">Inviter un proche</string>
+    <string name="admin_invite_body">Crée un code à lui transmettre. Il le saisira à sa première connexion. Chaque code ne sert qu’une fois.</string>
+    <string name="admin_invite_create">Créer un code d’invitation</string>
+    <string name="admin_invite_creating">Création…</string>
+    <string name="admin_invite_expires">Valable jusqu’au %1$s.</string>
+    <string name="admin_invite_share">Envoyer le code</string>
+    <string name="admin_invite_share_text">Je t’invite sur HeyWatchlist. Installe l’app, connecte-toi, puis saisis ce code : %1$s</string>
 </resources>

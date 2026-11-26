@@ -11,6 +11,9 @@
 #   BUILD_NUMBER ou GITHUB_RUN_NUMBER : numéro de build (CURRENT_PROJECT_VERSION),
 #                                       entier croissant exigé par TestFlight (défaut : 1).
 #   CARGO_TARGET_DIR                  : dossier de compilation de Cargo (défaut : target/).
+#   HEYWATCHLIST_API_URL              : adresse https:// de l'API, écrite dans
+#                                       Version.xcconfig (défaut : vide, l'app
+#                                       indique alors qu'elle n'a pas de serveur).
 #
 # Compatible avec le bash 3.2 livré par macOS : ni tableaux associatifs, ni mapfile.
 set -euo pipefail
@@ -155,12 +158,22 @@ rm -rf "$ios_dir/Generated"
 mkdir -p "$ios_dir/Generated"
 cp "$swift_file" "$ios_dir/Generated/"
 
+api_url="${HEYWATCHLIST_API_URL:-}"
+if [[ -n "$api_url" && ! "$api_url" =~ ^https://[A-Za-z0-9.-]+(/[A-Za-z0-9._~/-]*)?$ ]]; then
+  echo "Erreur : HEYWATCHLIST_API_URL doit être une adresse https:// sans paramètres." >&2
+  exit 1
+fi
+# Dans un .xcconfig, « // » ouvre un commentaire : on écrit « /$()/ », que
+# Xcode remplace par « // ».
+api_url_xcconfig="${api_url/:\/\//:\/\$()\/}"
+
 mkdir -p "$ios_dir/Config"
 cat >"$ios_dir/Config/Version.xcconfig" <<EOF
 // Généré par scripts/build-ios-xcframework.sh à partir du Cargo.toml racine :
 // ne pas modifier, ne pas versionner.
 MARKETING_VERSION = $version
 CURRENT_PROJECT_VERSION = $build_number
+HEYWATCHLIST_API_URL = $api_url_xcconfig
 EOF
 
 echo "==> Terminé : version $version (build $build_number), module $module_name"

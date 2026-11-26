@@ -29,19 +29,25 @@ iOS ne se compilent que sur GitHub Actions.
 
 ## Jalon 2 : backend Cloudflare et connexion
 
-- [ ] `backend/` : Worker TypeScript, déployé par `wrangler` depuis la CI sous
-      le nom `heywatchlist-api` (`name` dans `wrangler.toml`), qui porte déjà
-      le secret `FCM_SERVICE_ACCOUNT`.
-- [ ] Schéma D1 : `users`, `invitations`, `sessions`, `watchlist_items`,
-      `requests`, `request_followers`, `devices`, `credentials` (chiffrés),
-      `library`, `notified`.
-- [ ] Connexion Apple et Google : vérification des jetons, JWT court, jeton de
-      rafraîchissement, invitations, suppression de compte.
-- [ ] Tests du Worker (Vitest, environnement local de Wrangler).
-- [ ] Cœur : premier client réseau (`reqwest` + `rustls`), jetons rafraîchis
-      automatiquement, tests avec `wiremock`.
-- [ ] Fini quand : un invité se connecte avec Apple sur iPhone et voit son
-      prénom dans Réglages.
+Le code est écrit (`backend/`, `core/src/account.rs`, écrans d'accueil et de
+Réglages) ; le Worker et le cœur sont testés en local. Reste à le vérifier en
+vrai :
+
+- [ ] Lancer `node backend/scripts/configurer-backend.mjs` sur le PC du
+      propriétaire (jeton Cloudflare, secrets du Worker, réglages GitHub).
+- [ ] Premier déploiement du Worker et migrations D1 par la CI (fusion dans
+      `main`), puis `GET /v1/health` qui répond.
+- [ ] Premiers tours de CI Android et iOS du jalon : Credential Manager,
+      `WebAuthenticationSession`, Keychain, Keystore n'ont jamais été compilés.
+- [ ] Capacité « Sign in with Apple » ajoutée par la CI à l'identifiant d'app,
+      profil régénéré.
+- [ ] Fini quand : le propriétaire se connecte avec Apple sur iPhone (code
+      administrateur), crée une invitation depuis l'APK admin, et un invité se
+      connecte avec Apple et voit son prénom dans Réglages.
+- [ ] Clients Google (Web, Android ×2 avec SHA-1, iOS) et écran de
+      consentement en production, puis relancer le script pour les poser.
+- [ ] Clé « Sign in with Apple » pour la révocation à la suppression du compte
+      (exigée par Apple avant la publication).
 
 ## Jalon 3 : Découvrir (priorité n°1)
 
@@ -97,12 +103,13 @@ iOS ne se compilent que sur GitHub Actions.
 
 ## Points à trancher (par défaut, à confirmer)
 
-1. [ ] Connexion Google sur iPhone et Apple sur Android.
+1. [x] Connexion Google sur iPhone et Apple sur Android (jalon 2 : Apple sur
+       iPhone, Google partout).
 2. [ ] Comment savoir ce qui est « Sur Plex » pour les invités (table
        `library` et synchronisation nocturne proposées).
 3. [ ] Dépôt privé ou public (minutes macOS de GitHub Actions).
 4. [ ] APK admin et vérification des développeurs Android.
-5. [ ] Backend en TypeScript.
+5. [x] Backend en TypeScript.
 
 ## Risques à surveiller
 

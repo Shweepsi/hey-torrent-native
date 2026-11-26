@@ -35,6 +35,7 @@ android/app/google-services.json
 /ios/Frameworks/
 /ios/Config/Version.xcconfig
 /ios/Config/Info.plist
+/ios/Config/HeyWatchlist.entitlements
 *.xcodeproj
 *.xcworkspace
 DerivedData/

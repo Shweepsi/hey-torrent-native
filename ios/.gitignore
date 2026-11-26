@@ -14,6 +14,7 @@ Frameworks/
 # Réglages de version lus dans le Cargo.toml racine, et Info.plist généré
 Config/Version.xcconfig
 Config/Info.plist
+Config/HeyWatchlist.entitlements
 
 # Sorties de compilation et de test
 build/

@@ -2,11 +2,11 @@ import SwiftUI
 
 @main
 struct HeyWatchlistApp: App {
-    @State private var model = CoreStatusModel(client: LiveCoreClient())
+    @State private var model = AccountModel(client: LiveAccountClient())
 
     var body: some Scene {
         WindowGroup {
-            HomeView(model: model)
+            RootView(model: model)
         }
     }
 }

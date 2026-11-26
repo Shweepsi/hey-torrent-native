@@ -66,6 +66,9 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
+  # Adresse de l'API (Worker Cloudflare), écrite dans l'app au moment de la
+  # compilation. Variable GitHub, pas un secret ; absente, l'app l'indique.
+  HEYWATCHLIST_API_URL: ${{ vars.HEYWATCHLIST_API_URL }}
   # fastlane : pas de vérification de mise à jour ni de statistiques d'usage.
   FASTLANE_SKIP_UPDATE_CHECK: "1"
   FASTLANE_OPT_OUT_USAGE: "YES"

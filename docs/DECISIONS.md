@@ -113,16 +113,27 @@ facile.
   `docs/DESIGN.md`). iPhone : Liquid Glass natif. Android : `HeyTheme` sur
   Compose Foundation, flou par Haze.
 
+## Décidé au jalon 2 (2026-11-25)
+
+- **Connexion : Apple sur iPhone, Google sur Android et sur iPhone.** Pas
+  d'Apple sur Android. Une même adresse e-mail **vérifiée** par Apple ou Google
+  retrouve le même compte.
+- **Backend en TypeScript** (Worker) ; le Rust reste dans le cœur.
+- Google sur iPhone passe par la page web de Google (OAuth avec PKCE, conduit
+  par le cœur), sans SDK Google dans l'app. Sur Android, le Credential Manager
+  du système.
+- L'adresse du Worker n'est pas dans le dépôt : variable GitHub
+  `HEYWATCHLIST_API_URL`, inscrite dans les apps à la compilation. Les
+  identifiants des clients Google viennent du Worker (`GET /v1/config`).
+- Les tables D1 arrivent avec leur jalon : le jalon 2 ne crée que celles des
+  comptes.
+
 ## Par défaut, à confirmer par le propriétaire
 
-1. Connexion : Apple sur iPhone, Google sur Android, Google aussi sur iPhone
-   (Apple reste alors obligatoire à côté) ; un invité garde son compte avec la
-   même adresse e-mail.
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les
    webhooks et par une synchronisation complète chaque nuit.
 3. Dépôt privé (budget de minutes macOS à surveiller).
 4. APK admin : à vérifier au jalon 5 face aux règles Google de vérification des
    développeurs pour les APK installés hors Play Store.
-5. Backend en TypeScript (Worker) ; le Rust reste dans le cœur.
 6. Séries : demande de la série entière ou de saisons précises, comme
    Overseerr.

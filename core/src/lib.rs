@@ -5,11 +5,21 @@
 //! des macros `#[uniffi::export]` (jamais de fichier UDL) et ne sont pas
 //! versionnées.
 
+mod account;
 #[cfg(feature = "admin")]
 mod admin;
+mod api;
 mod error;
+mod google;
 
+pub use account::{
+    Account, AccountError, GoogleClientIds, IdentityProvider, SessionStore, SignInNonce,
+    SignInRequest, UserProfile, UserRole, new_sign_in_nonce,
+};
+#[cfg(feature = "admin")]
+pub use admin::Invitation;
 pub use error::CoreError;
+pub use google::{GoogleAuthorization, begin_google_sign_in, complete_google_sign_in};
 
 uniffi::setup_scaffolding!();
 

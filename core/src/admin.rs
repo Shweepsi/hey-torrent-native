@@ -1,5 +1,14 @@
 //! Code d'administration, compilé seulement avec la fonctionnalité `admin`.
 
+/// Code d'invitation à transmettre à un proche.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct Invitation {
+    /// Code lisible, `XXXX-XXXX-XXXX`.
+    pub code: String,
+    /// Fin de validité, en secondes Unix.
+    pub expires_at: i64,
+}
+
 /// Réponse de test de l'édition admin, vérifiée par l'app Android admin.
 #[uniffi::export]
 pub fn admin_ping() -> String {

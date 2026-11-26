@@ -23,6 +23,14 @@ val signingKeystorePassword = envOrNull("ANDROID_KEYSTORE_PASSWORD")
 val signingKeyAlias = envOrNull("ANDROID_KEY_ALIAS")
 val signingKeyPassword = envOrNull("ANDROID_KEY_PASSWORD")
 
+// Adresse de l'API (Worker Cloudflare) : variable GitHub HEYWATCHLIST_API_URL,
+// jamais écrite dans le dépôt. Absente, l'app affiche « serveur non configuré ».
+val apiBaseUrl = envOrNull("HEYWATCHLIST_API_URL")?.trim().orEmpty().also { url ->
+    require(url.isEmpty() || Regex("^https://[A-Za-z0-9.-]+(/[A-Za-z0-9._~/-]*)?$").matches(url)) {
+        "HEYWATCHLIST_API_URL doit être une adresse https:// sans paramètres."
+    }
+}
+
 android {
     // Paquet du code Kotlin et de la classe R : distinct de l'identifiant publié.
     namespace = "app.heywatchlist"
@@ -37,6 +45,8 @@ android {
         targetSdk = 36
         versionCode = appVersion.code
         versionName = appVersion.name
+
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
 
         // Seules architectures compilées pour le cœur ; limite aussi celles de JNA.
         ndk {
@@ -89,6 +99,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -100,6 +111,9 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.compose.foundation)
