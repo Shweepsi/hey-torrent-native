@@ -34,6 +34,15 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
   clé TMDB ; le Worker appelle TMDB avec la sienne, sur une liste blanche stricte
   (voir « Relais TMDB » plus bas), et garde les réponses dans D1.
 
+## Ce qu'il fait en plus (jalon 4)
+
+- **Watchlist et demandes** : ajouter un titre crée la demande, ou rattache la
+  personne à celle qui existe (une seule par titre). Le Worker lit le titre et
+  l'affiche chez TMDB ; le téléphone n'envoie que le type, l'identifiant et,
+  pour une série, les saisons (`null` : série entière). Retirer un titre
+  supprime la demande seulement si plus personne ne la suit et qu'elle est
+  encore `requested` ou `refused`.
+
 ## Routes
 
 | Méthode et chemin | Accès | Rôle |
@@ -46,6 +55,9 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | `GET /v1/me` | jeton d'accès | Profil : `id`, `role`, `display_name`, `providers` |
 | `DELETE /v1/me` | jeton d'accès | Supprime le compte ; `{apple_authorization_code?}` |
 | `POST /v1/invitations` | administrateur | Crée une invitation (201, `{code, expires_at}`) |
+| `GET /v1/watchlist` | jeton d'accès | `{items}` : ma watchlist, la plus récente d'abord, avec l'état de chaque demande |
+| `PUT /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Ajoute ou met à jour un titre ; `{seasons?}` → `{item}` |
+| `DELETE /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Retire un titre (204) |
 | `GET /v1/tmdb/<chemin>` | jeton d'accès | Relais du catalogue TMDB : liste blanche de chemins et de paramètres (voir « Relais TMDB »), réponse TMDB telle quelle |
 
 Les erreurs sont `{"error": "<code>"}`, avec un code stable que le cœur traduit
@@ -106,9 +118,11 @@ chemins existent ; tout le reste est `404 not_found`, jamais relayé.
 Base `heywatchlist` (identifiant dans `wrangler.toml`), migrations dans
 `migrations/`. Le jalon 2 crée les tables des comptes : `users`, `identities`,
 `invitations`, `sessions`, `used_nonces`. Le jalon 3 ajoute `tmdb_cache`
-(`0002_tmdb_cache.sql`), des données publiques sans lien avec `users`. Les
-tables des jalons suivants (watchlist, demandes, appareils, bibliothèque
-Plex…) arriveront avec leur jalon, dans de nouvelles migrations, rattachées à
+(`0002_tmdb_cache.sql`), des données publiques sans lien avec `users`. Le
+jalon 4 ajoute `requests` (une demande par titre, son état) et
+`watchlist_items` (rattachées à `users` et à `requests`,
+`0003_watchlist.sql`). Les tables des jalons suivants (appareils,
+bibliothèque Plex…) arriveront avec leur jalon, dans de nouvelles migrations, rattachées à
 `users` par `ON DELETE CASCADE`.
 
 ## Secrets du Worker

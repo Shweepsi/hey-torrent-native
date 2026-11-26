@@ -20,7 +20,10 @@
 - [x] Plex (Docker sur Unraid) et qBittorrent répondent en HTTPS depuis
       l'extérieur.
 
-> **Statut au 2026-11-25 : jalon 1 en cours.** Le squelette (cœur Rust,
+> **Statut au 2026-11-26 : jalon 4 (watchlist) écrit**, en attente de la CI
+> et d'un essai sur appareil ; les jalons 5 et 6 se préparent en parallèle.
+>
+> Historique : **au 2026-11-25, jalon 1 en cours.** Le squelette (cœur Rust,
 > Android, iOS par XcodeGen, CI) est écrit sur une branche. Seul le cœur Rust
 > se compile et se teste dans l'environnement de développement ; Android et iOS
 > ne peuvent être compilés que par la CI GitHub Actions (pas de SDK Android ni
