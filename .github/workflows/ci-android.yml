@@ -1,6 +1,7 @@
 # Android : tests (buildSrc et édition publique), contrôle de la release publique
 # (R8), APK admin de debug en artefact, puis, sur main ou un tag et si les
-# secrets de signature existent, APK admin signé et AAB public. Linux seulement
+# secrets de signature existent, APK admin signé, APK public signé (installation
+# directe) et AAB public (Play Store). Linux seulement
 # (aucune minute macOS).
 name: CI Android
 
@@ -41,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: Produire aussi l'APK admin signé et l'AAB public (secrets de signature requis)
+        description: Produire aussi les APK signés et l'AAB public (secrets de signature requis)
         type: boolean
         default: false
 
@@ -114,7 +115,7 @@ jobs:
           retention-days: 7
 
   release:
-    name: APK admin signé et AAB public
+    name: APK signés et AAB public
     needs: build
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release)
     runs-on: ubuntu-24.04
@@ -149,7 +150,7 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode >"$ANDROID_KEYSTORE_PATH"
-          ./gradlew assembleAdminRelease bundlePublicRelease --stacktrace
+          ./gradlew assembleAdminRelease assemblePublicRelease bundlePublicRelease --stacktrace
 
       - name: Supprimer le keystore du runner
         if: always() && steps.secrets.outputs.ready == 'true'
@@ -161,6 +162,17 @@ jobs:
         with:
           name: heywatchlist-admin-release-apk
           path: android/app/build/outputs/apk/admin/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # APK de l'édition publique, signé avec la même clé que l'AAB : il
+      # s'installe directement sur un téléphone, sans passer par le Play Store.
+      - name: Publier l'APK public signé
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: heywatchlist-public-release-apk
+          path: android/app/build/outputs/apk/public/release/*.apk
           if-no-files-found: error
           retention-days: 30
 
