@@ -12,7 +12,7 @@
 #                                           dépôt privé des certificats (match)
 #   GITHUB_RUN_NUMBER, GITHUB_REPOSITORY_OWNER
 #                                           fournies par GitHub Actions
-#   IOS_TEST_DEVICE                         facultative : simulateur des tests (défaut : iPhone 17)
+#   IOS_TEST_DEVICE                         facultative : simulateur des tests (défaut : un iPhone de l'image)
 #
 # Aucune de ces valeurs ne doit jamais être affichée dans le journal.
 
@@ -76,10 +76,37 @@ def prepare_match
   setup_ci
 end
 
+# Nom d'un iPhone disponible sur la machine, pour ne pas dépendre du modèle que
+# l'image macOS installe avec son Xcode. Le plus récent runtime d'abord.
+def default_test_device
+  require "json"
+  list = JSON.parse(`xcrun simctl list devices available -j`)["devices"]
+  runtimes = list.keys.select { |k| k.include?("iOS") }.sort.reverse
+  names = runtimes.flat_map { |k| list[k].map { |d| d["name"] } }
+  # Un iPhone ordinaire (« iPhone 18 », « iPhone 18 Pro »…), le plus récent :
+  # les modèles inhabituels de l'image (pliable, Air…) lancent mal l'app hôte.
+  numbered = names.uniq.select { |n| n =~ /\AiPhone \d+( Pro)?\z/ }
+  numbered.max_by { |n| [n[/\d+/].to_i, n.include?("Pro") ? 0 : 1] } ||
+    UI.user_error!("Aucun simulateur iPhone disponible : définir IOS_TEST_DEVICE.")
+end
+
+# Démarre le simulateur et attend qu'il soit prêt avant xcodebuild : sur une
+# machine fraîche, le lancer à la volée échoue avec « Invalid device state ».
+def boot_simulator(name)
+  require "json"
+  list = JSON.parse(`xcrun simctl list devices available -j`)["devices"]
+  udid = list.select { |k, _| k.include?("iOS") }.sort.reverse
+             .flat_map { |_, v| v }.find { |d| d["name"] == name }&.fetch("udid", nil)
+  UI.user_error!("Simulateur introuvable : #{name}") unless udid
+  sh("xcrun simctl bootstatus #{udid} -b")
+end
+
 platform :ios do
   desc "Tests unitaires sur un simulateur iPhone"
   lane :test do
-    device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? "iPhone 17" : ENV["IOS_TEST_DEVICE"]
+    device = ENV["IOS_TEST_DEVICE"].to_s.empty? ? default_test_device : ENV["IOS_TEST_DEVICE"]
+    UI.message("Simulateur des tests : #{device}")
+    boot_simulator(device)
     run_tests(
       project: xcode_project,
       scheme: app_scheme,
