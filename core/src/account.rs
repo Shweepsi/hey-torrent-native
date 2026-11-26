@@ -408,6 +408,31 @@ impl Account {
         api::read_bytes(response).await
     }
 
+    /// Requête authentifiée quelconque sur le Worker (méthode, chemin, corps
+    /// JSON) : statut et corps brut. Les routes d'administration s'en servent,
+    /// avec la même session que le reste de l'app.
+    #[cfg(feature = "admin")]
+    pub(crate) async fn send_json(
+        &self,
+        method: reqwest::Method,
+        target: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<(u16, Vec<u8>), AccountError> {
+        let url = self.base.join(target);
+        let response = self
+            .authorized(|http, token| {
+                let builder = http.request(method.clone(), &url).bearer_auth(token);
+                match body {
+                    Some(body) => builder.json(body),
+                    None => builder,
+                }
+            })
+            .await?;
+        let status = response.status().as_u16();
+        let bytes = response.bytes().await.map_err(api::transport_error)?;
+        Ok((status, bytes.to_vec()))
+    }
+
     /// Envoie une requête authentifiée ; sur un 401, renouvelle le jeton une
     /// fois et recommence.
     async fn authorized<F>(&self, build: F) -> Result<reqwest::Response, AccountError>

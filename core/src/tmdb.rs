@@ -46,7 +46,7 @@ const STILL_SIZE: &str = "w300";
 
 /// Adresse d'une image, ou `None` si le chemin est absent ou suspect (TMDB ne
 /// donne que `/nom.jpg`).
-fn image_url(path: Option<&str>, size: &str) -> Option<String> {
+pub(crate) fn image_url(path: Option<&str>, size: &str) -> Option<String> {
     let path = path?.trim();
     let plain = path.len() > 1
         && path.starts_with('/')

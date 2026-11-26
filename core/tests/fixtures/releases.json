@@ -1,0 +1,42 @@
+{
+  "_comment": "Noms de releases au format réel (groupes inventés). Chaque cas dit si la release est retenue pour la cible, et ce qu'on doit lire dans son nom.",
+  "cases": [
+    { "name": "Oppenheimer.2023.MULTi.VFF.2160p.UHD.BluRay.REMUX.HDR.HEVC-GRP", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": true, "language": "MultiVff", "resolution": "Uhd", "source": "Remux" },
+    { "name": "Oppenheimer.2023.FRENCH.1080p.WEB.H264-GRP", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": true, "language": "Vf", "resolution": "FullHd", "source": "Web" },
+    { "name": "Oppenheimer 2023 TRUEFRENCH 720p BluRay x264-GRP", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": true, "language": "Vff", "resolution": "Hd", "source": "BluRay" },
+    { "name": "Oppenheimer.2023.VOSTFR.1080p.WEBRip.x265-GRP", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": true, "language": "Vostfr", "resolution": "FullHd", "source": "WebRip" },
+    { "name": "Oppenheimer.2023.1080p.BluRay.DDP5.1.x264-GRP", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": true, "language": "Unknown", "resolution": "FullHd", "source": "BluRay" },
+    { "name": "Oppenheimer.2023.FRENCH.HDTS.x264", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": false },
+    { "name": "Oppenheimer.2023.FRENCH.TELESYNC.720p", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": false },
+    { "name": "Le.Comte.de.Monte-Cristo.2024.FRENCH.1080p.WEB-DL.H264-GRP", "title": "Le Comte de Monte-Cristo", "year": 2024, "media": "movie", "keep": true, "language": "Vf", "resolution": "FullHd", "source": "WebDl" },
+    { "name": "Le.Comte.de.Monte.Cristo.2002.MULTi.1080p.BluRay.x264-GRP", "title": "Le Comte de Monte-Cristo", "year": 2024, "media": "movie", "keep": false },
+    { "name": "Anatomie.d.une.Chute.2023.FRENCH.1080p.BluRay.x264-GRP", "title": "Anatomie d'une chute", "year": 2023, "media": "movie", "keep": true, "language": "Vf" },
+    { "name": "L.Ete.Dernier.2023.FRENCH.720p.WEB.H264-GRP", "title": "L'Été dernier", "year": 2023, "media": "movie", "keep": true },
+    { "name": "Spirited.Away.2001.MULTi.VFQ.1080p.BluRay.x264-GRP", "title": "Le Voyage de Chihiro", "original": "Spirited Away", "year": 2001, "media": "movie", "keep": true, "language": "Multi" },
+    { "name": "Le.Voyage.de.Chihiro.2001.MULTi.1080p.BluRay.x265-GRP", "title": "Le Voyage de Chihiro", "original": "千と千尋の神隠し", "year": 2001, "media": "movie", "keep": true, "language": "Multi" },
+    { "name": "Severance.S02.MULTi.1080p.ATVP.WEB-DL.DDP5.1.H264-GRP", "title": "Severance", "year": 2022, "media": "tv", "season": 2, "keep": true, "language": "Multi", "source": "WebDl" },
+    { "name": "Severance.S02E05.MULTi.1080p.WEB.H264-GRP", "title": "Severance", "year": 2022, "media": "tv", "season": 2, "keep": false },
+    { "name": "Severance.S01.FRENCH.720p.WEB.H264-GRP", "title": "Severance", "year": 2022, "media": "tv", "season": 2, "keep": false },
+    { "name": "Severance.Saison.2.FRENCH.1080p.WEB.x264-GRP", "title": "Severance", "year": 2022, "media": "tv", "season": 2, "keep": true },
+    { "name": "Severance.S01E01.FRENCH.1080p.WEB.H264-GRP", "title": "Severance", "year": 2022, "media": "tv", "keep": true },
+    { "name": "Shogun.2024.S01.MULTi.2160p.DSNP.WEB-DL.DV.HDR.H265-GRP", "title": "Shōgun", "year": 2024, "media": "tv", "season": 1, "keep": true, "resolution": "Uhd", "source": "WebDl" },
+    { "name": "Shogun.1980.S01.FRENCH.DVDRip.XviD-GRP", "title": "Shōgun", "year": 2024, "media": "tv", "season": 1, "keep": false },
+    { "name": "Fantastic.Beasts.The.Secrets.of.Dumbledore.2022.MULTi.1080p.BluRay.x264-GRP", "title": "Les Animaux fantastiques : Les Secrets de Dumbledore", "original": "Fantastic Beasts: The Secrets of Dumbledore", "year": 2022, "media": "movie", "keep": true },
+    { "name": "Dune.Deuxieme.Partie.2024.MULTi.1080p.WEB.H264-GRP", "title": "Dune : Deuxième partie", "original": "Dune: Part Two", "year": 2024, "media": "movie", "keep": true },
+    { "name": "Dune.Part.Two.Original.Soundtrack.Album.2024.FLAC", "title": "Dune : Deuxième partie", "original": "Dune: Part Two", "year": 2024, "media": "movie", "keep": false },
+    { "name": "Barbie.2023.FRENCH.1080p.WEB.H264-GRP", "title": "Oppenheimer", "year": 2023, "media": "movie", "keep": false }
+  ],
+  "ranking": {
+    "_comment": "Pour un même film, de la meilleure release à la moins bonne.",
+    "title": "Oppenheimer",
+    "year": 2023,
+    "order": [
+      { "name": "Oppenheimer.2023.MULTi.VFF.1080p.BluRay.x265-GRP", "seeders": 80 },
+      { "name": "Oppenheimer.2023.FRENCH.1080p.WEB.H264-GRP", "seeders": 40 },
+      { "name": "Oppenheimer.2023.MULTi.720p.WEB.H264-GRP", "seeders": 20 },
+      { "name": "Oppenheimer.2023.VOSTFR.2160p.WEB-DL.H265-GRP", "seeders": 300 },
+      { "name": "Oppenheimer.2023.2160p.BluRay.REMUX.HEVC-GRP", "seeders": 500 },
+      { "name": "Oppenheimer.2023.MULTi.VFF.2160p.BluRay.REMUX.HEVC-GRP", "seeders": 0 }
+    ]
+  }
+}

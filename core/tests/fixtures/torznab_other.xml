@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Deuxième source inventée : elle connaît la même release que la première
+     (même empreinte), avec moins de sources actives. -->
+<rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <item>
+      <title>Dune.Deuxieme.Partie.2024.MULTi.VFF.1080p.BluRay.x265-GRP</title>
+      <guid>autre-1</guid>
+      <jackettindexer id="b">Indexeur B</jackettindexer>
+      <pubDate>Mon, 10 Jun 2024 20:00:00 +0200</pubDate>
+      <size>12884901888</size>
+      <link>https://other.invalid/dl/1</link>
+      <torznab:attr name="seeders" value="12" />
+      <torznab:attr name="infohash" value="1111111111111111111111111111111111111111" />
+    </item>
+    <item>
+      <title>Dune.Deuxieme.Partie.2024.TRUEFRENCH.2160p.BluRay.REMUX.HEVC-GRP</title>
+      <guid>autre-2</guid>
+      <size>64424509440</size>
+      <link>https://other.invalid/dl/2</link>
+      <torznab:attr name="seeders" value="0" />
+    </item>
+  </channel>
+</rss>
