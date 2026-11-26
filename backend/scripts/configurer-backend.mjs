@@ -515,7 +515,7 @@ async function cf(token, method, route, body) {
 }
 
 async function askCloudflareToken() {
-  say("\n[1/6] Cloudflare : jeton pour la CI");
+  say("\n[1/7] Cloudflare : jeton pour la CI");
   note("Ce jeton permet à GitHub de mettre le serveur à jour. Il sert aussi, ici, à régler le serveur.");
   note("La page de création s'ouvre avec les bonnes autorisations déjà cochées :");
   note("  Workers Scripts : Edit · D1 : Edit · Account Settings : Read");
@@ -559,7 +559,7 @@ async function chooseAccount(token) {
 
 // Vérifie ce dont la CI aura besoin, avec les droits du jeton : le Worker et la base.
 async function checkCloudflare(token, accountId) {
-  say("\n[2/6] Cloudflare : Worker, base de données et adresse");
+  say("\n[2/7] Cloudflare : Worker, base de données et adresse");
   const secrets = await cf(token, "GET", `/accounts/${accountId}/workers/scripts/${WORKER}/secrets`);
   if (secrets.status === 404) {
     die(`Le Worker « ${WORKER} » n'existe pas dans ce compte. Créez-le (Workers & Pages > Create > Hello World, nom ${WORKER}) puis relancez.`);
@@ -601,7 +601,7 @@ function newAdminCode() {
 
 // Clé des sessions et code administrateur. Rend le code à afficher, s'il est connu.
 async function setupSessionSecrets(token, accountId, names) {
-  say("\n[3/6] Serveur : clé des sessions et code administrateur");
+  say("\n[3/7] Serveur : clé des sessions et code administrateur");
   if (names.has("SESSION_SIGNING_KEY")) {
     ok("clé des sessions déjà en place : conservée");
   } else {
@@ -627,7 +627,7 @@ async function setupSessionSecrets(token, accountId, names) {
 // Clé de l'app pour le catalogue TMDB, que le Worker relaie aux apps. Facultative
 // ici (Entrée pour passer), mais l'onglet Découvrir reste vide sans elle.
 async function setupTmdb(token, accountId, names) {
-  say("\n[4/6] Catalogue TMDB : clé de l'app");
+  say("\n[4/7] Catalogue TMDB : clé de l'app");
   if (names.has("TMDB_API_KEY")) {
     ok("clé TMDB déjà en place : conservée");
     return;
@@ -684,7 +684,7 @@ async function androidSha1() {
 }
 
 async function setupGoogle(token, accountId, names) {
-  say("\n[5/6] Connexion avec Google (facultatif : Apple marche sans)");
+  say("\n[5/7] Connexion avec Google (facultatif : Apple marche sans)");
   if (["GOOGLE_WEB_CLIENT_ID", "GOOGLE_IOS_CLIENT_ID"].every((name) => names.has(name))) {
     ok("clients Google déjà en place : conservés");
     return;
@@ -759,7 +759,7 @@ async function appleTeamId() {
   );
 }
 
-async function chooseSignInKey() {
+async function chooseAppleKey(label) {
   const candidates = findP8Candidates();
   if (candidates.length > 0) {
     say("  Fichiers de clé Apple trouvés :");
@@ -768,7 +768,7 @@ async function chooseSignInKey() {
   for (;;) {
     const answer = await ask(
       candidates.length > 0
-        ? "  Numéro de la clé « Sign in with Apple », ou chemin du fichier .p8 : "
+        ? `  Numéro de la clé « ${label} », ou chemin du fichier .p8 : `
         : "  Chemin du fichier .p8 téléchargé (glissez-le dans cette fenêtre) : ",
     );
     const index = Number(answer);
@@ -781,7 +781,7 @@ async function chooseSignInKey() {
 }
 
 async function setupApple(token, accountId, names) {
-  say("\n[6/6] Apple : révocation à la suppression d'un compte");
+  say("\n[6/7] Apple : révocation à la suppression d'un compte");
   const wanted = ["APPLE_TEAM_ID", "APPLE_SIGNIN_KEY_ID", "APPLE_SIGNIN_PRIVATE_KEY"];
   if (wanted.every((name) => names.has(name))) {
     ok("clé « Sign in with Apple » déjà en place : conservée");
@@ -800,11 +800,41 @@ async function setupApple(token, accountId, names) {
   note(`(${BUNDLE_ID} absent de la liste ? La CI iOS l'activera au prochain envoi TestFlight : revenez après.)`);
   openBrowser("https://developer.apple.com/account/resources/authkeys/add");
   await waitDone("  Appuyez sur Entrée une fois le fichier téléchargé. ");
-  const { keyId, pem } = await chooseSignInKey();
+  const { keyId, pem } = await chooseAppleKey("Sign in with Apple");
   const teamId = await appleTeamId();
   await putWorkerSecret(token, accountId, "APPLE_TEAM_ID", teamId);
+  names.add("APPLE_TEAM_ID");
   await putWorkerSecret(token, accountId, "APPLE_SIGNIN_KEY_ID", keyId);
   await putWorkerSecret(token, accountId, "APPLE_SIGNIN_PRIVATE_KEY", pem);
+}
+
+// Push « Disponible sur Plex ». Android : compte de service FCM, déjà rangé
+// sur le Worker (Firebase). iPhone : clé APNs, distincte de la clé
+// « Sign in with Apple » (Apple les sépare dans la liste des clés).
+async function setupPush(token, accountId, names) {
+  say("\n[7/7] Notifications « Disponible sur Plex »");
+  if (names.has("FCM_SERVICE_ACCOUNT")) ok("Android : compte de service FCM en place");
+  else flag("Android : secret FCM_SERVICE_ACCOUNT absent du Worker : refaire l'étape Firebase (firebase/README.md).");
+  const wanted = ["APPLE_TEAM_ID", "APNS_KEY_ID", "APNS_PRIVATE_KEY"];
+  if (wanted.every((name) => names.has(name))) {
+    ok("iPhone : clé APNs déjà en place : conservée");
+    return;
+  }
+  note("Pour envoyer des notifications aux iPhone, Apple demande une clé « Apple Push Notifications service ».");
+  if (!(await confirm("  La créer maintenant ? (sinon : pas de notification sur iPhone)", true))) {
+    flag("iPhone : clé APNs à ajouter (relancez ce script) ; sans elle, seuls les Android sont prévenus.");
+    return;
+  }
+  note("La page de création de clé s'ouvre :");
+  note("1. Key Name : HeyWatchlist Push ; cochez « Apple Push Notifications service (APNs) ».");
+  note("2. Si on vous demande l'environnement, choisissez « Sandbox & Production ». Continue, Register.");
+  note("3. Cliquez « Download » : le fichier AuthKey_XXXXXXXXXX.p8 va dans Téléchargements (une seule fois possible).");
+  openBrowser("https://developer.apple.com/account/resources/authkeys/add");
+  await waitDone("  Appuyez sur Entrée une fois le fichier téléchargé. ");
+  const { keyId, pem } = await chooseAppleKey("APNs");
+  if (!names.has("APPLE_TEAM_ID")) await putWorkerSecret(token, accountId, "APPLE_TEAM_ID", await appleTeamId());
+  await putWorkerSecret(token, accountId, "APNS_KEY_ID", keyId);
+  await putWorkerSecret(token, accountId, "APNS_PRIVATE_KEY", pem);
 }
 
 // --- Programme --------------------------------------------------------------
@@ -831,6 +861,7 @@ async function main() {
   await setupTmdb(token, account.id, names);
   await setupGoogle(token, account.id, names);
   await setupApple(token, account.id, names);
+  await setupPush(token, account.id, names);
 
   say("\nGitHub : réglages du déploiement");
   setSecret("CLOUDFLARE_API_TOKEN", token);

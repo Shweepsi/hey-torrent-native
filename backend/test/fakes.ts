@@ -8,6 +8,7 @@ import { env } from "cloudflare:workers";
 import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type CryptoKey } from "jose";
 import { sha256Hex } from "../src/crypto";
 import { createHandler, type Deps } from "../src/index";
+import type { Platform, PushMessage, PushOutcome, PushSender } from "../src/push";
 import type { Provider } from "../src/providers";
 
 const KID = "test-key";
@@ -43,6 +44,19 @@ export function replyToFetch(reply: FetchReply) {
   fetchReply = reply;
 }
 
+/** Push « envoyées » par le faux expéditeur. */
+export const pushes: { platform: Platform; token: string; message: PushMessage }[] = [];
+let pushOutcome: (token: string) => PushOutcome = () => "sent";
+export function replyToPush(reply: (token: string) => PushOutcome) {
+  pushOutcome = reply;
+}
+const fakeSender: PushSender = {
+  send: async (platform, token, message) => {
+    pushes.push({ platform, token, message });
+    return pushOutcome(token);
+  },
+};
+
 export const deps: Deps = {
   keySets: { apple: apple.jwks, google: google.jwks },
   fetch: async (url, init) => {
@@ -55,6 +69,7 @@ export const deps: Deps = {
     return fetchReply(url, init);
   },
   now: () => clock,
+  push: () => fakeSender,
 };
 
 const handler = createHandler(deps);
@@ -68,11 +83,18 @@ export async function call(
 ): Promise<Response> {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (token) headers.authorization = `Bearer ${token}`;
-  const request = new Request(`https://api.test${path}`, {
-    method,
-    headers,
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
+  return send(
+    new Request(`https://api.test${path}`, {
+      method,
+      headers,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    }),
+    workerEnv,
+  );
+}
+
+/** Requête quelconque (formulaire du webhook Plex, par exemple). */
+export async function send(request: Request, workerEnv: Cloudflare.Env = env): Promise<Response> {
   // `fetch` est toujours défini sur notre gestionnaire.
   return handler.fetch!(request as Request<unknown, IncomingRequestCfProperties>, workerEnv, {} as ExecutionContext);
 }
