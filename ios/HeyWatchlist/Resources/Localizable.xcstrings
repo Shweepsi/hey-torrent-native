@@ -133,6 +133,18 @@
         }
       }
     },
+    "common.ok" : {
+      "comment" : "Bouton qui ferme une alerte.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
     "common.retry" : {
       "comment" : "Bouton qui relance un chargement échoué.",
       "extractionState" : "manual",
@@ -1069,14 +1081,290 @@
         }
       }
     },
-    "watchlist.comingSoon" : {
-      "comment" : "Onglet Watchlist pas encore construit.",
+    "watchlist.add" : {
+      "comment" : "Bouton de la fiche : ajoute le titre, ce qui crée une demande.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Votre watchlist et vos demandes arrivent bientôt."
+            "value" : "Ajouter à ma watchlist"
+          }
+        }
+      }
+    },
+    "watchlist.cancel" : {
+      "comment" : "Ferme le choix des saisons.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
+          }
+        }
+      }
+    },
+    "watchlist.chooseSeasons" : {
+      "comment" : "Titre de la feuille du choix des saisons.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Que voulez-vous demander ?"
+          }
+        }
+      }
+    },
+    "watchlist.editSeasons" : {
+      "comment" : "Bouton de la fiche d’une série déjà demandée.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier les saisons"
+          }
+        }
+      }
+    },
+    "watchlist.empty" : {
+      "comment" : "Onglet Watchlist vide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre watchlist est vide. Ajoutez un film ou une série depuis sa fiche : chaque ajout est une demande, et vous serez prévenu quand il sera disponible."
+          }
+        }
+      }
+    },
+    "watchlist.error.rejected" : {
+      "comment" : "Erreur WatchlistError.Rejected.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce titre ne peut pas être demandé."
+          }
+        }
+      }
+    },
+    "watchlist.error.title" : {
+      "comment" : "Titre de l’alerte d’échec de la watchlist.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchlist"
+          }
+        }
+      }
+    },
+    "watchlist.error.unexpected" : {
+      "comment" : "Erreur WatchlistError.Internal ou imprévue.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La watchlist n’a pas pu être mise à jour (erreur inattendue)."
+          }
+        }
+      }
+    },
+    "watchlist.inList" : {
+      "comment" : "Fiche : le titre est dans la watchlist.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans ma watchlist"
+          }
+        }
+      }
+    },
+    "watchlist.offline" : {
+      "comment" : "Bandeau de l’onglet Watchlist hors ligne.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas de connexion : vos derniers changements partiront dès le retour du réseau."
+          }
+        }
+      }
+    },
+    "watchlist.remove" : {
+      "comment" : "Bouton de la fiche.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer de ma watchlist"
+          }
+        }
+      }
+    },
+    "watchlist.request" : {
+      "comment" : "Valide le choix des saisons.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demander"
+          }
+        }
+      }
+    },
+    "watchlist.season.one %@" : {
+      "comment" : "Une saison demandée ; %@ : son numéro.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saison %@"
+          }
+        }
+      }
+    },
+    "watchlist.season.one.specials %@" : {
+      "comment" : "Une saison et les épisodes spéciaux.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saison %@ et épisodes spéciaux"
+          }
+        }
+      }
+    },
+    "watchlist.seasons.many %@" : {
+      "comment" : "Plusieurs saisons demandées ; %@ : leurs numéros séparés par des virgules.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisons %@"
+          }
+        }
+      }
+    },
+    "watchlist.seasons.many.specials %@" : {
+      "comment" : "Plusieurs saisons et les épisodes spéciaux.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisons %@ et épisodes spéciaux"
+          }
+        }
+      }
+    },
+    "watchlist.specials" : {
+      "comment" : "Saison 0 de TMDB, seule demandée.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Épisodes spéciaux"
+          }
+        }
+      }
+    },
+    "watchlist.state.available" : {
+      "comment" : "État d’une demande disponible sur le serveur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disponible"
+          }
+        }
+      }
+    },
+    "watchlist.state.inProgress" : {
+      "comment" : "État d’une demande lancée par l’administrateur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En cours de téléchargement"
+          }
+        }
+      }
+    },
+    "watchlist.state.pending" : {
+      "comment" : "Changement fait hors ligne, pas encore reçu par le serveur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente d’envoi"
+          }
+        }
+      }
+    },
+    "watchlist.state.refused" : {
+      "comment" : "État d’une demande refusée, sans motif.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refusé"
+          }
+        }
+      }
+    },
+    "watchlist.state.refused.reason %@" : {
+      "comment" : "État d’une demande refusée ; %@ : motif écrit par l’administrateur.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refusé : %@"
+          }
+        }
+      }
+    },
+    "watchlist.state.requested" : {
+      "comment" : "État d’une demande pas encore traitée.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demandé"
+          }
+        }
+      }
+    },
+    "watchlist.wholeSeries" : {
+      "comment" : "Demande de toute la série.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Série entière"
           }
         }
       }

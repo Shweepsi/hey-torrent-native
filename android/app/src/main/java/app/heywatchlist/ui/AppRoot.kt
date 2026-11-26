@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.heywatchlist.appServices
 import app.heywatchlist.core.CatalogGateway
+import app.heywatchlist.core.WatchlistGateway
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
 import app.heywatchlist.ui.components.AuroraBackground
@@ -27,6 +28,7 @@ import dev.chrisbanes.haze.rememberHazeState
 fun AppRoot(
     viewModel: AccountViewModel = viewModel(factory = AccountViewModel.Factory),
     catalog: CatalogGateway = LocalContext.current.appServices.catalog,
+    watchlist: WatchlistGateway = LocalContext.current.appServices.watchlist,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val hazeState = rememberHazeState()
@@ -38,7 +40,12 @@ fun AppRoot(
                 // Lecture locale très courte : on garde le décor seul.
                 AccountUiState.Starting -> Unit
                 is AccountUiState.SignedOut -> WelcomeScreen(state = current, viewModel = viewModel)
-                is AccountUiState.SignedIn -> MainScreen(state = current, accountViewModel = viewModel, catalog = catalog)
+                is AccountUiState.SignedIn -> MainScreen(
+                    state = current,
+                    accountViewModel = viewModel,
+                    catalog = catalog,
+                    watchlistGateway = watchlist,
+                )
             }
         }
     }

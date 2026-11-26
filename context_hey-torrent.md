@@ -484,8 +484,8 @@ choisie ; il peut préparer le code pour que le choix reste facile.
   la même demande et toutes notifiées).
 - Retirer un média de sa watchlist ne supprime la demande que si personne
   d'autre ne l'attend et qu'elle n'est pas encore `en cours`.
-- Pour les séries, par défaut comme Overseerr : demande de la série entière
-  ou de saisons précises (à confirmer par le propriétaire).
+- Pour les séries : demande de la série entière ou de saisons au choix
+  (décidé par le propriétaire le 2026-11-26).
 - Règle de conflit : **la dernière modification gagne, champ par champ**,
   avec un horodatage `updated_at` posé par le Worker ; suppression logique
   (`deleted_at`).

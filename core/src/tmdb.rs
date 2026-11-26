@@ -57,6 +57,11 @@ fn image_url(path: Option<&str>, size: &str) -> Option<String> {
     plain.then(|| format!("{IMAGE_BASE}{size}{path}"))
 }
 
+/// Affiche d'une liste (watchlist) à partir du chemin TMDB gardé par le Worker.
+pub(crate) fn list_poster_url(path: Option<&str>) -> Option<String> {
+    image_url(path, LIST.poster)
+}
+
 /// Texte sans blancs de bord, `None` s'il est absent ou vide.
 fn text(raw: Option<&str>) -> Option<String> {
     raw.map(str::trim)

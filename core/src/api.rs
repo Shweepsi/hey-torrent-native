@@ -102,6 +102,9 @@ pub(crate) enum ApiFailure {
     Unavailable,
     /// Erreur du serveur (5xx).
     Server,
+    /// Requête refusée telle quelle (`invalid_request`, `forbidden`) : la
+    /// renvoyer ne changerait rien.
+    Rejected,
     /// Réponse imprévue (format, statut).
     Unexpected,
     /// Défaillance interne.
@@ -135,6 +138,7 @@ fn read_failure(status: u16, code: Option<&str>) -> ApiFailure {
         Some("unauthorized" | "session_expired") => ApiFailure::SignedOut,
         Some("not_found") => ApiFailure::NotFound,
         Some("provider_unavailable") => ApiFailure::Unavailable,
+        Some("invalid_request" | "forbidden") => ApiFailure::Rejected,
         _ if status == 401 => ApiFailure::SignedOut,
         _ if status >= 500 => ApiFailure::Server,
         _ => ApiFailure::Unexpected,
@@ -329,8 +333,10 @@ mod tests {
         assert_eq!(read_failure(502, None), ApiFailure::Server);
         assert_eq!(
             read_failure(400, Some("invalid_request")),
-            ApiFailure::Unexpected
+            ApiFailure::Rejected
         );
+        assert_eq!(read_failure(403, Some("forbidden")), ApiFailure::Rejected);
+        assert_eq!(read_failure(400, None), ApiFailure::Unexpected);
         // Un 404 sans code reconnu n'est pas un « introuvable » du Worker.
         assert_eq!(read_failure(404, None), ApiFailure::Unexpected);
         assert_eq!(read_failure(418, None), ApiFailure::Unexpected);
