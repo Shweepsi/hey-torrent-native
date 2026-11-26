@@ -53,7 +53,7 @@ class HeyMessagingService : FirebaseMessagingService() {
     }
 
     /** Corps traduit d'une clé envoyée par le serveur ; `null` si la clé est inconnue. */
-    private fun bodyText(key: String?, args: Array<String>): String? {
+    private fun bodyText(key: String?, args: Array<out String>): String? {
         @StringRes val res = when (key) {
             "push_available_movie" -> R.string.push_available_movie
             "push_available_show" -> R.string.push_available_show
