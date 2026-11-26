@@ -72,6 +72,10 @@ const TOKEN_PAGE =
 // Même alphabet que les codes d'invitation du serveur (backend/src/crypto.ts).
 const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const GOOGLE_CLIENT = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
+// Clé d'API TMDB v3 (32 caractères hexadécimaux) ou jeton d'accès v4 (un JWT, qui
+// commence par « eyJ » : c'est ce que le Worker utilise pour les distinguer,
+// backend/src/tmdb.ts).
+const TMDB_KEY = /^(?:[0-9a-fA-F]{32}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/;
 
 
 // Un antivirus qui inspecte HTTPS installe son certificat dans le magasin de
@@ -511,7 +515,7 @@ async function cf(token, method, route, body) {
 }
 
 async function askCloudflareToken() {
-  say("\n[1/5] Cloudflare : jeton pour la CI");
+  say("\n[1/6] Cloudflare : jeton pour la CI");
   note("Ce jeton permet à GitHub de mettre le serveur à jour. Il sert aussi, ici, à régler le serveur.");
   note("La page de création s'ouvre avec les bonnes autorisations déjà cochées :");
   note("  Workers Scripts : Edit · D1 : Edit · Account Settings : Read");
@@ -555,7 +559,7 @@ async function chooseAccount(token) {
 
 // Vérifie ce dont la CI aura besoin, avec les droits du jeton : le Worker et la base.
 async function checkCloudflare(token, accountId) {
-  say("\n[2/5] Cloudflare : Worker, base de données et adresse");
+  say("\n[2/6] Cloudflare : Worker, base de données et adresse");
   const secrets = await cf(token, "GET", `/accounts/${accountId}/workers/scripts/${WORKER}/secrets`);
   if (secrets.status === 404) {
     die(`Le Worker « ${WORKER} » n'existe pas dans ce compte. Créez-le (Workers & Pages > Create > Hello World, nom ${WORKER}) puis relancez.`);
@@ -597,7 +601,7 @@ function newAdminCode() {
 
 // Clé des sessions et code administrateur. Rend le code à afficher, s'il est connu.
 async function setupSessionSecrets(token, accountId, names) {
-  say("\n[3/5] Serveur : clé des sessions et code administrateur");
+  say("\n[3/6] Serveur : clé des sessions et code administrateur");
   if (names.has("SESSION_SIGNING_KEY")) {
     ok("clé des sessions déjà en place : conservée");
   } else {
@@ -618,6 +622,32 @@ async function setupSessionSecrets(token, accountId, names) {
   saveToStore("BOOTSTRAP_CODE", code);
   await putWorkerSecret(token, accountId, "BOOTSTRAP_CODE", code);
   return code;
+}
+
+// Clé de l'app pour le catalogue TMDB, que le Worker relaie aux apps. Facultative
+// ici (Entrée pour passer), mais l'onglet Découvrir reste vide sans elle.
+async function setupTmdb(token, accountId, names) {
+  say("\n[4/6] Catalogue TMDB : clé de l'app");
+  if (names.has("TMDB_API_KEY")) {
+    ok("clé TMDB déjà en place : conservée");
+    return;
+  }
+  note("Le serveur relaie le catalogue TMDB (onglet Découvrir) avec la clé de l'app : les apps ne la voient jamais.");
+  note("Sur themoviedb.org, dans Paramètres > API : copiez la « Clé d'API » (32 caractères)");
+  note("ou le « Jeton d'accès en lecture à l'API » (commence par eyJ). L'un ou l'autre convient.");
+  note("Ne la collez nulle part ailleurs, en particulier pas dans la discussion avec Claude.");
+  const value = await askValid(
+    "  Clé ou jeton TMDB (la saisie est masquée, Entrée pour passer) : ",
+    (answer) => answer === "" || TMDB_KEY.test(answer),
+    "Ce n'est ni une clé d'API (32 caractères, lettres a à f et chiffres) ni un jeton d'accès (eyJ…). Recopiez-la, ou Entrée pour passer.",
+    { hidden: true },
+  );
+  if (value === "") {
+    flag("TMDB : clé à ajouter plus tard (relancez ce script) : sans elle, l'onglet Découvrir reste vide.");
+    return;
+  }
+  await putWorkerSecret(token, accountId, "TMDB_API_KEY", value);
+  note("Pour la changer plus tard : Cloudflare > Workers & Pages > heywatchlist-api > Settings > Variables and Secrets.");
 }
 
 const GOOGLE_PROJECT = "heywatchlist-60448";
@@ -654,7 +684,7 @@ async function androidSha1() {
 }
 
 async function setupGoogle(token, accountId, names) {
-  say("\n[4/5] Connexion avec Google (facultatif : Apple marche sans)");
+  say("\n[5/6] Connexion avec Google (facultatif : Apple marche sans)");
   if (["GOOGLE_WEB_CLIENT_ID", "GOOGLE_IOS_CLIENT_ID"].every((name) => names.has(name))) {
     ok("clients Google déjà en place : conservés");
     return;
@@ -751,7 +781,7 @@ async function chooseSignInKey() {
 }
 
 async function setupApple(token, accountId, names) {
-  say("\n[5/5] Apple : révocation à la suppression d'un compte");
+  say("\n[6/6] Apple : révocation à la suppression d'un compte");
   const wanted = ["APPLE_TEAM_ID", "APPLE_SIGNIN_KEY_ID", "APPLE_SIGNIN_PRIVATE_KEY"];
   if (wanted.every((name) => names.has(name))) {
     ok("clé « Sign in with Apple » déjà en place : conservée");
@@ -798,6 +828,7 @@ async function main() {
   ok(`compte Cloudflare : ${account.name}`);
   const { names, apiUrl } = await checkCloudflare(token, account.id);
   const code = await setupSessionSecrets(token, account.id, names);
+  await setupTmdb(token, account.id, names);
   await setupGoogle(token, account.id, names);
   await setupApple(token, account.id, names);
 
@@ -810,7 +841,7 @@ async function main() {
     say("\nÀ faire plus tard :");
     for (const text of toCheck) note(`- ${text}`);
   }
-  say("\n✓ Serveur configuré. GitHub le déploiera à la fusion de la pull request du jalon 2.");
+  say("\n✓ Serveur configuré. GitHub le déploiera à la prochaine fusion qui touche backend/.");
   if (code) {
     say("\nVotre code administrateur, à taper une seule fois dans l'app, à votre première connexion :");
     say(`\n    ${code}\n`);
