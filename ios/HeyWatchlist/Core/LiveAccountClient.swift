@@ -3,36 +3,18 @@ import Foundation
 /// Implémentation réelle : appelle le compte UniFFI du cœur Rust.
 ///
 /// Un acteur : les appels quittent toujours le fil principal (règle du
-/// projet : jamais le cœur sur le fil principal), et le compte n'est créé
-/// qu'une fois.
+/// projet : jamais le cœur sur le fil principal). Le compte lui-même vient de
+/// `CoreAccountSource`, partagé avec le catalogue.
 actor LiveAccountClient: AccountClient {
-    private let baseUrl: String
-    private let store: any SessionStore
-    private var account: Account?
+    private let source: CoreAccountSource
 
-    init(
-        baseUrl: String = Bundle.main.object(forInfoDictionaryKey: "HeyWatchlistAPIURL") as? String ?? "",
-        store: any SessionStore = KeychainSessionStore()
-    ) {
-        self.baseUrl = baseUrl
-        self.store = store
-    }
-
-    private func core() throws(AccountFailure) -> Account {
-        if let account { return account }
-        guard !baseUrl.isEmpty else { throw .notConfigured }
-        do {
-            let created = try Account(baseUrl: baseUrl, store: store)
-            account = created
-            return created
-        } catch {
-            throw AccountFailure(error)
-        }
+    init(source: CoreAccountSource) {
+        self.source = source
     }
 
     /// Exécute un appel au cœur et traduit ses erreurs.
     private func call<T: Sendable>(_ body: (Account) async throws -> T) async throws(AccountFailure) -> T {
-        let account = try core()
+        let account = try await source.account()
         do {
             return try await body(account)
         } catch {
@@ -107,7 +89,7 @@ actor LiveAccountClient: AccountClient {
             invitationCode: invitationCode,
             givenName: credential.givenName
         )
-        let account = try core()
+        let account = try await source.account()
         do {
             return .signedIn(try await account.signIn(request: request).profile)
         } catch AccountError.InvitationRequired {
@@ -118,7 +100,7 @@ actor LiveAccountClient: AccountClient {
     }
 
     func signOut() async {
-        guard let account = try? core() else { return }
+        guard let account = try? await source.account() else { return }
         await account.signOut()
     }
 

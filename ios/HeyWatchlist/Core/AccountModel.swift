@@ -63,6 +63,13 @@ final class AccountModel {
         } catch {}
     }
 
+    /// Le catalogue a constaté que la session n'est plus valable (le cœur l'a
+    /// déjà effacée) : retour à l'accueil, avec l'explication.
+    func sessionExpired() async {
+        guard case .signedIn = state else { return }
+        await prepareSignedOut(SignedOut(failure: .signedOut))
+    }
+
     private func prepareSignedOut(_ signedOut: SignedOut) async {
         state = .signedOut(signedOut)
         appleNonce = try? await client.newAppleNonce()

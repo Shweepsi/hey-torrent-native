@@ -87,6 +87,20 @@ struct AccountModelTests {
         #expect(model.state == .signedOut(.init()))
     }
 
+    @Test func anExpiredSessionSeenByTheCatalogGoesBackToWelcome() async {
+        let model = AccountModel(client: FakeAccountClient(stored: .camille))
+        await model.start()
+        await model.sessionExpired()
+        #expect(model.state == .signedOut(.init(failure: .signedOut)))
+    }
+
+    @Test func anExpiredSessionIsIgnoredWhenAlreadySignedOut() async {
+        let model = AccountModel(client: FakeAccountClient())
+        await model.start()
+        await model.sessionExpired()
+        #expect(model.state == .signedOut(.init()))
+    }
+
     @Test func deletionSendsTheAppleCode() async {
         let client = FakeAccountClient(stored: .camille)
         let model = AccountModel(client: client)

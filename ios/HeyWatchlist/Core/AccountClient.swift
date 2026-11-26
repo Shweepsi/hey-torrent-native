@@ -8,14 +8,16 @@ struct Profile: Equatable, Sendable {
     let hasApple: Bool
 }
 
-enum Provider: Equatable, Sendable {
+/// Fournisseur d'identité. Pas « Provider » : le cœur exporte déjà un type de
+/// ce nom (plateforme de streaming), compilé dans le même module.
+enum SignInProvider: Equatable, Sendable {
     case apple
     case google
 }
 
 /// Jeton d'identité obtenu d'Apple ou de Google, à faire vérifier par le serveur.
 struct IdentityCredential: Equatable, Sendable {
-    let provider: Provider
+    let provider: SignInProvider
     let idToken: String
     /// Nonce brut ayant servi à obtenir ce jeton.
     let nonce: String

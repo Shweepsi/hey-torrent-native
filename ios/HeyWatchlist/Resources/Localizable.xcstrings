@@ -13,6 +13,138 @@
         }
       }
     },
+    "catalog.error.network" : {
+      "comment" : "Erreur CatalogError.Network.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas de connexion. Vérifiez votre réseau et réessayez."
+          }
+        }
+      }
+    },
+    "catalog.error.notConfigured" : {
+      "comment" : "Adresse du serveur absente de cette compilation (catalogue).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette version de l’app ne connaît pas l’adresse du serveur."
+          }
+        }
+      }
+    },
+    "catalog.error.notFound" : {
+      "comment" : "Erreur CatalogError.NotFound.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce titre est introuvable."
+          }
+        }
+      }
+    },
+    "catalog.error.server" : {
+      "comment" : "Erreur CatalogError.Server.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur a rencontré un problème. Réessayez plus tard."
+          }
+        }
+      }
+    },
+    "catalog.error.signedOut" : {
+      "comment" : "Erreur CatalogError.SignedOut.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre session a expiré. Reconnectez-vous."
+          }
+        }
+      }
+    },
+    "catalog.error.unavailable" : {
+      "comment" : "Erreur CatalogError.Unavailable.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le catalogue est momentanément indisponible. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "catalog.error.unexpected" : {
+      "comment" : "Erreur CatalogError.Unexpected ou Internal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le catalogue n’a pas pu être lu. Réessayez."
+          }
+        }
+      }
+    },
+    "catalog.stale" : {
+      "comment" : "Bandeau quand le catalogue vient du cache faute de réseau.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hors ligne : ce contenu est enregistré sur votre appareil."
+          }
+        }
+      }
+    },
+    "common.close" : {
+      "comment" : "Bouton qui ferme une feuille.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
+          }
+        }
+      }
+    },
+    "common.loading" : {
+      "comment" : "Description d’accessibilité d’un squelette ou d’une roue de chargement.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement en cours"
+          }
+        }
+      }
+    },
+    "common.retry" : {
+      "comment" : "Bouton qui relance un chargement échoué.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer"
+          }
+        }
+      }
+    },
     "delete.appleHint" : {
       "comment" : "Pourquoi Apple est redemandé avant la suppression.",
       "extractionState" : "manual",
@@ -73,14 +205,410 @@
         }
       }
     },
-    "discover.comingSoon" : {
-      "comment" : "Onglet Découvrir pas encore construit.",
+    "detail.cast" : {
+      "comment" : "Titre de la section des acteurs.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les films et séries arrivent dans la prochaine version."
+            "value" : "Casting"
+          }
+        }
+      }
+    },
+    "detail.directors.movie" : {
+      "comment" : "Libellé des réalisateurs d’un film.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réalisation"
+          }
+        }
+      }
+    },
+    "detail.directors.series" : {
+      "comment" : "Libellé des créateurs d’une série.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Création"
+          }
+        }
+      }
+    },
+    "detail.episodes %lld" : {
+      "comment" : "Nombre d’épisodes (pluriel).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld épisode"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld épisodes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "detail.overview" : {
+      "comment" : "Titre de la section du synopsis.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synopsis"
+          }
+        }
+      }
+    },
+    "detail.overview.none" : {
+      "comment" : "Fiche sans synopsis.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun synopsis disponible."
+          }
+        }
+      }
+    },
+    "detail.providers.attribution" : {
+      "comment" : "Mention de la source des plateformes de visionnage (TMDB exige d’en citer l’origine), sous la liste des plateformes de la fiche.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disponibilités fournies par JustWatch."
+          }
+        }
+      }
+    },
+    "detail.providers.buy" : {
+      "comment" : "Plateformes où acheter le titre.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À l’achat"
+          }
+        }
+      }
+    },
+    "detail.providers.flatrate" : {
+      "comment" : "Plateformes qui l’incluent dans leur abonnement.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inclus dans un abonnement"
+          }
+        }
+      }
+    },
+    "detail.providers.none" : {
+      "comment" : "Aucune plateforme pour ce titre en France.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune plateforme référencée en France pour le moment."
+          }
+        }
+      }
+    },
+    "detail.providers.rent" : {
+      "comment" : "Plateformes où louer le titre.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À la location"
+          }
+        }
+      }
+    },
+    "detail.providers.title" : {
+      "comment" : "Titre de la section des plateformes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Où regarder en France"
+          }
+        }
+      }
+    },
+    "detail.rating %@" : {
+      "comment" : "Description d’accessibilité de la note (ex. 7,4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note : %@ sur 10"
+          }
+        }
+      }
+    },
+    "detail.runtime.hoursMinutes %lld %@" : {
+      "comment" : "Durée d’une heure ou plus : heures, puis minutes sur deux chiffres.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld h %2$@"
+          }
+        }
+      }
+    },
+    "detail.runtime.minutes %lld" : {
+      "comment" : "Durée de moins d’une heure.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min"
+          }
+        }
+      }
+    },
+    "detail.season.empty" : {
+      "comment" : "Saison sans épisode connu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun épisode pour cette saison."
+          }
+        }
+      }
+    },
+    "detail.seasons %lld" : {
+      "comment" : "Nombre de saisons (pluriel).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld saison"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld saisons"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "detail.seasons.title" : {
+      "comment" : "Titre de la section des saisons d’une série.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisons"
+          }
+        }
+      }
+    },
+    "detail.similar" : {
+      "comment" : "Titre de la section des titres proches.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titres similaires"
+          }
+        }
+      }
+    },
+    "detail.trailer" : {
+      "comment" : "Bouton qui ouvre la bande-annonce.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bande-annonce"
+          }
+        }
+      }
+    },
+    "detail.trailer.hint" : {
+      "comment" : "Indication d’accessibilité du bouton de bande-annonce (s’ouvre dans le navigateur ou l’app vidéo du système).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre la vidéo hors de l’app."
+          }
+        }
+      }
+    },
+    "discover.genres" : {
+      "comment" : "Titre de la rangée des genres.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genres"
+          }
+        }
+      }
+    },
+    "discover.hero" : {
+      "comment" : "Description d’accessibilité du carrousel de tête.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À la une"
+          }
+        }
+      }
+    },
+    "discover.shelf.empty" : {
+      "comment" : "Rangée sans titre.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien à afficher pour le moment."
+          }
+        }
+      }
+    },
+    "discover.shelf.nowPlaying" : {
+      "comment" : "Rangée des films à l’affiche.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Au cinéma"
+          }
+        }
+      }
+    },
+    "discover.shelf.onTheAirSeries" : {
+      "comment" : "Rangée des séries en cours de diffusion.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séries en cours de diffusion"
+          }
+        }
+      }
+    },
+    "discover.shelf.popularMovies" : {
+      "comment" : "Rangée des films populaires.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Films populaires"
+          }
+        }
+      }
+    },
+    "discover.shelf.popularSeries" : {
+      "comment" : "Rangée des séries populaires.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séries populaires"
+          }
+        }
+      }
+    },
+    "discover.shelf.topRatedMovies" : {
+      "comment" : "Rangée des films les mieux notés.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Films les mieux notés"
+          }
+        }
+      }
+    },
+    "discover.shelf.topRatedSeries" : {
+      "comment" : "Rangée des séries les mieux notées.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séries les mieux notées"
+          }
+        }
+      }
+    },
+    "discover.shelf.trending" : {
+      "comment" : "Rangée des tendances de la semaine.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tendances"
+          }
+        }
+      }
+    },
+    "discover.shelf.upcoming" : {
+      "comment" : "Rangée des films à venir.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À venir"
           }
         }
       }
@@ -193,6 +721,66 @@
         }
       }
     },
+    "genre.empty" : {
+      "comment" : "Genre de film sans titre : la page de films est vide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun titre pour ce genre."
+          }
+        }
+      }
+    },
+    "genre.kind" : {
+      "comment" : "Libellé d’accessibilité du sélecteur Films / Séries.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type de titre"
+          }
+        }
+      }
+    },
+    "genre.kind.movies" : {
+      "comment" : "Choix Films d’un genre.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Films"
+          }
+        }
+      }
+    },
+    "genre.kind.series" : {
+      "comment" : "Choix Séries d’un genre.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séries"
+          }
+        }
+      }
+    },
+    "genre.noSeries" : {
+      "comment" : "Genre de film sans équivalent chez les séries : le cœur répond par une page vide, et le choix Séries du genre affiche ce message.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune série ne correspond à ce genre."
+          }
+        }
+      }
+    },
     "invitation.body" : {
       "comment" : "Explication du code d’invitation.",
       "extractionState" : "manual",
@@ -261,6 +849,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Code d’invitation"
+          }
+        }
+      }
+    },
+    "search.empty.description %@" : {
+      "comment" : "Recherche sans résultat ; %@ est le texte saisi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien ne correspond à « %@ »."
+          }
+        }
+      }
+    },
+    "search.empty.title" : {
+      "comment" : "Titre d’une recherche sans résultat.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun résultat"
+          }
+        }
+      }
+    },
+    "search.idle.description" : {
+      "comment" : "Invitation à chercher, champ vide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez le titre d’un film ou d’une série."
+          }
+        }
+      }
+    },
+    "search.idle.title" : {
+      "comment" : "Titre de l’écran de recherche, champ vide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher"
+          }
+        }
+      }
+    },
+    "search.prompt" : {
+      "comment" : "Texte du champ de recherche.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Films, séries"
           }
         }
       }
@@ -361,6 +1009,18 @@
         }
       }
     },
+    "tab.search" : {
+      "comment" : "Onglet Recherche.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher"
+          }
+        }
+      }
+    },
     "tab.settings" : {
       "comment" : "Onglet Réglages.",
       "extractionState" : "manual",
@@ -381,6 +1041,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watchlist"
+          }
+        }
+      }
+    },
+    "title.kind.movie" : {
+      "comment" : "Nature d’un titre : film.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film"
+          }
+        }
+      }
+    },
+    "title.kind.series" : {
+      "comment" : "Nature d’un titre : série.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Série"
           }
         }
       }
