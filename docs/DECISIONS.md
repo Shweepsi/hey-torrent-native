@@ -185,10 +185,40 @@ facile.
 - Les invités ne voient jamais de torrent ni de source : seuls l'état et le
   motif de refus remontent.
 
+## Décidé au jalon 5 (2026-11-26)
+
+- **Espace admin = activité à part** (`AdminActivity`) de l'édition admin,
+  ouverte depuis Réglages. Le Worker revérifie le rôle à chaque appel.
+- **Réglages des serveurs** (sources Torznab, qBittorrent, catégories, termes
+  exclus) : texte opaque produit par le cœur, chiffré en AES-256-GCM par le
+  Worker (`CREDENTIALS_KEY`, jamais remplacée) dans `credentials`, et gardé
+  chiffré par le Keystore sur le téléphone pour travailler hors ligne.
+  Adresses en HTTPS uniquement, 20 sources au plus. Aucune source n'est
+  préconfigurée.
+- **qBittorrent** : connexion par identifiant et mot de passe (cookie) ou par
+  jeton (`Authorization: Bearer`). Version lue au premier appel : routes
+  `stop`/`start` en v5, `pause`/`resume` en v4. Chaque torrent porte les
+  étiquettes `heywatchlist` et `hw-<demande>` ; la catégorie (`films` ou
+  `series` par défaut) est créée si elle manque.
+- **Tri des releases** : port des règles de l'ancien dépôt pour la pertinence
+  (titre, année, saison ; seuil 20), puis qualité : langue d'abord (VFF et
+  MULTi VFF 40, VF 35, MULTi 32, VFQ 15, VOSTFR −25, inconnue −40), définition
+  (2160p 30, 1080p 28, 720p 15), source (Remux 12, BluRay et WEB-DL 10…),
+  codec (x265 et AV1 8, x264 5), HDR +3, seeders (−80 sans seeder, sinon
+  jusqu'à +20). Les CAM, livres, albums et épisodes isolés sont écartés. Poids
+  à ajuster après les premiers essais.
+- **Envoi** : le torrent part d'abord dans qBittorrent, puis la demande passe
+  « en cours ». Si ce second appel échoue, l'app le dit et propose de
+  réessayer l'enregistrement seul, sans renvoyer le torrent.
+- **Vérification des développeurs Android** (ancien point n°4) : Google
+  l'a annoncée à partir du 30 septembre 2026 dans quelques pays (pas la France), puis partout à
+  partir de 2027. L'installation par ADB reste possible pour un APK non
+  vérifié, et un compte gratuit « distribution limitée » (20 appareils, sans
+  pièce d'identité) suffira pour l'APK admin si l'installation directe est un
+  jour bloquée en France.
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les
    webhooks et par une synchronisation complète chaque nuit.
 3. Dépôt privé (budget de minutes macOS à surveiller).
-4. APK admin : à vérifier au jalon 5 face aux règles Google de vérification des
-   développeurs pour les APK installés hors Play Store.
