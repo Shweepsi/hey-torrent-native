@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     let model: AccountModel
     let catalog: any CatalogClient
+    let watchlist: any WatchlistClient
 
     var body: some View {
         ZStack {
@@ -15,7 +16,7 @@ struct RootView: View {
             case .signedOut(let state):
                 WelcomeView(model: model, state: state)
             case .signedIn(let state):
-                MainTabView(model: model, state: state, catalog: catalog)
+                MainTabView(model: model, state: state, catalog: catalog, watchlist: watchlist)
             }
         }
         // Seule la palette sombre existe pour l'instant (docs/DESIGN.md).

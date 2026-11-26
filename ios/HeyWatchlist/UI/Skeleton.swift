@@ -81,8 +81,11 @@ struct TextSkeleton: View {
 /// Bandeau discret : ce qui s'affiche vient de l'appareil faute de réseau.
 /// Un fond uni, pas de verre : il défile avec le contenu.
 struct StaleBanner: View {
+    /// Message précis ; celui du catalogue par défaut.
+    var text: LocalizedStringKey = "catalog.stale"
+
     var body: some View {
-        Label("catalog.stale", systemImage: "wifi.slash")
+        Label(text, systemImage: "wifi.slash")
             .font(.footnote)
             .foregroundStyle(.secondary)
             .padding(.horizontal, 14)

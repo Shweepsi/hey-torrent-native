@@ -408,6 +408,36 @@ impl Account {
         api::read_bytes(response).await
     }
 
+    /// Écriture authentifiée sur le Worker (`PUT`, `DELETE`…), avec un corps
+    /// JSON facultatif : corps brut de la réponse (vide pour un 204).
+    pub(crate) async fn send_bytes(
+        &self,
+        method: reqwest::Method,
+        target: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<Vec<u8>, ApiFailure> {
+        let url = self.base.join(target);
+        let response = self
+            .authorized(|http, token| {
+                let request = http.request(method.clone(), &url).bearer_auth(token);
+                match body {
+                    Some(body) => request.json(body),
+                    None => request,
+                }
+            })
+            .await?;
+        api::read_bytes(response).await
+    }
+
+    /// Identifiant du compte connecté, sans appel réseau.
+    pub(crate) async fn user_id(&self) -> Option<String> {
+        self.session
+            .lock()
+            .await
+            .as_ref()
+            .map(|s| s.user.id.clone())
+    }
+
     /// Requête authentifiée quelconque sur le Worker (méthode, chemin, corps
     /// JSON) : statut et corps brut. Les routes d'administration s'en servent,
     /// avec la même session que le reste de l'app.

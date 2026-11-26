@@ -1,9 +1,9 @@
 package app.heywatchlist.ui.main
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,9 +22,9 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -33,6 +33,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.heywatchlist.R
 import app.heywatchlist.core.CatalogGateway
 import app.heywatchlist.core.Title
+import app.heywatchlist.core.WatchlistFailure
+import app.heywatchlist.core.WatchlistGateway
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
 import app.heywatchlist.ui.components.GlassSurface
@@ -50,6 +52,8 @@ import app.heywatchlist.ui.discover.SearchScreen
 import app.heywatchlist.ui.discover.SearchViewModel
 import app.heywatchlist.ui.settings.SettingsScreen
 import app.heywatchlist.ui.theme.HeyTheme
+import app.heywatchlist.ui.watchlist.WatchlistScreen
+import app.heywatchlist.ui.watchlist.WatchlistViewModel
 
 /** Les trois onglets de l'app. */
 enum class Tab(@param:StringRes val labelRes: Int) {
@@ -66,15 +70,25 @@ enum class Tab(@param:StringRes val labelRes: Int) {
  * d'onglet ou qu'on ouvre une fiche.
  */
 @Composable
-fun MainScreen(state: AccountUiState.SignedIn, accountViewModel: AccountViewModel, catalog: CatalogGateway) {
+fun MainScreen(
+    state: AccountUiState.SignedIn,
+    accountViewModel: AccountViewModel,
+    catalog: CatalogGateway,
+    watchlistGateway: WatchlistGateway,
+) {
     var tab by rememberSaveable { mutableStateOf(Tab.Discover) }
     val savedStates = rememberSaveableStateHolder()
     val navigator: DiscoverNavigator = viewModel(factory = DiscoverNavigator.Factory)
     val discoverFactory = remember(catalog) { DiscoverViewModel.factory(catalog) }
     val discover: DiscoverViewModel = viewModel(factory = discoverFactory)
+    // Partagée par l'onglet et les fiches : un ajout se voit partout.
+    val watchlist: WatchlistViewModel = viewModel(factory = remember(watchlistGateway) { WatchlistViewModel.factory(watchlistGateway) })
     val stack by navigator.stack.collectAsStateWithLifecycle()
     // Après une reconnexion ou une rotation, ce qui avait échoué se relit.
     LaunchedEffect(discover) { discover.reloadFailed() }
+    // À chaque arrivée sur les onglets (connexion, retour de l'app) : copie locale, puis synchronisation.
+    LaunchedEffect(watchlist) { watchlist.open() }
+    WatchlistMessages(watchlist)
     // Un écran quitté ne garde pas son état sauvegardé (défilement, saisie) : sans cela il s'accumulerait.
     val openIds = remember { mutableSetOf<String>() }
     LaunchedEffect(stack) {
@@ -88,7 +102,7 @@ fun MainScreen(state: AccountUiState.SignedIn, accountViewModel: AccountViewMode
     if (top != null) {
         BackHandler { navigator.back() }
         savedStates.SaveableStateProvider(entryStateKey(top.id)) {
-            DiscoverEntryScreen(entry = top, catalog = catalog, navigator = navigator)
+            DiscoverEntryScreen(entry = top, catalog = catalog, watchlist = watchlist, navigator = navigator)
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
@@ -102,7 +116,10 @@ fun MainScreen(state: AccountUiState.SignedIn, accountViewModel: AccountViewMode
                             onOpenGenre = { navigator.open(DiscoverDestination.GenreTitles(it)) },
                         )
 
-                        Tab.Watchlist -> ComingSoon(R.string.tab_watchlist, R.string.watchlist_coming_soon)
+                        Tab.Watchlist -> WatchlistScreen(
+                            viewModel = watchlist,
+                            onOpenTitle = { navigator.open(DiscoverDestination.Detail(it)) },
+                        )
                         Tab.Settings -> SettingsScreen(state = state, viewModel = accountViewModel)
                     }
                 }
@@ -117,7 +134,12 @@ private fun entryStateKey(id: String) = "entry-$id"
 
 /** Un écran de la pile de Découvrir, avec les ViewModels de son étape. */
 @Composable
-private fun DiscoverEntryScreen(entry: DiscoverEntry, catalog: CatalogGateway, navigator: DiscoverNavigator) {
+private fun DiscoverEntryScreen(
+    entry: DiscoverEntry,
+    catalog: CatalogGateway,
+    watchlist: WatchlistViewModel,
+    navigator: DiscoverNavigator,
+) {
     val onBack = { navigator.back() }
     val onOpenTitle = { title: Title -> navigator.open(DiscoverDestination.Detail(title)) }
     when (val destination = entry.destination) {
@@ -134,7 +156,7 @@ private fun DiscoverEntryScreen(entry: DiscoverEntry, catalog: CatalogGateway, n
                 viewModelStoreOwner = entry,
                 factory = remember(catalog, destination) { DetailViewModel.factory(catalog, destination.title) },
             )
-            DetailScreen(viewModel = model, onBack = onBack, onOpenTitle = onOpenTitle)
+            DetailScreen(viewModel = model, watchlist = watchlist, onBack = onBack, onOpenTitle = onOpenTitle)
         }
 
         is DiscoverDestination.GenreTitles -> {
@@ -147,24 +169,19 @@ private fun DiscoverEntryScreen(entry: DiscoverEntry, catalog: CatalogGateway, n
     }
 }
 
+/** Un échec de la watchlist (titre refusé, erreur imprévue) s'affiche une fois, en bref. */
 @Composable
-private fun ComingSoon(@StringRes titleRes: Int, @StringRes bodyRes: Int) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        HeyText(
-            text = stringResource(titleRes),
-            style = HeyTheme.typography.display,
-            modifier = Modifier.semantics { heading() },
-        )
-        GlassSurface(modifier = Modifier.fillMaxWidth()) {
-            HeyText(
-                text = stringResource(bodyRes),
-                color = HeyTheme.colors.onBackgroundMuted,
-                modifier = Modifier.padding(24.dp),
-            )
+private fun WatchlistMessages(watchlist: WatchlistViewModel) {
+    val context = LocalContext.current
+    val state by watchlist.uiState.collectAsStateWithLifecycle()
+    val message = state.message
+    LaunchedEffect(message) {
+        if (message == null) return@LaunchedEffect
+        // La session expirée ramène déjà à l'accueil : pas de message en plus.
+        if (message != WatchlistFailure.SignedOut) {
+            Toast.makeText(context, context.getString(message.messageRes), Toast.LENGTH_SHORT).show()
         }
+        watchlist.consumeMessage()
     }
 }
 

@@ -14,6 +14,7 @@ mod catalog;
 mod error;
 mod google;
 mod tmdb;
+mod watchlist;
 
 pub use account::{
     Account, AccountError, GoogleClientIds, IdentityProvider, SessionStore, SignInNonce,
@@ -23,8 +24,8 @@ pub use account::{
 pub use admin::{
     AdminError, AdminRequest, AdminSpace, AudioLanguage, Download, DownloadState, Invitation,
     InvitationInfo, QbitAuth, QbitSettings, Release, ReleaseInfo, ReleaseSource, RequestFilter,
-    RequestFollower, RequestStatus, Resolution, SearchObserver, SearchOutcome, SearchQuery,
-    ServerSettings, SourceFailure, SourceReport, TorznabSource, VideoCodec,
+    RequestFollower, Resolution, SearchObserver, SearchOutcome, SearchQuery, ServerSettings,
+    SourceFailure, SourceReport, TorznabSource, VideoCodec,
 };
 pub use catalog::{
     CastMember, Catalog, CatalogError, Episode, Genre, MediaType, Provider, Providers,
@@ -32,6 +33,7 @@ pub use catalog::{
 };
 pub use error::CoreError;
 pub use google::{GoogleAuthorization, begin_google_sign_in, complete_google_sign_in};
+pub use watchlist::{RequestStatus, Watchlist, WatchlistError, WatchlistItem, WatchlistSnapshot};
 
 uniffi::setup_scaffolding!();
 

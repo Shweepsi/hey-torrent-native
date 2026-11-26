@@ -17,7 +17,6 @@
     <string name="tab_discover">Découvrir</string>
     <string name="tab_watchlist">Watchlist</string>
     <string name="tab_settings">Réglages</string>
-    <string name="watchlist_coming_soon">Votre watchlist et vos demandes arrivent bientôt.</string>
 
     <!-- Découvrir -->
     <string name="action_back">Retour</string>
@@ -85,6 +84,36 @@
     <plurals name="detail_votes">
         <item quantity="one">%1$s vote</item>
         <item quantity="other">%1$s votes</item>
+    </plurals>
+
+    <!-- Watchlist et demandes -->
+    <string name="watchlist_add">Ajouter à ma watchlist</string>
+    <string name="watchlist_in_list">Dans ma watchlist</string>
+    <string name="watchlist_remove">Retirer de ma watchlist</string>
+    <string name="watchlist_edit_seasons">Modifier les saisons</string>
+    <string name="watchlist_choose_seasons">Que voulez-vous demander ?</string>
+    <string name="watchlist_whole_series">Série entière</string>
+    <string name="watchlist_specials">Épisodes spéciaux</string>
+    <string name="watchlist_seasons_submit">Demander</string>
+    <string name="watchlist_seasons_cancel">Annuler</string>
+    <string name="watchlist_state_requested">Demandé</string>
+    <string name="watchlist_state_in_progress">En cours de téléchargement</string>
+    <string name="watchlist_state_available">Disponible</string>
+    <string name="watchlist_state_refused">Refusé</string>
+    <string name="watchlist_state_refused_reason">Refusé : %1$s</string>
+    <string name="watchlist_pending">En attente d’envoi</string>
+    <string name="watchlist_empty">Votre watchlist est vide. Ajoutez un film ou une série depuis sa fiche : chaque ajout est une demande, et vous serez prévenu quand il sera disponible.</string>
+    <string name="watchlist_offline">Pas de connexion : vos derniers changements partiront dès le retour du réseau.</string>
+    <string name="watchlist_error_rejected">Ce titre ne peut pas être demandé.</string>
+    <string name="watchlist_error_unknown">La watchlist n’a pas pu être mise à jour (erreur inattendue).</string>
+
+    <plurals name="watchlist_seasons">
+        <item quantity="one">Saison %1$s</item>
+        <item quantity="other">Saisons %1$s</item>
+    </plurals>
+    <plurals name="watchlist_seasons_and_specials">
+        <item quantity="one">Saison %1$s et épisodes spéciaux</item>
+        <item quantity="other">Saisons %1$s et épisodes spéciaux</item>
     </plurals>
 
     <string name="settings_hello">Bonjour %1$s</string>

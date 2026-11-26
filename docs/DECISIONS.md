@@ -161,6 +161,30 @@ facile.
 - Pas de badge « Sur Plex » au jalon 3 : il dépend de la table `library` et du
   point à trancher n°2 ci-dessous, donc il n'est pas codé.
 
+## Décidé au jalon 4 (2026-11-26)
+
+- **Séries** (choix du propriétaire, ancien point n°6) : on demande la série
+  entière ou des saisons au choix. Une liste de saisons vide est refusée ;
+  `null` veut dire « série entière ». Le choix se modifie depuis la fiche.
+- **Une demande par titre** (`requests`, unique sur type et identifiant TMDB).
+  Ses demandeurs sont les lignes vivantes de `watchlist_items` : pas de table
+  de rattachement séparée. Retirer un titre est une suppression logique
+  (`deleted_at`) ; une demande `requested` ou `refused` que plus personne ne
+  suit est supprimée, une demande `in_progress` ou `available` reste.
+- **Le Worker lit le titre, l'affiche et l'année chez TMDB** (même cache que le
+  relais) : le téléphone n'envoie que le type, l'identifiant et les saisons,
+  qui sont vérifiées face à la liste de TMDB.
+- **Hors ligne** : le cœur garde une copie de la liste et une file d'au plus un
+  changement par titre (le dernier geste l'emporte), envoyée dans l'ordre au
+  retour du réseau. La dernière écriture reçue par le Worker gagne. Un
+  changement refusé par le serveur (titre introuvable, saisons invalides) est
+  abandonné ; une panne réseau le garde. Changement de compte : la copie
+  locale est effacée.
+- **« Déjà disponible » n'est pas codé** : il dépend de la table `library`
+  (point n°2), créée au jalon 6.
+- Les invités ne voient jamais de torrent ni de source : seuls l'état et le
+  motif de refus remontent.
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les
@@ -168,5 +192,3 @@ facile.
 3. Dépôt privé (budget de minutes macOS à surveiller).
 4. APK admin : à vérifier au jalon 5 face aux règles Google de vérification des
    développeurs pour les APK installés hors Play Store.
-6. Séries : demande de la série entière ou de saisons précises, comme
-   Overseerr.

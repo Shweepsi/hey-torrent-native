@@ -26,7 +26,7 @@ pub use search::{
 };
 pub use settings::{QbitAuth, QbitSettings, ServerSettings, TorznabSource};
 pub use space::AdminSpace;
-pub use worker::{AdminRequest, InvitationInfo, RequestFilter, RequestFollower, RequestStatus};
+pub use worker::{AdminRequest, InvitationInfo, RequestFilter, RequestFollower};
 
 /// Code d'invitation à transmettre à un proche.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]

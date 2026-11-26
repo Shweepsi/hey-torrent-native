@@ -77,12 +77,16 @@ appareil.
 
 ## Jalon 4 : watchlist et demandes
 
-- [ ] Ajout en un geste, création de la demande, rattachement à une demande
-      existante.
-- [ ] États : demandée, en cours, disponible, refusée, déjà disponible.
-- [ ] Synchronisation avec D1, file d'attente hors ligne, dernière
+- [x] Ajout depuis la fiche, création de la demande, rattachement à une
+      demande existante (Worker, cœur, Android, iPhone).
+- [x] États : demandée, en cours, disponible, refusée.
+- [x] Synchronisation avec D1, file d'attente hors ligne, dernière
       modification gagnante.
-- [ ] Séries : série entière ou saisons précises (à confirmer).
+- [x] Séries : série entière ou saisons au choix (décidé le 2026-11-26).
+- [ ] CI verte sur Android et iPhone, puis essai sur appareil : Camille
+      demande un film sur iPhone et la demande apparaît dans D1.
+- [ ] État « déjà disponible » : attend la table `library` (jalon 6).
+- [ ] Ajout en un geste depuis une affiche (appui long dans Découvrir).
 
 ## Jalon 5 : espace admin (APK Android)
 

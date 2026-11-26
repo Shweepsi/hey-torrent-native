@@ -18,13 +18,16 @@ struct MainTabView: View {
     /// Gardés ici, au-dessus des onglets : leurs données survivent aux changements d'onglet.
     @State private var discover: DiscoverModel
     @State private var search: SearchModel
+    /// Partagée par l'onglet Watchlist et les fiches de tous les onglets.
+    @State private var watchlist: WatchlistModel
 
-    init(model: AccountModel, state: AccountModel.SignedIn, catalog: any CatalogClient) {
+    init(model: AccountModel, state: AccountModel.SignedIn, catalog: any CatalogClient, watchlist: any WatchlistClient) {
         self.model = model
         self.state = state
         self.catalog = catalog
         _discover = State(initialValue: DiscoverModel(client: catalog))
         _search = State(initialValue: SearchModel(client: catalog))
+        _watchlist = State(initialValue: WatchlistModel(client: watchlist))
     }
 
     var body: some View {
@@ -33,7 +36,7 @@ struct MainTabView: View {
                 DiscoverView(model: discover, catalog: catalog)
             }
             Tab("tab.watchlist", systemImage: "bookmark", value: AppTab.watchlist) {
-                ComingSoonView(title: "tab.watchlist", message: "watchlist.comingSoon")
+                WatchlistView(catalog: catalog)
             }
             Tab("tab.settings", systemImage: "gearshape", value: AppTab.settings) {
                 SettingsView(model: model, state: state)
@@ -44,26 +47,21 @@ struct MainTabView: View {
         }
         // La barre se réduit quand on fait défiler vers le bas.
         .tabBarMinimizeBehavior(.onScrollDown)
-    }
-}
-
-/// Onglet pas encore construit (jalon 4).
-private struct ComingSoonView: View {
-    let title: LocalizedStringKey
-    let message: LocalizedStringKey
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                HeyBackground()
-                Text(message)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(24)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 28))
-                    .padding(24)
-            }
-            .navigationTitle(title)
+        .environment(watchlist)
+        // À chaque arrivée sur les onglets : copie locale, puis synchronisation.
+        .task { await watchlist.open() }
+        .alert(
+            Text("watchlist.error.title"),
+            isPresented: Binding(
+                // La session expirée ramène déjà à l'accueil : pas d'alerte en plus.
+                get: { watchlist.message != nil && watchlist.message != .signedOut },
+                set: { shown in if !shown { watchlist.message = nil } }
+            ),
+            presenting: watchlist.message
+        ) { _ in
+            Button("common.ok") { watchlist.message = nil }
+        } message: { failure in
+            Text(failure.message)
         }
     }
 }

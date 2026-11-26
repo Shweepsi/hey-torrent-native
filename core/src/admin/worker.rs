@@ -8,36 +8,25 @@ use serde::Deserialize;
 use super::AdminError;
 use crate::account::{Account, AccountError};
 use crate::catalog::MediaType;
+use crate::watchlist::RequestStatus;
 
-/// État d'une demande, vu par l'administrateur.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum RequestStatus {
-    Requested,
-    /// Envoyée à qBittorrent.
-    InProgress,
-    /// Vue sur Plex.
-    Available,
-    Refused,
+/// État lu du serveur ; `None` pour un état inconnu (la demande est ignorée).
+fn parse_status(raw: &str) -> Option<RequestStatus> {
+    Some(match raw {
+        "requested" => RequestStatus::Requested,
+        "in_progress" => RequestStatus::InProgress,
+        "available" => RequestStatus::Available,
+        "refused" => RequestStatus::Refused,
+        _ => return None,
+    })
 }
 
-impl RequestStatus {
-    fn parse(raw: &str) -> Option<Self> {
-        Some(match raw {
-            "requested" => Self::Requested,
-            "in_progress" => Self::InProgress,
-            "available" => Self::Available,
-            "refused" => Self::Refused,
-            _ => return None,
-        })
-    }
-
-    pub(crate) fn wire(self) -> &'static str {
-        match self {
-            Self::Requested => "requested",
-            Self::InProgress => "in_progress",
-            Self::Available => "available",
-            Self::Refused => "refused",
-        }
+fn status_wire(status: RequestStatus) -> &'static str {
+    match status {
+        RequestStatus::Requested => "requested",
+        RequestStatus::InProgress => "in_progress",
+        RequestStatus::Available => "available",
+        RequestStatus::Refused => "refused",
     }
 }
 
@@ -124,7 +113,7 @@ impl WireRequest {
             title: self.title,
             poster_url: crate::tmdb::image_url(self.poster_path.as_deref(), "w342"),
             year: self.year,
-            status: RequestStatus::parse(&self.status)?,
+            status: parse_status(&self.status)?,
             refusal_reason: self.refusal_reason.filter(|r| !r.trim().is_empty()),
             release_title: self.release_title,
             created_at: self.created_at,
@@ -255,7 +244,9 @@ pub(crate) async fn requests(
     let target = match filter {
         RequestFilter::Open => "/v1/admin/requests".to_owned(),
         RequestFilter::All => "/v1/admin/requests?status=all".to_owned(),
-        RequestFilter::Only { status } => format!("/v1/admin/requests?status={}", status.wire()),
+        RequestFilter::Only { status } => {
+            format!("/v1/admin/requests?status={}", status_wire(status))
+        }
     };
     let bytes = call(account, reqwest::Method::GET, &target, None).await?;
     let body: RequestsBody = serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
