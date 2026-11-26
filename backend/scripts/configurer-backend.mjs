@@ -620,53 +620,103 @@ async function setupSessionSecrets(token, accountId, names) {
   return code;
 }
 
-async function setupGoogle(token, accountId, names) {
-  say("\n[4/5] Connexion avec Google (facultatif aujourd'hui)");
-  const wanted = [
-    ["GOOGLE_WEB_CLIENT_ID", "« Application Web » (utilisé par Android)"],
-    ["GOOGLE_IOS_CLIENT_ID", "« iOS » (utilisé par l'iPhone)"],
-  ];
-  if (wanted.every(([name]) => names.has(name))) {
-    ok("clients Google déjà en place : conservés");
-    return;
-  }
-  note("Les identifiants de client se trouvent dans Google Cloud > API et services > Identifiants");
-  note("(projet heywatchlist-60448), et finissent par .apps.googleusercontent.com. Pas secrets.");
-  note("Pas encore créés ? Appuyez sur Entrée : le bouton Google restera inactif, Apple marche sans.");
-  const sha1 = androidSha1();
-  if (sha1) {
-    note(`Empreinte SHA-1 de votre clé Android, à donner aux deux clients « Android »`);
-    note(`(${BUNDLE_ID} et ${BUNDLE_ID}.admin) : ${sha1}`);
-  }
-  for (const [name, label] of wanted) {
-    if (names.has(name)) {
-      ok(`${name} déjà en place : conservé`);
-      continue;
-    }
-    const value = await askValid(
-      `  Client ${label} : `,
-      (answer) => answer === "" || GOOGLE_CLIENT.test(answer),
-      "Format attendu : 123456789-abc….apps.googleusercontent.com (ou Entrée pour plus tard).",
-    );
-    if (value === "") {
-      flag(`Google : ${name} à ajouter plus tard (relancez ce script).`);
-      continue;
-    }
-    await putWorkerSecret(token, accountId, name, value);
-  }
+const GOOGLE_PROJECT = "heywatchlist-60448";
+const googlePage = (page) => `https://console.cloud.google.com/auth/${page}?project=${GOOGLE_PROJECT}`;
+
+// Attend que la personne ait fini dans le navigateur.
+async function waitDone(text = "  Appuyez sur Entrée quand c'est fait. ") {
+  await ask(text);
 }
 
-// Empreinte de la clé de signature Android, si le keystore et keytool sont là.
-function androidSha1() {
+async function askGoogleClient(label) {
+  return askValid(
+    `  Collez l'identifiant du client ${label} : `,
+    (answer) => answer === "" || GOOGLE_CLIENT.test(answer),
+    "Format attendu : 123456789-abc….apps.googleusercontent.com (bouton « copier » à côté de « ID client »), ou Entrée pour passer.",
+  );
+}
+
+// Empreinte de la clé de signature Android. Propose d'installer Java au besoin.
+async function androidSha1() {
   const password = readStore().ANDROID_KEYSTORE_PASSWORD;
-  if (!password || !fs.existsSync(KEYSTORE_FILE)) return null;
-  const keytool = findKeytool();
-  if (!keytool) return null;
+  if (!password || !fs.existsSync(KEYSTORE_FILE)) {
+    flag(`Google sur Android : keystore introuvable (${KEYSTORE_FILE}) ; lancez d'abord configurer-secrets.mjs.`);
+    return null;
+  }
+  const keytool = await ensureTool("Java (keytool)", findKeytool, "EclipseAdoptium.Temurin.17.JDK", "Il faut un JDK 17 : https://adoptium.net");
   const listing = run(keytool, ["-list", "-v", "-keystore", KEYSTORE_NAME, "-alias", ANDROID_ALIAS, "-storepass:env", "HW_KEYSTORE_PASSWORD"], {
     cwd: BACKUP_DIR,
     env: { HW_KEYSTORE_PASSWORD: password },
   });
-  return /SHA1:\s*([0-9A-F:]{59})/.exec(listing.stdout)?.[1] ?? null;
+  const sha1 = /SHA-?1:\s*([0-9A-F]{2}(?::[0-9A-F]{2}){19})/.exec(listing.stdout)?.[1] ?? null;
+  if (!sha1) flag("Google sur Android : empreinte SHA-1 illisible dans le keystore.");
+  return sha1;
+}
+
+async function setupGoogle(token, accountId, names) {
+  say("\n[4/5] Connexion avec Google (facultatif : Apple marche sans)");
+  if (["GOOGLE_WEB_CLIENT_ID", "GOOGLE_IOS_CLIENT_ID"].every((name) => names.has(name))) {
+    ok("clients Google déjà en place : conservés");
+    return;
+  }
+  note("Environ 5 minutes dans la console Google. Le script ouvre chaque page et vous dit quoi cliquer.");
+  if (!(await confirm("  Configurer Google maintenant ?", false))) {
+    flag("Google : à configurer plus tard (relancez ce script et répondez o).");
+    return;
+  }
+
+  say("\n  Étape 1/4 : écran de consentement");
+  note(`Vérifiez en haut de la page que le projet est ${GOOGLE_PROJECT}.`);
+  note("Si un bouton « Commencer » apparaît : nom de l'app HeyWatchlist, votre e-mail d'assistance,");
+  note("Suivant, cible « Externe », Suivant, votre e-mail de contact, Suivant, cochez l'accord, Créer.");
+  note("Si la page affiche déjà un tableau de bord, il n'y a rien à faire ici.");
+  openBrowser(googlePage("overview"));
+  await waitDone();
+
+  say("\n  Étape 2/4 : ouvrir l'app à tous les comptes Google");
+  note("Sur la page « Audience » : bouton « Publier l'application », puis Confirmer.");
+  note("(Aucune validation Google : l'app ne demande que le nom et l'adresse e-mail.)");
+  note("Si l'état affiché est déjà « En production », il n'y a rien à faire.");
+  openBrowser(googlePage("audience"));
+  await waitDone();
+
+  say("\n  Étape 3/4 : clients pour le serveur et l'iPhone");
+  note("Page « Clients » : « + Créer un client ».");
+  openBrowser(googlePage("clients"));
+  for (const [name, label, steps] of [
+    ["GOOGLE_WEB_CLIENT_ID", "« Application Web »", [
+      "Type d'application : « Application Web », nom : HeyWatchlist serveur. Ne remplissez rien d'autre, Créer.",
+      "Un client « Web client (auto created by Google Service) » existe déjà ? Il convient aussi : ouvrez-le.",
+    ]],
+    ["GOOGLE_IOS_CLIENT_ID", "« iOS »", [
+      `Nouveau client, type « iOS », nom : HeyWatchlist iPhone, ID du bundle : ${BUNDLE_ID}. Le reste vide, Créer.`,
+    ]],
+  ]) {
+    if (names.has(name)) {
+      ok(`client ${label} déjà en place : conservé`);
+      continue;
+    }
+    for (const step of steps) note(step);
+    note("Google affiche alors l'« ID client » : copiez-le.");
+    const value = await askGoogleClient(label);
+    if (value === "") {
+      flag(`Google : client ${label} à ajouter plus tard (relancez ce script).`);
+      continue;
+    }
+    await putWorkerSecret(token, accountId, name, value);
+  }
+
+  say("\n  Étape 4/4 : clients Android (connexion Google sur Android)");
+  const sha1 = await androidSha1();
+  if (!sha1) return;
+  note("Encore « + Créer un client », deux fois, type « Android » :");
+  note(`  1. nom HeyWatchlist Android, nom du paquet ${BUNDLE_ID}`);
+  note(`  2. nom HeyWatchlist Admin, nom du paquet ${BUNDLE_ID}.admin`);
+  note("Empreinte SHA-1 pour les deux (pas secrète, copiez-la d'ici) :");
+  say(`\n      ${sha1}\n`);
+  note("Rien à copier ensuite : il suffit que ces deux clients existent.");
+  await waitDone();
+  ok("Google configuré");
 }
 
 async function appleTeamId() {
@@ -708,14 +758,18 @@ async function setupApple(token, accountId, names) {
     return;
   }
   note("Apple exige que la suppression d'un compte coupe aussi le lien « Se connecter avec Apple ».");
-  note("Il faut pour cela une clé dédiée, différente de la clé App Store Connect :");
-  note("developer.apple.com > Certificates, Identifiers & Profiles > Keys > + > nom « HeyWatchlist Sign in »,");
-  note(`cochez « Sign in with Apple » > Configure > Primary App ID ${BUNDLE_ID} > Save > Continue > Register > Download.`);
-  note(`(Si ${BUNDLE_ID} n'apparaît pas : la CI iOS l'active au prochain envoi TestFlight.)`);
-  if (!(await confirm("  Vous avez téléchargé cette clé ?", false))) {
+  note("Il faut pour cela une clé dédiée, différente de la clé App Store Connect. Pas utile pour tester.");
+  if (!(await confirm("  La créer maintenant ? (sinon : plus tard, avant la publication)", false))) {
     flag("Apple : clé « Sign in with Apple » à ajouter avant la publication (relancez ce script).");
     return;
   }
+  note("La page de création de clé s'ouvre :");
+  note("1. Key Name : HeyWatchlist Sign in ; cochez « Sign in with Apple », puis « Configure » à côté.");
+  note(`2. Primary App ID : ${BUNDLE_ID}, Save, Continue, Register.`);
+  note("3. Cliquez « Download » : le fichier AuthKey_XXXXXXXXXX.p8 va dans Téléchargements (une seule fois possible).");
+  note(`(${BUNDLE_ID} absent de la liste ? La CI iOS l'activera au prochain envoi TestFlight : revenez après.)`);
+  openBrowser("https://developer.apple.com/account/resources/authkeys/add");
+  await waitDone("  Appuyez sur Entrée une fois le fichier téléchargé. ");
   const { keyId, pem } = await chooseSignInKey();
   const teamId = await appleTeamId();
   await putWorkerSecret(token, accountId, "APPLE_TEAM_ID", teamId);
