@@ -11,6 +11,7 @@ import { ApiError, errorResponse, json, noContent, optionalString, readJson, req
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
 import { authenticate, openSession, refreshSession, revokeSession } from "./sessions";
 import { TMDB_PREFIX, relayTmdb } from "./tmdb";
+import { WATCHLIST_PATH, deleteOrphanRequests, watchlistHandler } from "./watchlist";
 
 /** Ce qui varie entre la production et les tests. */
 export interface Deps {
@@ -77,6 +78,9 @@ async function deleteMe(request: Request, env: Env, deps: Deps): Promise<Respons
     }
   }
   await deleteAccount(env, claims.userId);
+  // Ses entrées de watchlist sont parties avec le compte : ses demandes que
+  // plus personne n'attend aussi.
+  await deleteOrphanRequests(env);
   return noContent();
 }
 
@@ -117,10 +121,17 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
   "/v1/invitations": { POST: createInvitation },
 };
 
-/** Le relais TMDB répond à tout un préfixe (liste blanche dans `tmdb.ts`) ; les autres routes sont exactes. */
+/**
+ * Le relais TMDB répond à tout un préfixe (liste blanche dans `tmdb.ts`), la
+ * watchlist à ses chemins (`watchlist.ts`) ; les autres routes sont exactes.
+ */
 function findHandler(method: string, pathname: string): Handler | undefined {
   if (pathname.startsWith(TMDB_PREFIX)) {
     return method === "GET" ? (request, env, deps) => relayTmdb(request, env, deps.fetch, deps.now()) : undefined;
+  }
+  if (pathname === WATCHLIST_PATH || pathname.startsWith(`${WATCHLIST_PATH}/`)) {
+    const handler = watchlistHandler(method, pathname);
+    return handler ? (request, env, deps) => handler(request, env, deps.fetch, deps.now()) : undefined;
   }
   return ROUTES[pathname]?.[method];
 }
