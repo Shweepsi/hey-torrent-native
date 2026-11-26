@@ -76,23 +76,32 @@ def prepare_match
   setup_ci
 end
 
-# Capacités de l'identifiant d'app dont l'app a besoin. « Se connecter avec
-# Apple » doit être cochée chez Apple et figurer dans le profil, sinon la
-# signature échoue. Renvoie vrai si une capacité vient d'être ajoutée : le
-# profil doit alors être régénéré.
+# Capacités de l'identifiant d'app dont l'app a besoin : « Se connecter avec
+# Apple » et les notifications push. Elles doivent être cochées chez Apple et
+# figurer dans le profil, sinon la signature échoue. Renvoie vrai si une
+# capacité vient d'être ajoutée : le profil doit alors être régénéré.
 def ensure_capabilities(api_key, bundle_id)
   Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
   bundle = Spaceship::ConnectAPI::BundleId.find(bundle_id)
   UI.user_error!("Identifiant d'app #{bundle_id} absent chez Apple (docs/CI.md, étape 2).") if bundle.nil?
-  type = Spaceship::ConnectAPI::BundleIdCapability::Type::APPLE_ID_AUTH
-  return false if bundle.get_capabilities.any? { |capability| capability.capability_type == type }
+  types = Spaceship::ConnectAPI::BundleIdCapability::Type
+  present = bundle.get_capabilities.map(&:capability_type)
+  added = false
 
-  UI.message("Ajout de la capacité « Se connecter avec Apple » à #{bundle_id}.")
-  bundle.create_capability(
-    type,
-    settings: [{ key: "APPLE_ID_AUTH_APP_CONSENT", options: [{ key: "PRIMARY_APP_CONSENT" }] }]
-  )
-  true
+  unless present.include?(types::APPLE_ID_AUTH)
+    UI.message("Ajout de la capacité « Se connecter avec Apple » à #{bundle_id}.")
+    bundle.create_capability(
+      types::APPLE_ID_AUTH,
+      settings: [{ key: "APPLE_ID_AUTH_APP_CONSENT", options: [{ key: "PRIMARY_APP_CONSENT" }] }]
+    )
+    added = true
+  end
+  unless present.include?(types::PUSH_NOTIFICATIONS)
+    UI.message("Ajout de la capacité « Notifications push » à #{bundle_id}.")
+    bundle.create_capability(types::PUSH_NOTIFICATIONS)
+    added = true
+  end
+  added
 end
 
 # Nom d'un iPhone disponible sur la machine, pour ne pas dépendre du modèle que

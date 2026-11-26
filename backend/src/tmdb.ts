@@ -71,6 +71,10 @@ function parseQuery(value: string): string | null {
   return length >= 1 && length <= 100 ? query : null;
 }
 
+function parseExternalSource(value: string): string | null {
+  return value === "imdb_id" || value === "tvdb_id" ? value : null;
+}
+
 const PAGE: Param = { parse: parsePage, fallback: "1" };
 
 function route(path: string, ttl: number, accepted: Record<string, Param>, fixed: Record<string, string> = {}): Route {
@@ -104,6 +108,10 @@ function resolve(path: string): Route | null {
   }
   if (parts.length === 2 && first === "search" && second === "multi") {
     return route(path, 0, { query: { parse: parseQuery, required: true }, page: PAGE }, { include_adult: "false" });
+  }
+  // Correspondance d'un identifiant IMDb ou TVDB (webhooks Plex et Tautulli).
+  if (parts.length === 2 && first === "find" && /^(?:tt[0-9]{1,10}|[0-9]{1,10})$/.test(second)) {
+    return route(path, 7 * DAY, { external_source: { parse: parseExternalSource, required: true } });
   }
   if (first === "movie" || first === "tv") {
     if (parts.length === 2 && LISTS[first].has(second)) {

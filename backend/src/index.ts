@@ -10,8 +10,12 @@ import { invitationCode, normalizeCode, sha256Hex } from "./crypto";
 import type { Env } from "./env";
 import { ApiError, errorResponse, json, noContent, optionalString, readJson, requiredString } from "./http";
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
+import { devicesOfUser, pushTo } from "./availability";
+import { DEVICES_PATH, registerDevice, unregisterDevice } from "./devices";
+import { LivePushSender, type PushSender } from "./push";
 import { authenticate, openSession, refreshSession, revokeSession } from "./sessions";
 import { TMDB_PREFIX, relayTmdb } from "./tmdb";
+import { HOOKS_PREFIX, WEBHOOK_SETTINGS_PATH, receiveHook, regenerateWebhook, webhookStatus } from "./webhooks";
 import { WATCHLIST_PATH, deleteOrphanRequests, watchlistHandler } from "./watchlist";
 
 /** Ce qui varie entre la production et les tests. */
@@ -20,6 +24,8 @@ export interface Deps {
   fetch: FetchLike;
   /** Heure courante, en secondes Unix. */
   now: () => number;
+  /** Expéditeur des push (APNs, FCM) pour cet environnement. */
+  push: (env: Env) => PushSender;
 }
 
 const INVITATION_TTL_DAYS = 14;
@@ -102,6 +108,22 @@ async function createInvitation(request: Request, env: Env, deps: Deps): Promise
   return json({ code, expires_at: expiresAt }, 201);
 }
 
+/** Push d'essai vers les appareils de la personne connectée ; renvoie le nombre envoyé. */
+async function testPush(request: Request, env: Env, deps: Deps): Promise<Response> {
+  const now = deps.now();
+  const claims = await authenticate(request, env, now);
+  const devices = await devicesOfUser(env, claims.userId, now);
+  const sent = await pushTo(env, deps.push(env), devices, {
+    title: "HeyWatchlist",
+    bodyKey: "push_test",
+    bodyArgs: [],
+    collapseKey: "test",
+    mediaType: "movie",
+    tmdbId: 0,
+  });
+  return json({ devices: devices.length, sent });
+}
+
 /** Réglages publics dont les apps ont besoin pour se connecter. */
 function config(env: Env): Response {
   return json({
@@ -120,6 +142,15 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
   "/v1/auth/sign-out": { POST: signOut },
   "/v1/me": { GET: me, DELETE: deleteMe },
   "/v1/invitations": { POST: createInvitation },
+  [DEVICES_PATH]: {
+    PUT: (request, env, deps) => registerDevice(request, env, deps.now()),
+    DELETE: (request, env, deps) => unregisterDevice(request, env, deps.now()),
+  },
+  "/v1/notifications/test": { POST: testPush },
+  [WEBHOOK_SETTINGS_PATH]: {
+    GET: (request, env, deps) => webhookStatus(request, env, deps.now()),
+    POST: (request, env, deps) => regenerateWebhook(request, env, deps.now()),
+  },
 };
 
 /**
@@ -130,6 +161,11 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
 function findHandler(method: string, pathname: string): Handler | undefined {
   if (pathname.startsWith(TMDB_PREFIX)) {
     return method === "GET" ? (request, env, deps) => relayTmdb(request, env, deps.fetch, deps.now()) : undefined;
+  }
+  if (pathname.startsWith(HOOKS_PREFIX)) {
+    return method === "POST"
+      ? (request, env, deps) => receiveHook(request, env, deps.fetch, deps.push(env), deps.now())
+      : undefined;
   }
   if (pathname.startsWith(ADMIN_PREFIX)) {
     const handler = adminHandler(method, pathname);
@@ -159,8 +195,22 @@ export function createHandler(deps: Deps): ExportedHandler<Env> {
   };
 }
 
+const fetchLive: FetchLike = (input, init) => fetch(input, init);
+const nowLive = () => Math.floor(Date.now() / 1000);
+// Un expéditeur par environnement : ses jetons APNs et Google restent en
+// mémoire le temps de leur validité.
+const senders = new WeakMap<Env, PushSender>();
+
 export default createHandler({
   keySets: remoteKeySets(),
-  fetch: (input, init) => fetch(input, init),
-  now: () => Math.floor(Date.now() / 1000),
+  fetch: fetchLive,
+  now: nowLive,
+  push: (env) => {
+    let sender = senders.get(env);
+    if (!sender) {
+      sender = new LivePushSender(env, fetchLive, nowLive);
+      senders.set(env, sender);
+    }
+    return sender;
+  },
 });

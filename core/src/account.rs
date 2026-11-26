@@ -184,7 +184,7 @@ const RENEW_MARGIN: Duration = Duration::from_secs(60);
 /// appelées en parallèle (le rafraîchissement est sérialisé).
 #[derive(uniffi::Object)]
 pub struct Account {
-    base: BaseUrl,
+    pub(crate) base: BaseUrl,
     http: reqwest::Client,
     store: Arc<dyn SessionStore>,
     session: Mutex<Option<Session>>,
@@ -465,7 +465,7 @@ impl Account {
 
     /// Envoie une requête authentifiée ; sur un 401, renouvelle le jeton une
     /// fois et recommence.
-    async fn authorized<F>(&self, build: F) -> Result<reqwest::Response, AccountError>
+    pub(crate) async fn authorized<F>(&self, build: F) -> Result<reqwest::Response, AccountError>
     where
         F: Fn(&reqwest::Client, &str) -> reqwest::RequestBuilder,
     {

@@ -15,6 +15,7 @@ struct SettingsView: View {
                     GlassEffectContainer(spacing: 12) {
                         VStack(alignment: .leading, spacing: 16) {
                             accountCard
+                            NotificationsCard()
                             if let failure = state.failure {
                                 Text(failure.message)
                                     .foregroundStyle(.red)

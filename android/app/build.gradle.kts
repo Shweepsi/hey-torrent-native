@@ -1,3 +1,4 @@
+import com.android.build.api.variant.BuildConfigField
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -30,6 +31,12 @@ val apiBaseUrl = envOrNull("HEYWATCHLIST_API_URL")?.trim().orEmpty().also { url 
         "HEYWATCHLIST_API_URL doit être une adresse https:// sans paramètres."
     }
 }
+
+// Réglages Firebase (push Android) : secret GitHub GOOGLE_SERVICES_JSON, ou
+// app/google-services.json sur un poste (jamais versionné). Sans eux, l'app se
+// compile et fonctionne, sans notifications.
+val googleServicesJson: String? = envOrNull("GOOGLE_SERVICES_JSON")?.let(FirebaseConfig::decode)
+    ?: layout.projectDirectory.file("google-services.json").asFile.takeIf { it.isFile }?.readText()
 
 android {
     // Paquet du code Kotlin et de la classe R : distinct de l'identifiant publié.
@@ -117,6 +124,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
+    implementation(libs.firebase.messaging)
     implementation(libs.coil.network.okhttp)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
@@ -171,6 +179,18 @@ androidComponents {
             repoRoot.set(coreRepoRoot)
             rustInputs.from(coreInputs)
         }
+
+        // Réglages Firebase de cette app (publique ou admin), vides s'ils manquent.
+        val packageName = "io.github.shweepsi.heywatchlist" + if (edition == "admin") ".admin" else ""
+        val firebase = googleServicesJson?.let { FirebaseConfig.parse(it, packageName) }
+        fun firebaseField(name: String, value: String?) = variant.buildConfigFields?.put(
+            name,
+            BuildConfigField("String", "\"${value.orEmpty()}\"", "Firebase (push), vide sans google-services.json"),
+        )
+        firebaseField("FIREBASE_APP_ID", firebase?.applicationId)
+        firebaseField("FIREBASE_API_KEY", firebase?.apiKey)
+        firebaseField("FIREBASE_PROJECT_ID", firebase?.projectId)
+        firebaseField("FIREBASE_SENDER_ID", firebase?.senderId)
 
         // Le Kotlin généré se compile avec le reste ; les `.so` rejoignent l'APK.
         variant.sources.java?.addGeneratedSourceDirectory(bindingsTask, RustCoreTask::outputDir)

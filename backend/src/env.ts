@@ -25,4 +25,12 @@ export interface Env {
   APPLE_TEAM_ID?: string;
   APPLE_SIGNIN_KEY_ID?: string;
   APPLE_SIGNIN_PRIVATE_KEY?: string;
+  /**
+   * Compte de service Google (JSON complet) limité à FCM : push Android.
+   * Secret déjà rangé sur le Worker `heywatchlist-api`.
+   */
+  FCM_SERVICE_ACCOUNT?: string;
+  /** Clé APNs (fichier `.p8`, PEM) et son identifiant : push iPhone. Secrets. */
+  APNS_KEY_ID?: string;
+  APNS_PRIVATE_KEY?: string;
 }

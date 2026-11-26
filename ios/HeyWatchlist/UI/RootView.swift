@@ -17,6 +17,7 @@ struct RootView: View {
                 WelcomeView(model: model, state: state)
             case .signedIn(let state):
                 MainTabView(model: model, state: state, catalog: catalog, watchlist: watchlist)
+                    .task { await PushCenter.shared.start() }
             }
         }
         // Seule la palette sombre existe pour l'instant (docs/DESIGN.md).

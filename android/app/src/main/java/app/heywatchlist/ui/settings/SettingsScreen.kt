@@ -35,7 +35,10 @@ fun SettingsScreen(state: AccountUiState.SignedIn, viewModel: AccountViewModel) 
         onDelete = viewModel::requestDeletion,
         onConfirmDelete = viewModel::confirmDeletion,
         onCancelDelete = viewModel::cancelDeletion,
-        extras = { EditionContent.SettingsExtras(gateway = viewModel.gateway, isAdmin = state.profile.isAdmin) },
+        extras = {
+            NotificationsCard(viewModel.gateway)
+            EditionContent.SettingsExtras(gateway = viewModel.gateway, isAdmin = state.profile.isAdmin)
+        },
     )
 }
 

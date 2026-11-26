@@ -10,6 +10,7 @@ import app.heywatchlist.core.UniffiAccountGateway
 import app.heywatchlist.core.UniffiCatalogGateway
 import app.heywatchlist.core.UniffiWatchlistGateway
 import app.heywatchlist.core.WatchlistGateway
+import app.heywatchlist.push.PushSetup
 import java.io.File
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,6 +19,11 @@ import kotlinx.coroutines.flow.SharedFlow
 /** Application : porte les services partagés par tous les écrans (voir [AppServices]). */
 class HeyWatchlistApp : Application() {
     val services: AppServices by lazy { AppServices(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        PushSetup.initialize(this)
+    }
 }
 
 /** Services du processus, créés au premier usage. */

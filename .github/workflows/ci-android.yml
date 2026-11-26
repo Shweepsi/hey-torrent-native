@@ -58,6 +58,9 @@ env:
   # Adresse de l'API (Worker Cloudflare), écrite dans l'app au moment de la
   # compilation. Variable GitHub, pas un secret ; absente, l'app l'indique.
   HEYWATCHLIST_API_URL: ${{ vars.HEYWATCHLIST_API_URL }}
+  # Réglages Firebase des notifications (google-services.json en base64), lus
+  # par app/build.gradle.kts. Absent : l'app se compile, sans notifications.
+  GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
 jobs:
   build:

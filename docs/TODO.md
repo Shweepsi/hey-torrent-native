@@ -85,7 +85,8 @@ appareil.
 - [x] Séries : série entière ou saisons au choix (décidé le 2026-11-26).
 - [ ] CI verte sur Android et iPhone, puis essai sur appareil : Camille
       demande un film sur iPhone et la demande apparaît dans D1.
-- [ ] État « déjà disponible » : attend la table `library` (jalon 6).
+- [ ] État « déjà disponible » : la table `library` existe (jalon 6), remplie
+      par les webhooks ; reste à la lire (point à trancher n°2).
 - [ ] Ajout en un geste depuis une affiche (appui long dans Découvrir).
 
 ## Jalon 5 : espace admin (APK Android)
@@ -111,14 +112,31 @@ appareil.
 
 ## Jalon 6 : notifications « Disponible sur Plex »
 
-- [ ] **Firebase** : le compte de service `fcm-worker` et le secret
-      `FCM_SERVICE_ACCOUNT` existent déjà ; reste l'envoi par l'API FCM HTTP v1.
-      Supprimer les projets Google Cloud vides `heywatchlist` et
+Écrit (v0.6.0). Worker et cœur testés en local (réponses simulées) ; Android et
+iPhone ne se compilent que sur la CI. Rien n'a encore été reçu sur un téléphone.
+
+- [x] Envoi par APNs (jeton ES256) et FCM HTTP v1 (compte de service), textes
+      traduits par les apps (`loc-key`, `body_loc_key`).
+- [x] Enregistrement des appareils (`PUT /v1/devices`), rattachés à leur
+      session ; jetons périmés oubliés.
+- [x] Webhooks Plex (`library.new`) et Tautulli, URL secrète régénérable
+      (carte « Notifications Plex » de l'APK admin), dédoublonnage.
+- [x] Mise à jour de `library`, passage des demandes en `disponible`, push vers
+      les personnes qui attendent (filtrées par saisons voulues).
+- [ ] Secret GitHub `GOOGLE_SERVICES_JSON` (base64 de `google-services.json`) :
+      sans lui, les APK se compilent sans notifications.
+- [ ] Clé APNs sur le Worker : relancer `configurer-backend.mjs` (étape 7/7).
+- [ ] Capacité « Notifications push » ajoutée par la CI à l'identifiant d'app,
+      profil régénéré (premier envoi TestFlight).
+- [ ] Coller les URL dans Plex (Réglages, Webhooks) et dans Tautulli (agent
+      Webhook, « Recently Added », corps JSON fourni par la carte).
+- [ ] Bouton « Envoyer une notification d'essai » de Réglages sur iPhone et
+      Android, puis fini quand : le film arrive sur Plex et Camille reçoit la
+      notification.
+- [ ] Ouvrir la fiche du titre à l'appui sur la notification (les données
+      `media_type` et `tmdb_id` voyagent déjà avec elle).
+- [ ] Supprimer les projets Google Cloud vides `heywatchlist` et
       `heywatchlist-push` créés lors des essais.
-- [ ] Enregistrement des appareils (APNs et FCM).
-- [ ] Webhooks Plex (`library.new`) et Tautulli, URL secrète, dédoublonnage.
-- [ ] Mise à jour de `library`, passage des demandes en `disponible`, push vers
-      toutes les personnes qui attendent.
 
 ## Jalon 7 : préparation des stores
 
