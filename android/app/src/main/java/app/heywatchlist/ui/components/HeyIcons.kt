@@ -58,6 +58,23 @@ object HeyIcons {
         }
     }
 
+    val Plus: ImageVector by lazy {
+        stroked("Plus") {
+            moveTo(12f, 5f)
+            lineTo(12f, 19f)
+            moveTo(5f, 12f)
+            lineTo(19f, 12f)
+        }
+    }
+
+    val Check: ImageVector by lazy {
+        stroked("Check") {
+            moveTo(5f, 12.5f)
+            lineTo(10f, 17.5f)
+            lineTo(19f, 7f)
+        }
+    }
+
     val Play: ImageVector by lazy {
         filled("Play") {
             moveTo(8f, 5f)

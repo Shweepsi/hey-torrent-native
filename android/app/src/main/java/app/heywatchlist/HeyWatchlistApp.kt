@@ -5,8 +5,11 @@ import android.content.Context
 import app.heywatchlist.core.CatalogGateway
 import app.heywatchlist.core.KeystoreSessionStore
 import app.heywatchlist.core.SessionAwareCatalogGateway
+import app.heywatchlist.core.SessionAwareWatchlistGateway
 import app.heywatchlist.core.UniffiAccountGateway
 import app.heywatchlist.core.UniffiCatalogGateway
+import app.heywatchlist.core.UniffiWatchlistGateway
+import app.heywatchlist.core.WatchlistGateway
 import java.io.File
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,7 +33,7 @@ class AppServices(context: Context) {
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
 
-    /** Émet quand une lecture du catalogue constate que la session n'est plus valable. */
+    /** Émet quand le catalogue ou la watchlist constate que la session n'est plus valable. */
     val sessionExpired: SharedFlow<Unit> = _sessionExpired
 
     /** Cache hors ligne dans le dossier privé exclu de la sauvegarde. */
@@ -41,8 +44,20 @@ class AppServices(context: Context) {
         )
     }
 
+    /**
+     * Watchlist : copie locale et file d'attente hors ligne, dans le même dossier
+     * privé exclu de la sauvegarde. La copie appartient au compte connecté.
+     */
+    val watchlist: WatchlistGateway by lazy {
+        SessionAwareWatchlistGateway(
+            UniffiWatchlistGateway(account, storePath = File(context.noBackupFilesDir, WATCHLIST_FILE).path),
+            onSignedOut = { _sessionExpired.tryEmit(Unit) },
+        )
+    }
+
     private companion object {
         const val CATALOG_CACHE_FILE = "catalog-cache.db"
+        const val WATCHLIST_FILE = "watchlist.db"
     }
 }
 

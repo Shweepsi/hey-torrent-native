@@ -1,5 +1,6 @@
 package app.heywatchlist.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -49,13 +50,16 @@ fun ErrorPanel(failure: CatalogFailure, onRetry: () -> Unit, modifier: Modifier 
     }
 }
 
-/** Bandeau discret : ce qu'on voit vient du cache de l'appareil, faute de réseau. */
+/**
+ * Bandeau discret : ce qu'on voit vient de l'appareil, faute de réseau. [textRes]
+ * précise le message (celui du catalogue par défaut).
+ */
 @Composable
-fun StaleBanner(modifier: Modifier = Modifier) {
+fun StaleBanner(modifier: Modifier = Modifier, @StringRes textRes: Int = R.string.catalog_stale) {
     val colors = HeyTheme.colors
     val shape = HeyTheme.shapes.button
     HeyText(
-        text = stringResource(R.string.catalog_stale),
+        text = stringResource(textRes),
         style = HeyTheme.typography.caption,
         color = colors.onBackgroundMuted,
         modifier = modifier

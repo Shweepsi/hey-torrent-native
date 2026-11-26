@@ -37,7 +37,7 @@ internal fun Shelf.toCore(): CoreShelf = when (this) {
     Shelf.TopRatedSeries -> CoreShelf.TOP_RATED_SERIES
 }
 
-private fun CoreMediaType.toKind(): MediaKind = when (this) {
+internal fun CoreMediaType.toKind(): MediaKind = when (this) {
     CoreMediaType.MOVIE -> MediaKind.Movie
     CoreMediaType.TV -> MediaKind.Tv
 }
@@ -62,6 +62,21 @@ internal fun CoreTitleSummary.toTitle() = Title(
     rating = rating,
     voteCount = voteCount.toInt(),
     genreIds = genreIds.map { it.toInt() },
+)
+
+/** Retour vers le type du cœur, pour ajouter un titre à la watchlist. */
+internal fun Title.toCore() = CoreTitleSummary(
+    id = id.coerceAtLeast(0L).toULong(),
+    mediaType = kind.toCore(),
+    title = title,
+    year = year?.coerceAtLeast(0)?.toUInt(),
+    releaseDate = releaseDate,
+    overview = overview,
+    posterUrl = posterUrl,
+    backdropUrl = backdropUrl,
+    rating = rating,
+    voteCount = voteCount.coerceAtLeast(0).toUInt(),
+    genreIds = genreIds.map { it.coerceAtLeast(0).toUInt() },
 )
 
 internal fun CoreTitlePage.toPage() = TitlePage(
