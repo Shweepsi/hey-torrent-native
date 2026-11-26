@@ -3,7 +3,9 @@ package app.heywatchlist.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.heywatchlist.ui.theme.HeyTheme
@@ -28,7 +31,10 @@ enum class HeyButtonKind {
     Danger,
 }
 
-/** Bouton, cible tactile d'au moins 48 dp ; estompé et inactif si `enabled` est faux. */
+/**
+ * Bouton, cible tactile d'au moins 48 dp ; estompé et inactif si `enabled` est
+ * faux. [icon] s'affiche avant le texte.
+ */
 @Composable
 fun HeyButton(
     text: String,
@@ -36,6 +42,7 @@ fun HeyButton(
     modifier: Modifier = Modifier,
     kind: HeyButtonKind = HeyButtonKind.Primary,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
 ) {
     val colors = HeyTheme.colors
     val shape = HeyTheme.shapes.button
@@ -55,6 +62,9 @@ fun HeyButton(
             .padding(horizontal = 24.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        HeyText(text = text, style = HeyTheme.typography.label, color = content)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (icon != null) HeyIcon(icon = icon, contentDescription = null, tint = content, iconSize = 20.dp)
+            HeyText(text = text, style = HeyTheme.typography.label, color = content)
+        }
     }
 }

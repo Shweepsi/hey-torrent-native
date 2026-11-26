@@ -1,30 +1,37 @@
 package app.heywatchlist.ui.account
 
-import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.heywatchlist.HeyWatchlistApp
 import app.heywatchlist.core.AccountFailure
 import app.heywatchlist.core.AccountFailureException
 import app.heywatchlist.core.AccountGateway
 import app.heywatchlist.core.IdentityCredential
-import app.heywatchlist.core.KeystoreSessionStore
 import app.heywatchlist.core.SignInOutcome
-import app.heywatchlist.core.UniffiAccountGateway
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Obtient un jeton Google ; fourni par l'écran, qui a l'activité sous la main. */
 typealias GoogleCredentialRequester = suspend (serverClientId: String, nonce: String) -> IdentityCredential
 
-/** Connexion, invitation, déconnexion et suppression du compte. */
-class AccountViewModel(val gateway: AccountGateway) : ViewModel() {
+/**
+ * Connexion, invitation, déconnexion et suppression du compte. [sessionExpired]
+ * émet quand le catalogue constate que la session n'est plus valable : on
+ * revient alors à l'accueil, comme quand le renouvellement du profil échoue.
+ */
+class AccountViewModel(
+    val gateway: AccountGateway,
+    sessionExpired: Flow<Unit> = emptyFlow(),
+) : ViewModel() {
     private val _uiState = MutableStateFlow<AccountUiState>(AccountUiState.Starting)
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
 
@@ -33,6 +40,7 @@ class AccountViewModel(val gateway: AccountGateway) : ViewModel() {
 
     init {
         viewModelScope.launch { start() }
+        viewModelScope.launch { sessionExpired.collect { returnToWelcome() } }
     }
 
     private suspend fun start() {
@@ -59,6 +67,13 @@ class AccountViewModel(val gateway: AccountGateway) : ViewModel() {
             if (error.failure == AccountFailure.SignedOut) {
                 _uiState.value = AccountUiState.SignedOut(errorRes = error.failure.messageRes)
             }
+        }
+    }
+
+    /** La session n'est plus valable (le cœur l'a déjà effacée) : retour à l'accueil, avec l'explication. */
+    private fun returnToWelcome() {
+        if (_uiState.value is AccountUiState.SignedIn) {
+            _uiState.value = AccountUiState.SignedOut(errorRes = AccountFailure.SignedOut.messageRes)
         }
     }
 
@@ -160,7 +175,9 @@ class AccountViewModel(val gateway: AccountGateway) : ViewModel() {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
-                AccountViewModel(UniffiAccountGateway(KeystoreSessionStore(application as Application)))
+                // Le compte du cœur est partagé avec le catalogue : un seul par processus.
+                val services = (application as HeyWatchlistApp).services
+                AccountViewModel(services.account, services.sessionExpired)
             }
         }
     }

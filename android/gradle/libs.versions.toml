@@ -19,12 +19,19 @@ credentials = "1.6.0"
 # googleid 1.2.x est compilé avec Kotlin 2.4, illisible par notre Kotlin 2.2 :
 # rester en 1.1.x tant que le plugin Kotlin n'est pas monté.
 googleid = "1.1.1"
+# Affiches et photos du catalogue. Coil 3.4+ est compilé avec Kotlin 2.3 (comme
+# googleid 1.2.x), illisible par notre Kotlin 2.2 : ne PAS prendre plus récent
+# tant que le plugin Kotlin n'est pas monté.
+coil = "3.3.0"
 junit = "4.13.2"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+# Le chargeur réseau, enregistré tout seul au démarrage : sans lui, Coil ne sait pas lire une URL.
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }

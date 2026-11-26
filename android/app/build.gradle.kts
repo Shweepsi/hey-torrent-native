@@ -116,6 +116,8 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
     implementation(libs.haze)

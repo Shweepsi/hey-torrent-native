@@ -17,8 +17,75 @@
     <string name="tab_discover">Découvrir</string>
     <string name="tab_watchlist">Watchlist</string>
     <string name="tab_settings">Réglages</string>
-    <string name="discover_coming_soon">Les films et séries arrivent dans la prochaine version.</string>
     <string name="watchlist_coming_soon">Votre watchlist et vos demandes arrivent bientôt.</string>
+
+    <!-- Découvrir -->
+    <string name="action_back">Retour</string>
+    <string name="action_retry">Réessayer</string>
+    <string name="action_refresh">Actualiser</string>
+    <string name="status_loading">Chargement…</string>
+    <string name="status_refreshing">Actualisation…</string>
+    <string name="state_expanded">Ouverte</string>
+    <string name="state_collapsed">Fermée</string>
+    <string name="catalog_stale">Ces données viennent de l’appareil et peuvent ne pas être à jour.</string>
+    <string name="kind_movie">Film</string>
+    <string name="kind_series">Série</string>
+    <string name="kind_movies">Films</string>
+    <string name="kind_series_plural">Séries</string>
+    <string name="rating_out_of_ten">%1$s / 10</string>
+    <string name="runtime_minutes">%1$d min</string>
+    <string name="runtime_hours_minutes">%1$d h %2$02d</string>
+
+    <string name="discover_genres">Genres</string>
+    <string name="shelf_trending">Tendances</string>
+    <string name="shelf_now_playing">Au cinéma</string>
+    <string name="shelf_upcoming">À venir</string>
+    <string name="shelf_popular_movies">Films populaires</string>
+    <string name="shelf_popular_series">Séries populaires</string>
+    <string name="shelf_on_the_air">Séries en cours de diffusion</string>
+    <string name="shelf_top_rated_movies">Mieux notés (films)</string>
+    <string name="shelf_top_rated_series">Mieux notées (séries)</string>
+
+    <string name="genre_no_titles">Aucun titre pour ce genre.</string>
+    <string name="genre_no_series">Aucune série ne correspond à ce genre.</string>
+
+    <string name="search_placeholder">Rechercher un film ou une série</string>
+    <string name="search_label">Recherche de films et de séries</string>
+    <string name="search_clear">Effacer la recherche</string>
+    <string name="search_hint">Saisissez le titre d’un film ou d’une série.</string>
+    <string name="search_no_results">Aucun résultat pour «&#160;%1$s&#160;».</string>
+
+    <string name="detail_trailer">Bande-annonce</string>
+    <string name="detail_trailer_unavailable">Impossible d’ouvrir la vidéo.</string>
+    <string name="detail_overview">Synopsis</string>
+    <string name="detail_overview_empty">Aucun synopsis en français pour ce titre.</string>
+    <string name="detail_directed_by">Réalisé par %1$s</string>
+    <string name="detail_created_by">Créé par %1$s</string>
+    <string name="detail_where_to_watch">Où regarder en France</string>
+    <string name="detail_providers_flatrate">Inclus dans un abonnement</string>
+    <string name="detail_providers_rent">À la location</string>
+    <string name="detail_providers_buy">À l’achat</string>
+    <string name="detail_providers_none">Aucune plateforme n’est indiquée en France pour le moment.</string>
+    <string name="detail_providers_attribution">Disponibilités fournies par JustWatch.</string>
+    <string name="detail_cast">Casting</string>
+    <string name="detail_seasons_title">Saisons</string>
+    <string name="detail_season_default">Saison %1$d</string>
+    <string name="detail_episode_default">Épisode %1$d</string>
+    <string name="detail_no_episodes">Aucun épisode n’est indiqué pour cette saison.</string>
+    <string name="detail_similar">Titres similaires</string>
+
+    <plurals name="detail_seasons">
+        <item quantity="one">%1$d saison</item>
+        <item quantity="other">%1$d saisons</item>
+    </plurals>
+    <plurals name="detail_episodes">
+        <item quantity="one">%1$d épisode</item>
+        <item quantity="other">%1$d épisodes</item>
+    </plurals>
+    <plurals name="detail_votes">
+        <item quantity="one">%1$s vote</item>
+        <item quantity="other">%1$s votes</item>
+    </plurals>
 
     <string name="settings_hello">Bonjour %1$s</string>
     <string name="settings_hello_anonymous">Bonjour</string>
@@ -44,4 +111,13 @@
     <string name="error_not_configured">Cette version de l’app ne connaît pas l’adresse du serveur.</string>
     <string name="error_core_unavailable">Impossible de charger le cœur de l’application.</string>
     <string name="error_unknown">Une erreur inattendue est survenue.</string>
+
+    <string name="catalog_error_network">Pas de connexion. Vérifiez votre réseau et réessayez.</string>
+    <string name="catalog_error_signed_out">Votre session a expiré. Reconnectez-vous.</string>
+    <string name="catalog_error_not_found">Ce titre est introuvable.</string>
+    <string name="catalog_error_unavailable">Le catalogue ne répond pas pour le moment. Réessayez dans un instant.</string>
+    <string name="catalog_error_server">Le serveur a rencontré un problème. Le catalogue est indisponible, réessayez plus tard.</string>
+    <string name="catalog_error_not_configured">L’adresse du serveur manque dans cette version de l’app : le catalogue ne peut pas se charger.</string>
+    <string name="catalog_error_core_unavailable">Le cœur de l’application n’a pas pu démarrer : le catalogue est indisponible.</string>
+    <string name="catalog_error_unknown">Le catalogue n’a pas pu se charger (erreur inattendue).</string>
 </resources>
