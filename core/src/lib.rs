@@ -9,8 +9,11 @@ mod account;
 #[cfg(feature = "admin")]
 mod admin;
 mod api;
+mod cache;
+mod catalog;
 mod error;
 mod google;
+mod tmdb;
 
 pub use account::{
     Account, AccountError, GoogleClientIds, IdentityProvider, SessionStore, SignInNonce,
@@ -18,6 +21,10 @@ pub use account::{
 };
 #[cfg(feature = "admin")]
 pub use admin::Invitation;
+pub use catalog::{
+    CastMember, Catalog, CatalogError, Episode, Genre, MediaType, Provider, Providers,
+    SeasonDetail, SeasonSummary, Shelf, TitleDetail, TitlePage, TitleSummary, Video, VideoKind,
+};
 pub use error::CoreError;
 pub use google::{GoogleAuthorization, begin_google_sign_in, complete_google_sign_in};
 

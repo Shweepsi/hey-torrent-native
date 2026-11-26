@@ -9,6 +9,7 @@ import app.heywatchlist.core.Profile
 import app.heywatchlist.core.SignInOutcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -80,6 +81,46 @@ class AccountViewModelTest {
         val viewModel = AccountViewModel(gateway)
         advanceUntilIdle()
         assertEquals(AccountUiState.SignedOut(errorRes = R.string.error_signed_out), viewModel.uiState.value)
+    }
+
+    @Test
+    fun aSessionExpiredWhileReadingTheCatalogGoesBackToWelcome() = runTest(dispatcher) {
+        val expired = MutableSharedFlow<Unit>()
+        val viewModel = AccountViewModel(FakeGateway(stored = camille), expired)
+        advanceUntilIdle()
+        assertEquals(AccountUiState.SignedIn(camille, "0.2.0"), viewModel.uiState.value)
+
+        expired.emit(Unit)
+        advanceUntilIdle()
+
+        assertEquals(AccountUiState.SignedOut(errorRes = R.string.error_signed_out), viewModel.uiState.value)
+    }
+
+    @Test
+    fun severalExpiredReadsChangeNothingMore() = runTest(dispatcher) {
+        val expired = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+        val viewModel = AccountViewModel(FakeGateway(stored = camille), expired)
+        advanceUntilIdle()
+
+        repeat(5) { expired.tryEmit(Unit) }
+        advanceUntilIdle()
+
+        assertEquals(AccountUiState.SignedOut(errorRes = R.string.error_signed_out), viewModel.uiState.value)
+    }
+
+    @Test
+    fun anExpiredNoticeWhileSignedOutKeepsTheInvitationStep() = runTest(dispatcher) {
+        val expired = MutableSharedFlow<Unit>()
+        val viewModel = AccountViewModel(FakeGateway(), expired)
+        advanceUntilIdle()
+        viewModel.signInWithGoogle(google)
+        advanceUntilIdle()
+        assertEquals(AccountUiState.SignedOut(askInvitation = true), viewModel.uiState.value)
+
+        expired.emit(Unit)
+        advanceUntilIdle()
+
+        assertEquals(AccountUiState.SignedOut(askInvitation = true), viewModel.uiState.value)
     }
 
     @Test

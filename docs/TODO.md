@@ -51,14 +51,29 @@ vrai :
 
 ## Jalon 3 : Découvrir (priorité n°1)
 
-- [ ] Le Worker relaie TMDB (clé de l'app) avec cache.
-- [ ] Cœur : client TMDB (tendances, populaires, nouveautés, à venir, genres,
-      recherche, fiche, casting, vidéos, saisons, plateformes en France,
-      similaires) et cache SQLite hors ligne.
-- [ ] Les trois onglets, carrousel, rangées, fiche détail plein écran,
-      recherche instantanée, squelettes de chargement, sur iPhone et Android.
-- [ ] Badge « Sur Plex » lu dans `library` (voir point à trancher n°2).
-- [ ] Régler le Liquid Glass sur appareil (allers et retours TestFlight).
+Écrit (v0.3.0). La CI de la PR #9 est verte : les apps Android et iPhone se
+compilent et leurs tests passent (le 2026-11-26). Rien n'a encore été vu sur
+appareil.
+
+- [x] Le Worker relaie TMDB (clé de l'app) avec cache D1 ; 130 tests Vitest
+      passent en local.
+- [x] Cœur : client TMDB et cache SQLite hors ligne ; tests `wiremock` passent
+      en local.
+- [ ] Poser le secret `TMDB_API_KEY` sur le Worker (relancer
+      `backend/scripts/configurer-backend.mjs`), puis déployer : sans lui le
+      relais répond `provider_unavailable`.
+- [ ] Voir les écrans Découvrir, Genre, recherche et fiche sur un vrai
+      appareil (APK, TestFlight) : la CI prouve la compilation et les tests,
+      pas le rendu.
+- [ ] Confirmer la raison `E174.1` de `DiskSpace` dans `PrivacyInfo.xcprivacy`.
+- [ ] Badge « Sur Plex » lu dans `library` (voir point à trancher n°2) : pas
+      codé tant que le propriétaire n'a pas choisi.
+- [ ] Régler le Liquid Glass et le contraste des affiches claires sur appareil
+      (allers et retours TestFlight) ; vérifier R8 avec Coil (`assemblePublicRelease`).
+- [ ] Vérifier sur iOS 26 : `.searchable` dans `Tab(role: .search)`, transition
+      zoom de la fiche, pluriels des chaînes.
+- [ ] Vider la pile de navigation de Découvrir à l'expiration de session ?
+      (choix produit, non tranché ; comme la déconnexion volontaire, on la garde).
 
 ## Jalon 4 : watchlist et demandes
 

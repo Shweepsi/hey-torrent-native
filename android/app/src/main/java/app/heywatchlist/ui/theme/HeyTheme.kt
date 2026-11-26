@@ -67,9 +67,13 @@ private val LightColors = HeyColors(
 @Immutable
 class HeyTypography(
     val display: TextStyle,
+    /** Titre d'une fiche ou d'un grand encart. */
+    val headline: TextStyle,
     val title: TextStyle,
     val body: TextStyle,
     val label: TextStyle,
+    /** Légende sous une affiche, mentions secondaires. */
+    val caption: TextStyle,
 )
 
 private val DefaultTypography = HeyTypography(
@@ -79,6 +83,13 @@ private val DefaultTypography = HeyTypography(
         fontSize = 34.sp,
         lineHeight = 40.sp,
         letterSpacing = (-0.5).sp,
+    ),
+    headline = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.3).sp,
     ),
     title = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -98,6 +109,12 @@ private val DefaultTypography = HeyTypography(
         fontSize = 15.sp,
         lineHeight = 20.sp,
     ),
+    caption = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 17.sp,
+    ),
 )
 
 /** Formes très arrondies. */
@@ -105,11 +122,14 @@ private val DefaultTypography = HeyTypography(
 class HeyShapes(
     val card: RoundedCornerShape,
     val button: RoundedCornerShape,
+    /** Affiches et vignettes. */
+    val poster: RoundedCornerShape,
 )
 
 private val DefaultShapes = HeyShapes(
     card = RoundedCornerShape(28.dp),
     button = RoundedCornerShape(20.dp),
+    poster = RoundedCornerShape(16.dp),
 )
 
 // Valeurs par défaut sûres : un composable hors de HeyTheme reste affichable.

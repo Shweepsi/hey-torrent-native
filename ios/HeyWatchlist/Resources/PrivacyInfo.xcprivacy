@@ -9,6 +9,35 @@
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
-	<array/>
+	<array>
+		<!-- SQLite est compilé avec le cœur (cache hors ligne du catalogue) et
+		     travaille dans le dossier Caches de l'app. Son code appelle deux
+		     familles d'API à raison requise : les attributs de fichier (ci-dessous)
+		     et l'espace disque (entrée suivante). -->
+		<!-- Attributs de fichier (stat, fstat : taille et dates de son fichier).
+		     Raison C617.1 : fichiers du conteneur de l'app. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<!-- Espace disque : à chaque ouverture de fichier sur une plateforme Apple,
+		     SQLite appelle fstatfs (et statfs) pour reconnaître le système de
+		     fichiers et choisir son verrouillage ; il n'en lit aucune valeur d'espace
+		     libre. Aucune raison ne correspond exactement : E174.1 (vérifier l'espace
+		     avant d'écrire des fichiers) est la plus proche. À CONFIRMER par le
+		     propriétaire avant le premier envoi. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

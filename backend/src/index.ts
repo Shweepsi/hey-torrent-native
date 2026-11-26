@@ -10,6 +10,7 @@ import type { Env } from "./env";
 import { ApiError, errorResponse, json, noContent, optionalString, readJson, requiredString } from "./http";
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
 import { authenticate, openSession, refreshSession, revokeSession } from "./sessions";
+import { TMDB_PREFIX, relayTmdb } from "./tmdb";
 
 /** Ce qui varie entre la production et les tests. */
 export interface Deps {
@@ -116,11 +117,18 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
   "/v1/invitations": { POST: createInvitation },
 };
 
+/** Le relais TMDB répond à tout un préfixe (liste blanche dans `tmdb.ts`) ; les autres routes sont exactes. */
+function findHandler(method: string, pathname: string): Handler | undefined {
+  if (pathname.startsWith(TMDB_PREFIX)) {
+    return method === "GET" ? (request, env, deps) => relayTmdb(request, env, deps.fetch, deps.now()) : undefined;
+  }
+  return ROUTES[pathname]?.[method];
+}
+
 export function createHandler(deps: Deps): ExportedHandler<Env> {
   return {
     async fetch(request, env) {
-      const route = ROUTES[new URL(request.url).pathname];
-      const handler = route?.[request.method];
+      const handler = findHandler(request.method, new URL(request.url).pathname);
       if (!handler) return errorResponse("not_found");
       try {
         return await handler(request, env, deps);

@@ -1,6 +1,8 @@
 /**
  * Faux Apple et faux Google : des clés RSA de test signent des jetons
- * d'identité au même format que les vrais. Aucun appel réseau.
+ * d'identité au même format que les vrais. Les appels sortants du Worker
+ * (révocation Apple, TMDB) passent par `deps.fetch`, simulé ici : ils sont
+ * enregistrés dans `fetchCalls`. Aucun appel réseau.
  */
 import { env } from "cloudflare:workers";
 import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type CryptoKey } from "jose";
@@ -27,17 +29,30 @@ export function setNow(value: number) {
   clock = value;
 }
 
-export const fetchCalls: { url: string; body: string }[] = [];
-let fetchReply: (url: string) => Response = () => new Response("{}", { status: 500 });
-export function replyToFetch(reply: (url: string) => Response) {
+/** Appels sortants du Worker : URL, corps, en-têtes (noms en minuscules) et délai armé. */
+export const fetchCalls: {
+  url: string;
+  body: string;
+  headers: Record<string, string>;
+  signal: AbortSignal | undefined;
+}[] = [];
+type FetchReply = (url: string, init: RequestInit) => Response | Promise<Response>;
+let fetchReply: FetchReply = () => new Response("{}", { status: 500 });
+/** Une réponse qui lève une erreur ou rejette simule une panne réseau ou un délai dépassé. */
+export function replyToFetch(reply: FetchReply) {
   fetchReply = reply;
 }
 
 export const deps: Deps = {
   keySets: { apple: apple.jwks, google: google.jwks },
   fetch: async (url, init) => {
-    fetchCalls.push({ url, body: String(init.body ?? "") });
-    return fetchReply(url);
+    fetchCalls.push({
+      url,
+      body: String(init.body ?? ""),
+      headers: Object.fromEntries(new Headers(init.headers).entries()),
+      signal: init.signal ?? undefined,
+    });
+    return fetchReply(url, init);
   },
   now: () => clock,
 };

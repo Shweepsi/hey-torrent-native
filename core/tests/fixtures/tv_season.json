@@ -1,0 +1,42 @@
+{
+  "_id": "season-1",
+  "air_date": "2026-09-03",
+  "episodes": [
+    {
+      "air_date": "2026-09-03",
+      "episode_number": 1,
+      "episode_type": "standard",
+      "id": 3001,
+      "name": "Marée basse",
+      "overview": "Le corps d'un pêcheur est retrouvé sur la grève.",
+      "production_code": "",
+      "runtime": 52,
+      "season_number": 1,
+      "show_id": 920002,
+      "still_path": "/stillEpisode1.jpg",
+      "vote_average": 7.9,
+      "vote_count": 12
+    },
+    {
+      "air_date": "2026-09-10",
+      "episode_number": 2,
+      "id": 3002,
+      "name": "Brouillard",
+      "overview": "",
+      "runtime": null,
+      "season_number": 1,
+      "show_id": 920002,
+      "still_path": null,
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    { "name": "Épisode sans numéro", "overview": "Illisible." },
+    { "episode_number": "trois", "name": "Numéro illisible" }
+  ],
+  "name": "Saison 1",
+  "overview": "La première saison.",
+  "id": 11,
+  "poster_path": "/afficheSaison1.jpg",
+  "season_number": 1,
+  "vote_average": 8.0
+}

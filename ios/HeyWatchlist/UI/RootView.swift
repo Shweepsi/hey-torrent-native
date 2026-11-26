@@ -3,6 +3,7 @@ import SwiftUI
 /// Racine de l'interface : accueil tant qu'on n'est pas connecté, sinon les onglets.
 struct RootView: View {
     let model: AccountModel
+    let catalog: any CatalogClient
 
     var body: some View {
         ZStack {
@@ -14,7 +15,7 @@ struct RootView: View {
             case .signedOut(let state):
                 WelcomeView(model: model, state: state)
             case .signedIn(let state):
-                MainTabView(model: model, state: state)
+                MainTabView(model: model, state: state, catalog: catalog)
             }
         }
         // Seule la palette sombre existe pour l'instant (docs/DESIGN.md).
