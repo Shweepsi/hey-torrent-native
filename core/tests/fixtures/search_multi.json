@@ -1,0 +1,53 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "adult": false,
+      "backdrop_path": "/fondRecherche01.jpg",
+      "id": 940001,
+      "title": "La Maison du lac",
+      "original_title": "La Maison du lac",
+      "overview": "Un été, une maison, des secrets.",
+      "poster_path": "/afficheRecherche01.jpg",
+      "media_type": "movie",
+      "original_language": "fr",
+      "genre_ids": [18],
+      "popularity": 44.0,
+      "release_date": "2019-07-03",
+      "video": false,
+      "vote_average": 6.7,
+      "vote_count": 88
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 950002,
+      "name": "Lac Noir",
+      "original_name": "Lac Noir",
+      "overview": "",
+      "poster_path": "/afficheRecherche02.jpg",
+      "media_type": "tv",
+      "original_language": "fr",
+      "genre_ids": [80],
+      "popularity": 12.0,
+      "first_air_date": "2021-10-01",
+      "vote_average": 7.0,
+      "vote_count": 31,
+      "origin_country": ["FR"]
+    },
+    {
+      "adult": false,
+      "id": 960003,
+      "name": "Lac Personne",
+      "original_name": "Lac Personne",
+      "media_type": "person",
+      "popularity": 5.0,
+      "gender": 2,
+      "known_for_department": "Directing",
+      "profile_path": null
+    },
+    { "id": 940004, "media_type": "movie", "overview": "Sans titre." }
+  ],
+  "total_pages": 3,
+  "total_results": 47
+}

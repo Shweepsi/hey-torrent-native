@@ -1,0 +1,83 @@
+{
+  "adult": false,
+  "backdrop_path": "/fondMaisonLac01.jpg",
+  "belongs_to_collection": null,
+  "budget": 4500000,
+  "genres": [
+    { "id": 18, "name": "Drame" },
+    { "id": 53, "name": "Thriller" }
+  ],
+  "homepage": "",
+  "id": 940001,
+  "imdb_id": "tt0000000",
+  "origin_country": ["FR"],
+  "original_language": "fr",
+  "original_title": "La Maison du lac",
+  "overview": "Un été, une maison, des secrets.",
+  "popularity": 44.0,
+  "poster_path": "/afficheRecherche01.jpg",
+  "production_companies": [
+    { "id": 1, "logo_path": null, "name": "Studio Fictif", "origin_country": "FR" }
+  ],
+  "release_date": "2019-07-03",
+  "revenue": 0,
+  "runtime": 112,
+  "spoken_languages": [{ "english_name": "French", "iso_639_1": "fr", "name": "Français" }],
+  "status": "Released",
+  "tagline": "Certains étés ne finissent jamais.",
+  "title": "La Maison du lac",
+  "video": false,
+  "vote_average": 6.7,
+  "vote_count": 88,
+  "credits": {
+    "cast": [
+      { "adult": false, "gender": 1, "id": 5001, "known_for_department": "Acting", "name": "Camille Exemple", "original_name": "Camille Exemple", "popularity": 9.1, "profile_path": "/profilCamille.jpg", "cast_id": 3, "character": "Léa", "credit_id": "c1", "order": 0 },
+      { "adult": false, "gender": 2, "id": 5002, "known_for_department": "Acting", "name": "Noé Exemple", "original_name": "Noé Exemple", "popularity": 7.4, "profile_path": null, "cast_id": 4, "character": "", "credit_id": "c2", "order": 1 },
+      { "id": 5003, "name": "", "order": 2 },
+      { "name": "Sans identifiant", "order": 3 }
+    ],
+    "crew": [
+      { "adult": false, "gender": 2, "id": 6001, "known_for_department": "Directing", "name": "Alix Réalisateur", "original_name": "Alix Réalisateur", "popularity": 3.0, "profile_path": null, "credit_id": "d1", "department": "Directing", "job": "Director" },
+      { "adult": false, "gender": 1, "id": 6002, "known_for_department": "Sound", "name": "Maud Compositrice", "original_name": "Maud Compositrice", "popularity": 2.0, "profile_path": null, "credit_id": "d2", "department": "Sound", "job": "Original Music Composer" }
+    ]
+  },
+  "videos": {
+    "results": [
+      { "iso_639_1": "fr", "iso_3166_1": "FR", "name": "Teaser", "key": "teaserKey001", "site": "YouTube", "size": 1080, "type": "Teaser", "official": true, "published_at": "2019-05-01T10:00:00.000Z", "id": "v1" },
+      { "iso_639_1": "fr", "iso_3166_1": "FR", "name": "Bande-annonce officielle", "key": "trailer-Key_01", "site": "YouTube", "size": 1080, "type": "Trailer", "official": true, "published_at": "2019-06-01T10:00:00.000Z", "id": "v2" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Trailer sur un autre hébergeur", "key": "hebergeur123", "site": "Vimeo", "size": 1080, "type": "Trailer", "official": true, "published_at": "2019-06-02T10:00:00.000Z", "id": "v3" },
+      { "iso_639_1": "fr", "iso_3166_1": "FR", "name": "Clé piégée", "key": "abc&autoplay=1", "site": "YouTube", "size": 720, "type": "Trailer", "official": false, "published_at": "2019-06-03T10:00:00.000Z", "id": "v4" }
+    ]
+  },
+  "watch/providers": {
+    "results": {
+      "US": {
+        "link": "https://example.com/us",
+        "flatrate": [{ "logo_path": "/logoUS.jpg", "provider_id": 1, "provider_name": "Service américain", "display_priority": 1 }]
+      },
+      "FR": {
+        "link": "https://example.com/fr",
+        "flatrate": [
+          { "logo_path": "/logoAbo1.jpg", "provider_id": 8, "provider_name": "Service A", "display_priority": 1 },
+          { "logo_path": null, "provider_id": 9, "provider_name": "Service B", "display_priority": 2 }
+        ],
+        "rent": [
+          { "logo_path": "/logoLoc1.jpg", "provider_id": 2, "provider_name": "Boutique C", "display_priority": 3 }
+        ],
+        "buy": [
+          { "logo_path": "/logoLoc1.jpg", "provider_id": 2, "provider_name": "Boutique C", "display_priority": 3 },
+          { "logo_path": "/logoAchat.jpg", "provider_id": 3, "provider_name": "Boutique D", "display_priority": 4 }
+        ]
+      }
+    }
+  },
+  "similar": {
+    "page": 1,
+    "results": [
+      { "adult": false, "backdrop_path": "/fondSimilaire1.jpg", "genre_ids": [18], "id": 940010, "original_language": "fr", "original_title": "Le Lac gelé", "overview": "Un hiver au bord du lac.", "popularity": 20.0, "poster_path": "/afficheSimilaire1.jpg", "release_date": "2017-12-20", "title": "Le Lac gelé", "video": false, "vote_average": 6.1, "vote_count": 40 },
+      { "id": 940011, "overview": "Sans titre." }
+    ],
+    "total_pages": 1,
+    "total_results": 2
+  }
+}

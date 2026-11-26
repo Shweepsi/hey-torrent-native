@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
-use crate::api::{self, BaseUrl, ConfigResponse, MeResponse, SignInResponse, TokenPair, WireUser};
+use crate::api::{
+    self, ApiFailure, BaseUrl, ConfigResponse, MeResponse, SignInResponse, TokenPair, WireUser,
+};
 
 /// Erreur d'une opération de compte. L'interface traduit chaque cas en
 /// français ; le texte ci-dessous ne sert qu'aux journaux.
@@ -390,6 +392,20 @@ impl Account {
             }
             Err(other) => Err(other),
         }
+    }
+
+    /// GET authentifié sur le Worker : corps brut de la réponse. Sert aux
+    /// modules qui lisent l'API avec la session du compte (même client HTTP,
+    /// même jeton, même renouvellement) sans second client.
+    ///
+    /// `target` est le chemin absolu avec sa requête déjà encodée
+    /// (`/v1/...?page=1`).
+    pub(crate) async fn get_bytes(&self, target: &str) -> Result<Vec<u8>, ApiFailure> {
+        let url = self.base.join(target);
+        let response = self
+            .authorized(|http, token| http.get(&url).bearer_auth(token))
+            .await?;
+        api::read_bytes(response).await
     }
 
     /// Envoie une requête authentifiée ; sur un 401, renouvelle le jeton une

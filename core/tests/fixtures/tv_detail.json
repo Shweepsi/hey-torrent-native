@@ -1,0 +1,64 @@
+{
+  "adult": false,
+  "backdrop_path": "/fondIleMarees02.jpg",
+  "created_by": [
+    { "id": 7001, "credit_id": "k1", "name": "Inès Créatrice", "original_name": "Inès Créatrice", "gender": 1, "profile_path": null }
+  ],
+  "episode_run_time": [],
+  "first_air_date": "2026-09-03",
+  "genres": [
+    { "id": 9648, "name": "Mystère" },
+    { "id": 18, "name": "Drame" }
+  ],
+  "homepage": "",
+  "id": 920002,
+  "in_production": true,
+  "languages": ["fr"],
+  "last_air_date": "2026-11-12",
+  "last_episode_to_air": { "id": 1, "name": "Marée haute", "air_date": "2026-11-12", "episode_number": 6, "runtime": 51, "season_number": 1 },
+  "name": "L'Île aux marées",
+  "next_episode_to_air": null,
+  "number_of_episodes": 6,
+  "number_of_seasons": 1,
+  "origin_country": ["FR"],
+  "original_language": "fr",
+  "original_name": "L'Île aux marées",
+  "overview": "Sur une île que la mer coupe du monde deux fois par jour, une enquête commence.",
+  "popularity": 201.713,
+  "poster_path": "/afficheIleMarees02.jpg",
+  "seasons": [
+    { "air_date": "2026-01-01", "episode_count": 2, "id": 10, "name": "Épisodes spéciaux", "overview": "", "poster_path": null, "season_number": 0, "vote_average": 0 },
+    { "air_date": "2026-09-03", "episode_count": 6, "id": 11, "name": "Saison 1", "overview": "", "poster_path": "/afficheSaison1.jpg", "season_number": 1, "vote_average": 8.0 },
+    { "name": "Saison sans numéro" }
+  ],
+  "status": "Returning Series",
+  "tagline": "",
+  "type": "Scripted",
+  "vote_average": 8.1,
+  "vote_count": 342,
+  "credits": {
+    "cast": [
+      { "adult": false, "gender": 1, "id": 8001, "known_for_department": "Acting", "name": "Sacha Exemple", "original_name": "Sacha Exemple", "popularity": 5.0, "profile_path": "/profilSacha.jpg", "character": "Capitaine Roux", "credit_id": "s1", "order": 0 }
+    ],
+    "crew": [
+      { "id": 9001, "name": "Alix Réalisateur", "department": "Directing", "job": "Director" }
+    ]
+  },
+  "videos": { "results": [] },
+  "watch/providers": {
+    "results": {
+      "FR": {
+        "link": "https://example.com/fr",
+        "flatrate": [{ "logo_path": "/logoAbo1.jpg", "provider_id": 8, "provider_name": "Service A", "display_priority": 1 }]
+      }
+    }
+  },
+  "similar": {
+    "page": 1,
+    "results": [
+      { "adult": false, "backdrop_path": null, "genre_ids": [9648], "id": 920050, "origin_country": ["FR"], "original_language": "fr", "original_name": "Brume", "overview": "", "popularity": 10.0, "poster_path": "/afficheBrume.jpg", "first_air_date": "2022-03-01", "name": "Brume", "vote_average": 7.2, "vote_count": 60 }
+    ],
+    "total_pages": 1,
+    "total_results": 1
+  }
+}

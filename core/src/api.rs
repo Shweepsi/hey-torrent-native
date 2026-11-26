@@ -85,6 +85,62 @@ fn server_error(status: u16, code: Option<&str>) -> AccountError {
     }
 }
 
+/// Échec d'une lecture au Worker, avant traduction par le module appelant.
+///
+/// `AccountError` a des `switch` exhaustifs côté apps : les lectures du
+/// catalogue passent par cette énumération interne, qui distingue en plus
+/// `NotFound`, plutôt que d'ajouter une variante publique.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ApiFailure {
+    /// Pas de réseau, serveur injoignable ou délai dépassé.
+    Network,
+    /// Session absente, expirée ou révoquée (après le renouvellement automatique).
+    SignedOut,
+    /// Le serveur ne connaît pas la ressource (`not_found`).
+    NotFound,
+    /// Service amont indisponible (`provider_unavailable`).
+    Unavailable,
+    /// Erreur du serveur (5xx).
+    Server,
+    /// Réponse imprévue (format, statut).
+    Unexpected,
+    /// Défaillance interne.
+    Internal,
+}
+
+impl From<AccountError> for ApiFailure {
+    /// Échec survenu pendant l'authentification de la requête.
+    fn from(error: AccountError) -> Self {
+        match error {
+            AccountError::Network => Self::Network,
+            AccountError::SignedOut => Self::SignedOut,
+            AccountError::ProviderUnavailable => Self::Unavailable,
+            AccountError::Server => Self::Server,
+            AccountError::Internal => Self::Internal,
+            _ => Self::Unexpected,
+        }
+    }
+}
+
+/// Code d'erreur du corps d'une réponse en échec, s'il est lisible.
+fn error_code(bytes: &[u8]) -> Option<String> {
+    serde_json::from_slice::<ErrorBody>(bytes)
+        .ok()
+        .map(|b| b.error)
+}
+
+/// Code d'erreur du serveur (ou statut sans corps lisible) → échec de lecture.
+fn read_failure(status: u16, code: Option<&str>) -> ApiFailure {
+    match code {
+        Some("unauthorized" | "session_expired") => ApiFailure::SignedOut,
+        Some("not_found") => ApiFailure::NotFound,
+        Some("provider_unavailable") => ApiFailure::Unavailable,
+        _ if status == 401 => ApiFailure::SignedOut,
+        _ if status >= 500 => ApiFailure::Server,
+        _ => ApiFailure::Unexpected,
+    }
+}
+
 /// Échec de transport (pas de réseau, délai dépassé…).
 pub(crate) fn transport_error(_error: reqwest::Error) -> AccountError {
     // Le détail n'est pas gardé : il peut contenir l'adresse du serveur.
@@ -100,10 +156,7 @@ pub(crate) async fn read<T: DeserializeOwned>(
     if (200..300).contains(&status) {
         return serde_json::from_slice(&bytes).map_err(|_| AccountError::Unexpected);
     }
-    let code = serde_json::from_slice::<ErrorBody>(&bytes)
-        .ok()
-        .map(|b| b.error);
-    Err(server_error(status, code.as_deref()))
+    Err(server_error(status, error_code(&bytes).as_deref()))
 }
 
 /// Comme [`read`], pour une réponse sans corps attendu.
@@ -113,10 +166,20 @@ pub(crate) async fn read_empty(response: reqwest::Response) -> Result<(), Accoun
         return Ok(());
     }
     let bytes = response.bytes().await.map_err(transport_error)?;
-    let code = serde_json::from_slice::<ErrorBody>(&bytes)
-        .ok()
-        .map(|b| b.error);
-    Err(server_error(status, code.as_deref()))
+    Err(server_error(status, error_code(&bytes).as_deref()))
+}
+
+/// Comme [`read`], mais rend le corps brut (non décodé) en cas de succès.
+pub(crate) async fn read_bytes(response: reqwest::Response) -> Result<Vec<u8>, ApiFailure> {
+    let status = response.status().as_u16();
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|error| ApiFailure::from(transport_error(error)))?;
+    if (200..300).contains(&status) {
+        return Ok(bytes.to_vec());
+    }
+    Err(read_failure(status, error_code(&bytes).as_deref()))
 }
 
 /// Compte tel que l'API le renvoie.
@@ -244,6 +307,55 @@ mod tests {
             server_error(418, Some("inconnu")),
             AccountError::Unexpected
         ));
+    }
+
+    #[test]
+    fn read_failures_distinguish_not_found() {
+        assert_eq!(read_failure(404, Some("not_found")), ApiFailure::NotFound);
+        assert_eq!(
+            read_failure(401, Some("unauthorized")),
+            ApiFailure::SignedOut
+        );
+        assert_eq!(
+            read_failure(401, Some("session_expired")),
+            ApiFailure::SignedOut
+        );
+        assert_eq!(read_failure(401, None), ApiFailure::SignedOut);
+        assert_eq!(
+            read_failure(503, Some("provider_unavailable")),
+            ApiFailure::Unavailable
+        );
+        assert_eq!(read_failure(500, Some("internal")), ApiFailure::Server);
+        assert_eq!(read_failure(502, None), ApiFailure::Server);
+        assert_eq!(
+            read_failure(400, Some("invalid_request")),
+            ApiFailure::Unexpected
+        );
+        // Un 404 sans code reconnu n'est pas un « introuvable » du Worker.
+        assert_eq!(read_failure(404, None), ApiFailure::Unexpected);
+        assert_eq!(read_failure(418, None), ApiFailure::Unexpected);
+    }
+
+    #[test]
+    fn authentication_failures_keep_their_meaning() {
+        assert_eq!(ApiFailure::from(AccountError::Network), ApiFailure::Network);
+        assert_eq!(
+            ApiFailure::from(AccountError::SignedOut),
+            ApiFailure::SignedOut
+        );
+        assert_eq!(
+            ApiFailure::from(AccountError::ProviderUnavailable),
+            ApiFailure::Unavailable
+        );
+        assert_eq!(ApiFailure::from(AccountError::Server), ApiFailure::Server);
+        assert_eq!(
+            ApiFailure::from(AccountError::Internal),
+            ApiFailure::Internal
+        );
+        assert_eq!(
+            ApiFailure::from(AccountError::Forbidden),
+            ApiFailure::Unexpected
+        );
     }
 
     #[test]
