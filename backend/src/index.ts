@@ -3,6 +3,7 @@
  * par le cœur Rust. Routes sous `/v1` ; réponses JSON, erreurs en codes stables.
  * Rien n'est journalisé qui identifie une personne ou contient un jeton.
  */
+import { ADMIN_PREFIX, adminHandler } from "./admin";
 import { consumeNonce, deleteAccount, findUser, hasAppleIdentity, publicUser, resolveAccount } from "./accounts";
 import { revokeAppleAuthorization, type FetchLike } from "./apple";
 import { invitationCode, normalizeCode, sha256Hex } from "./crypto";
@@ -154,7 +155,8 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
 
 /**
  * Le relais TMDB répond à tout un préfixe (liste blanche dans `tmdb.ts`), la
- * watchlist à ses chemins (`watchlist.ts`) ; les autres routes sont exactes.
+ * watchlist et l'administration à leurs chemins (`watchlist.ts`, `admin.ts`) ;
+ * les autres routes sont exactes.
  */
 function findHandler(method: string, pathname: string): Handler | undefined {
   if (pathname.startsWith(TMDB_PREFIX)) {
@@ -164,6 +166,10 @@ function findHandler(method: string, pathname: string): Handler | undefined {
     return method === "POST"
       ? (request, env, deps) => receiveHook(request, env, deps.fetch, deps.push(env), deps.now())
       : undefined;
+  }
+  if (pathname.startsWith(ADMIN_PREFIX)) {
+    const handler = adminHandler(method, pathname);
+    return handler ? (request, env, deps) => handler(request, env, deps.now()) : undefined;
   }
   if (pathname === WATCHLIST_PATH || pathname.startsWith(`${WATCHLIST_PATH}/`)) {
     const handler = watchlistHandler(method, pathname);

@@ -24,7 +24,12 @@ pub use account::{
     SignInRequest, UserProfile, UserRole, new_sign_in_nonce,
 };
 #[cfg(feature = "admin")]
-pub use admin::Invitation;
+pub use admin::{
+    AdminError, AdminRequest, AdminSpace, AudioLanguage, Download, DownloadState, Invitation,
+    InvitationInfo, QbitAuth, QbitSettings, Release, ReleaseInfo, ReleaseSource, RequestFilter,
+    RequestFollower, Resolution, SearchObserver, SearchOutcome, SearchQuery, ServerSettings,
+    SourceFailure, SourceReport, TorznabSource, VideoCodec,
+};
 pub use catalog::{
     CastMember, Catalog, CatalogError, Episode, Genre, MediaType, Provider, Providers,
     SeasonDetail, SeasonSummary, Shelf, TitleDetail, TitlePage, TitleSummary, Video, VideoKind,

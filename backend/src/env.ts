@@ -16,6 +16,11 @@ export interface Env {
    * utilisée par le relais `/v1/tmdb/`. Secret : jamais journalisée ni renvoyée.
    */
   TMDB_API_KEY?: string;
+  /**
+   * Clé AES-256-GCM (32 octets en base64) des réglages des serveurs de
+   * l'administrateur, chiffrés dans D1. Secret : jamais dans D1 ni le code.
+   */
+  CREDENTIALS_KEY?: string;
   /** Équipe Apple et clé « Sign in with Apple » : révocation à la suppression. */
   APPLE_TEAM_ID?: string;
   APPLE_SIGNIN_KEY_ID?: string;

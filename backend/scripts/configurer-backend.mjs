@@ -599,13 +599,24 @@ function newAdminCode() {
   return `${group()}-${group()}-${group()}`;
 }
 
-// Clé des sessions et code administrateur. Rend le code à afficher, s'il est connu.
+// Clés des sessions et des réglages admin, code administrateur. Rend le code à
+// afficher, s'il est connu.
 async function setupSessionSecrets(token, accountId, names) {
-  say("\n[3/7] Serveur : clé des sessions et code administrateur");
+  say("\n[3/7] Serveur : clés des sessions et des réglages, code administrateur");
   if (names.has("SESSION_SIGNING_KEY")) {
     ok("clé des sessions déjà en place : conservée");
   } else {
     await putWorkerSecret(token, accountId, "SESSION_SIGNING_KEY", randomBytes(32).toString("base64"));
+  }
+  // Chiffre les réglages des serveurs (sources, qBittorrent). Jamais remplacée :
+  // une nouvelle clé rendrait illisibles les réglages déjà enregistrés.
+  if (names.has("CREDENTIALS_KEY")) {
+    ok("clé des réglages admin déjà en place : conservée");
+  } else {
+    const key = randomBytes(32).toString("base64");
+    // Sauvegardée avant l'envoi : une coupure entre les deux ne la perd pas.
+    saveToStore("CREDENTIALS_KEY", key);
+    await putWorkerSecret(token, accountId, "CREDENTIALS_KEY", key);
   }
 
   const saved = readStore().BOOTSTRAP_CODE;
