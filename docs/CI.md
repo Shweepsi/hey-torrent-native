@@ -23,7 +23,7 @@ quel ordre, et où lire les résultats**.
 | Fichier | Se lance | Machine | Sert à |
 |---|---|---|---|
 | `ci-core.yml` | PR et `main`, si le cœur, les outils, les scripts ou Cargo changent | Linux | `cargo fmt`, `clippy -D warnings`, tests (sans puis avec `admin`) ; génération des liaisons Kotlin et Swift et contrôle du contrat (`admin_ping` seulement dans l'édition admin) ; ShellCheck |
-| `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests de `buildSrc`, `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié), APK admin de debug ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé et AAB public |
+| `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests de `buildSrc`, `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié), APK admin de debug ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé, APK public signé et AAB public |
 | `ci-ios.yml` | PR (hors brouillons), `main`, tags `v*`, si iOS, le cœur, `build-ios-xcframework.sh`, `generate-bindings.sh` ou Cargo changent (jamais pour un `.md`) | **macOS** | XCFramework du cœur, XcodeGen, tests sur simulateur iPhone ; sur `main`, un tag ou un lancement manuel, **si les secrets iOS existent** : signature et envoi TestFlight |
 | `ios-setup-signing.yml` | À la main seulement | **macOS** | Crée le certificat et le profil de distribution (fastlane match) |
 | `ci-backend.yml` | PR et `main`, si `backend/` change | Linux | TypeScript et tests du Worker (Vitest dans `workerd`, rien n'appelle Cloudflare) ; sur `main`, **si les réglages Cloudflare existent** : migrations D1 puis déploiement du Worker `heywatchlist-api` |
@@ -222,6 +222,7 @@ de la page de résumé > télécharger le zip.
 |---|---|---|
 | `heywatchlist-admin-debug-apk` | APK admin de debug (chaque exécution Android) | 14 jours |
 | `heywatchlist-admin-release-apk` | APK admin signé (`main`, tag ou lancement manuel) | 30 jours |
+| `heywatchlist-public-release-apk` | APK public signé, à installer directement sur un téléphone | 30 jours |
 | `heywatchlist-public-release-aab` | AAB public signé, pour le Play Store | 30 jours |
 | `android-rapports-de-tests` | Rapports de tests, **en cas d'échec** | 7 jours |
 | `ios-resultat-des-tests` | Résultat de tests (`.xcresult`), **en cas d'échec** | 7 jours |
@@ -239,7 +240,7 @@ d'échec iOS, le journal complet de `xcodebuild` est dans l'étape en erreur de
 l'exécution (sans Mac, c'est lui qui explique l'échec).
 
 Le lancement manuel (**Run workflow**) de `CI Android` a une case « Produire
-aussi l'APK admin signé et l'AAB public » ; celui de `CI iOS`, une case pour
+aussi les APK signés et l'AAB public » ; celui de `CI iOS`, une case pour
 envoyer ou non sur TestFlight.
 
 ## Coût des minutes macOS
