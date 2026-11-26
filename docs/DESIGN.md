@@ -53,8 +53,8 @@ Barre d'onglets en verre, identique pour tout le monde :
 L'espace admin n'ajoute **pas** d'onglet : il vit uniquement dans l'APK admin
 Android, jamais dans les apps publiques (voir `docs/DECISIONS.md`).
 
-Au jalon 1, il n'y a ni onglets ni écran Découvrir : un seul écran d'accueil
-affiche le nom, la version du cœur et la réponse « pong ».
+L'onglet Découvrir est construit (jalon 3) ; Watchlist reste un espace
+réservé jusqu'au jalon 4.
 
 ## iPhone : Liquid Glass natif (iOS 26)
 
@@ -108,7 +108,8 @@ ne gèle jamais.
 ## Mentions obligatoires
 
 L'écran « À propos » porte le logo TMDB et la phrase d'attribution fournie par
-TMDB (jalon 7). Aucune marque tierce (Plex, Netflix…) dans le nom, l'icône ou le
+TMDB (jalon 7). La section des plateformes de la fiche porte la mention
+« Disponibilités fournies par JustWatch ». Aucune marque tierce (Plex, Netflix…) dans le nom, l'icône ou le
 sous-titre ; aucun tracker nommé, nulle part.
 
 ## Où en est le code
@@ -118,11 +119,17 @@ sous-titre ; aucun tracker nommé, nulle part.
 | Jetons de couleur | `HeyTheme.swift` : `primary`, `background` | `HeyTheme.kt` : tous les jetons ci-dessus, clair et sombre |
 | Verre | Liquid Glass du système | `GlassSurface` (Haze) avec repli opaque |
 | Fond | `HeyBackground` : dégradé sombre | `AuroraBackground` : halos sur fond sombre |
-| Écrans | `HomeView` | `HomeScreen` |
+| Découvrir | `DiscoverView` (carrousel, rangées, genres), `GenreView` | `DiscoverScreen`, `GenreScreen` |
+| Recherche | `SearchView`, onglet `Tab(role: .search)` | `SearchScreen`, champ en tête de Découvrir |
+| Fiche détail | `TitleDetailView` (transition zoom) | `DetailScreen` |
+| Affiches | `PosterView` (`AsyncImage`) | `HeyPoster` (Coil) |
 
-Pas encore géré au jalon 1 : les réglages « Réduire la transparence » et
-« Supprimer les animations » (règle 4), les onglets, la recherche et la fiche
-détail (voir `docs/TODO.md`). Côté Android, le repli opaque existe déjà quand
+Au jalon 3, la barre d'onglets iPhone compte une bulle de recherche à côté des
+trois onglets. Pas encore géré : les réglages « Réduire la transparence » et
+« Supprimer les animations » dans tout l'app (règle 4, seulement là où les
+nouveaux composants le faisaient simplement ; voir `docs/TODO.md`), le thème
+clair d'iOS, la fiche et le carrousel jamais vus sur appareil (contraste des
+affiches claires à contrôler). Côté Android, le repli opaque existe déjà quand
 Haze ne peut pas flouter.
 
 Les textes affichés sont dans `Localizable.xcstrings` (iOS) et `strings.xml`

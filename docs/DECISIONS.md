@@ -128,6 +128,39 @@ facile.
 - Les tables D1 arrivent avec leur jalon : le jalon 2 ne crée que celles des
   comptes.
 
+## Décidé au jalon 3 (2026-11-26)
+
+- **Images : chargeurs natifs.** Le cœur fabrique les URL du CDN d'images de
+  TMDB (`image.tmdb.org`, tailles fixées par le cœur) ; `AsyncImage` (iPhone) et
+  Coil (Android) les téléchargent. C'est la seule exception à « pas de réseau en
+  Swift ou Kotlin » : des images publiques, sans clé ni jeton. Tout le reste
+  passe par le cœur et le Worker.
+- **Cache du Worker : D1, pas la Cache API**, qui n'a aucun effet sur
+  `workers.dev`. Table `tmdb_cache`, durées de vie par type de requête ; la
+  recherche n'est jamais gardée.
+- **Relais sur liste blanche** (chemins, paramètres, bornes) : jamais un
+  proxy TMDB ouvert, la clé de l'app ne doit pas pouvoir être détournée. Langue
+  `fr-FR` et région `FR` imposées par le Worker.
+- **Hors ligne : SQLite dans le cœur** (`rusqlite`, SQLite embarqué). Une
+  entrée de moins de 5 minutes est servie sans réseau ; au-delà, le réseau, et
+  si l'échec est réseau, service indisponible ou erreur du serveur, l'entrée
+  périmée est servie avec `stale = true` (bandeau discret). Élagage à 30 jours
+  et 400 entrées.
+- **Genres de séries** : l'interface passe toujours un identifiant de genre
+  de film ; le cœur le traduit en genre de série par une table fixe (Action et
+  Aventure vers « Action & Adventure », etc.) et renvoie une page vide quand
+  il n'y a pas d'équivalent (Horreur, Romance…). Aucune règle de genre dans
+  Swift ou Kotlin.
+- **Attribution** : « Disponibilités fournies par JustWatch » dans la section
+  des plateformes de la fiche, car TMDB l'exige pour ces données. Le logo TMDB
+  et sa phrase d'attribution restent pour « À propos » (jalon 7).
+- **Confidentialité iOS** : SQLite embarqué appelle `fstat` et `fstatfs` ;
+  `PrivacyInfo.xcprivacy` déclare `FileTimestamp` (`C617.1`) et `DiskSpace`.
+  **La raison `E174.1` de `DiskSpace` est provisoire** : à confirmer au premier
+  envoi TestFlight (courriel ITMS-91053 éventuel).
+- Pas de badge « Sur Plex » au jalon 3 : il dépend de la table `library` et du
+  point à trancher n°2 ci-dessous, donc il n'est pas codé.
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

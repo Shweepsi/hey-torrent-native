@@ -5,6 +5,44 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.3.0] - 2026-11-26
+
+Jalon 3 : Découvrir. L'onglet Découvrir parcourt le catalogue TMDB en
+français sur iPhone et Android : carrousel, rangées, genres, recherche
+instantanée et fiche détail. Aucun badge « Sur Plex » ni ajout à la watchlist
+pour l'instant (jalons 4 et 6).
+
+### Ajouté
+
+- Worker : relais `GET /v1/tmdb/<chemin>` du catalogue TMDB, derrière le jeton
+  d'accès, sur une liste blanche stricte de chemins et de paramètres (langue
+  `fr-FR`, région `FR` imposées), avec cache dans D1 (table `tmdb_cache`,
+  migration `0002_tmdb_cache.sql` ; la Cache API ne fonctionne pas sur
+  `workers.dev`). Nouveau secret `TMDB_API_KEY` (clé v3 ou jeton v4), saisi par
+  `configurer-backend.mjs`. Tests Vitest.
+- Cœur : objet `Catalog` (étagères, genres, genre, recherche, fiche, saison),
+  types sans texte affiché, erreurs typées `CatalogError`, décodage tolérant
+  (une entrée illisible est ignorée), URL d'images fabriquées par le cœur,
+  cache SQLite hors ligne (`rusqlite`, SQLite embarqué) avec repli sur
+  l'entrée périmée quand le réseau manque, correspondance des genres de films
+  vers ceux des séries. Tests `wiremock`.
+- Android : écrans Découvrir (carrousel, rangées indépendantes avec squelettes
+  et « Réessayer », pastilles de genres), Genre, recherche instantanée, fiche
+  détail plein écran (bande-annonce, plateformes en France, casting, saisons et
+  épisodes, similaires) ; images par Coil 3.3.0.
+- iPhone : mêmes écrans en Liquid Glass, recherche dans la bulle séparée
+  (`Tab(role: .search)`), fiche avec transition zoom ; images par
+  `AsyncImage`.
+- Mention « Disponibilités fournies par JustWatch » dans la fiche, comme TMDB
+  l'exige pour les plateformes.
+
+### Modifié
+
+- La session expirée détectée par le catalogue ramène à l'accueil, comme celle
+  détectée par le compte.
+- `PrivacyInfo.xcprivacy` : déclare `FileTimestamp` (`C617.1`) et `DiskSpace`
+  (`E174.1`, provisoire) à cause de SQLite embarqué.
+
 ## [0.2.0] - 2026-11-25
 
 Jalon 2 : comptes et connexion. On se connecte avec Apple (iPhone) ou Google
