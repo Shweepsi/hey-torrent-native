@@ -4,17 +4,27 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -30,6 +40,8 @@ import app.heywatchlist.ui.account.AccountViewModel
 import app.heywatchlist.ui.components.GlassSurface
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
+import app.heywatchlist.ui.components.HeyIcon
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.privacyPolicyUrl
@@ -76,16 +88,23 @@ internal fun SettingsContent(
             modifier = Modifier.semantics { heading() },
         )
         GlassSurface(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 val name = state.profile.firstName
-                HeyText(
-                    text = if (name != null) stringResource(R.string.settings_hello, name) else stringResource(R.string.settings_hello_anonymous),
-                    style = HeyTheme.typography.title,
-                )
-                HeyText(
-                    text = stringResource(if (state.profile.isAdmin) R.string.settings_role_admin else R.string.settings_role_member),
-                    color = HeyTheme.colors.onBackgroundMuted,
-                )
+                ProfileBadge(name = name)
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    HeyText(
+                        text = if (name != null) stringResource(R.string.settings_hello, name) else stringResource(R.string.settings_hello_anonymous),
+                        style = HeyTheme.typography.title,
+                    )
+                    HeyText(
+                        text = stringResource(if (state.profile.isAdmin) R.string.settings_role_admin else R.string.settings_role_member),
+                        color = HeyTheme.colors.onBackgroundMuted,
+                    )
+                }
             }
         }
         extras()
@@ -125,6 +144,27 @@ internal fun SettingsContent(
     }
     if (state.confirmingDeletion) {
         DeleteDialog(busy = state.busy, onConfirm = onConfirmDelete, onCancel = onCancelDelete)
+    }
+}
+
+/** Pastille ronde à l'initiale du prénom (ou une silhouette), en dégradé. Décorative. */
+@Composable
+private fun ProfileBadge(name: String?) {
+    val colors = HeyTheme.colors
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(Brush.linearGradient(listOf(colors.primary, colors.accent)))
+            .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        val initial = name?.trim()?.take(1)?.uppercase()
+        if (initial.isNullOrEmpty()) {
+            HeyIcon(icon = HeyIcons.Person, contentDescription = null, tint = Color.White, iconSize = 28.dp)
+        } else {
+            HeyText(text = initial, style = HeyTheme.typography.headline, color = Color.White)
+        }
     }
 }
 

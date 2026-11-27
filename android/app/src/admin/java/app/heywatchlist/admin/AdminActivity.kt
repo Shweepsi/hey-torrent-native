@@ -7,13 +7,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.StringRes
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
@@ -24,10 +22,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,10 +31,10 @@ import app.heywatchlist.R
 import app.heywatchlist.appServices
 import app.heywatchlist.core.KeystoreSessionStore
 import app.heywatchlist.ui.components.AppBackdrop
-import app.heywatchlist.ui.components.GlassSurface
+import app.heywatchlist.ui.components.GlassTab
+import app.heywatchlist.ui.components.GlassTabBar
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
-import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.AdminRequest
 
@@ -57,11 +53,11 @@ class AdminActivity : ComponentActivity() {
 }
 
 /** Sections de l'espace admin. */
-internal enum class AdminTab(@param:StringRes val labelRes: Int) {
-    Requests(R.string.admin_tab_requests),
-    Downloads(R.string.admin_tab_downloads),
-    Servers(R.string.admin_tab_servers),
-    Access(R.string.admin_tab_access),
+internal enum class AdminTab(@param:StringRes val labelRes: Int, val icon: ImageVector) {
+    Requests(R.string.admin_tab_requests, HeyIcons.Inbox),
+    Downloads(R.string.admin_tab_downloads, HeyIcons.Download),
+    Servers(R.string.admin_tab_servers, HeyIcons.Server),
+    Access(R.string.admin_tab_access, HeyIcons.People),
 }
 
 @Composable
@@ -120,28 +116,12 @@ internal fun AdminTabBar(selected: AdminTab, onSelect: (AdminTab) -> Unit, onClo
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HeyIconButton(icon = HeyIcons.Close, contentDescription = stringResource(R.string.admin_close), onClick = onClose)
-        GlassSurface(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(6.dp)) {
-                AdminTab.entries.forEach { tab ->
-                    val isSelected = tab == selected
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp)
-                            .clickable(role = Role.Tab) { onSelect(tab) }
-                            .semantics { this.selected = isSelected },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        HeyText(
-                            text = stringResource(tab.labelRes),
-                            style = HeyTheme.typography.caption,
-                            color = if (isSelected) HeyTheme.colors.primary else HeyTheme.colors.onBackgroundMuted,
-                            maxLines = 1,
-                        )
-                    }
-                }
-            }
-        }
+        GlassTabBar(
+            tabs = AdminTab.entries.map { GlassTab(label = stringResource(it.labelRes), icon = it.icon) },
+            selectedIndex = selected.ordinal,
+            onSelect = { onSelect(AdminTab.entries[it]) },
+            modifier = Modifier.weight(1f).padding(start = 8.dp),
+        )
     }
 }
 

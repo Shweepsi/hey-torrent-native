@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -19,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -26,9 +29,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.components.HeyTextField
+import app.heywatchlist.ui.components.StatusPill
+import app.heywatchlist.ui.components.StatusTone
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.AccessStatus
 import uniffi.heywatchlist_core.AllowedEmail
@@ -125,25 +131,49 @@ fun AccessScreen(viewModel: AccessViewModel) {
 
 @Composable
 private fun SectionTitle(text: String) {
-    HeyText(text = text, style = HeyTheme.typography.title)
+    HeyText(
+        text = text,
+        style = HeyTheme.typography.title,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp).semantics { heading() },
+    )
 }
 
 @Composable
 private fun displayName(member: Member): String =
     member.displayName ?: member.email ?: stringResource(R.string.admin_access_unnamed)
 
-/** Prénom, adresse et date : de quoi reconnaître la personne. */
+/** Initiale, prénom, adresse, date et état : de quoi reconnaître la personne. */
 @Composable
-private fun Identity(member: Member, dateRes: Int, date: Long) {
-    HeyText(text = displayName(member))
-    member.email?.takeIf { member.displayName != null }?.let {
-        HeyText(text = it, style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
+private fun Identity(member: Member, dateRes: Int, date: Long, modifier: Modifier = Modifier) {
+    val name = displayName(member)
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+        InitialAvatar(name = name)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            HeyText(text = name, style = HeyTheme.typography.label)
+            member.email?.takeIf { member.displayName != null }?.let {
+                HeyText(text = it, style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
+            }
+            HeyText(
+                text = stringResource(dateRes, formatDate(date)),
+                style = HeyTheme.typography.caption,
+                color = HeyTheme.colors.onBackgroundMuted,
+            )
+            AccessPill(member)
+        }
     }
-    HeyText(
-        text = stringResource(dateRes, formatDate(date)),
-        style = HeyTheme.typography.caption,
-        color = HeyTheme.colors.onBackgroundMuted,
-    )
+}
+
+/** État de l'accès d'un compte : texte et icône, en plus de la teinte. */
+@Composable
+private fun AccessPill(member: Member) {
+    when {
+        member.isAdmin -> StatusPill(stringResource(R.string.admin_access_is_admin), StatusTone.Info, icon = HeyIcons.Check)
+        member.access == AccessStatus.PENDING ->
+            StatusPill(stringResource(R.string.admin_access_state_pending), StatusTone.Progress, icon = HeyIcons.Clock)
+        member.access == AccessStatus.REFUSED ->
+            StatusPill(stringResource(R.string.admin_access_state_refused), StatusTone.Danger, icon = HeyIcons.Close)
+        else -> StatusPill(stringResource(R.string.admin_access_state_active), StatusTone.Success, icon = HeyIcons.Check)
+    }
 }
 
 @Composable
@@ -172,17 +202,13 @@ private fun PendingRow(member: Member, busy: Boolean, onApprove: () -> Unit, onR
 private fun MemberRow(member: Member, busy: Boolean, onRemove: () -> Unit, onRestore: () -> Unit) {
     AdminCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val refused = member.access == AccessStatus.REFUSED
-                Identity(
-                    member,
-                    if (refused) R.string.admin_access_refused_on else R.string.admin_access_member_since,
-                    member.statusChangedAt ?: member.createdAt,
-                )
-                if (member.isAdmin) {
-                    HeyText(text = stringResource(R.string.admin_access_is_admin), color = HeyTheme.colors.onBackgroundMuted)
-                }
-            }
+            val refused = member.access == AccessStatus.REFUSED
+            Identity(
+                member,
+                if (refused) R.string.admin_access_refused_on else R.string.admin_access_member_since,
+                member.statusChangedAt ?: member.createdAt,
+                modifier = Modifier.weight(1f),
+            )
             when {
                 member.isAdmin -> Unit
                 member.access == AccessStatus.REFUSED -> HeyButton(

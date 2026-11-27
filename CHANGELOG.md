@@ -5,6 +5,39 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.9.0] - 2026-11-27
+
+Passe de design sur Android, dans le style verre dépoli (pas de Material 3).
+
+### Ajouté
+
+- Accueil et attente : mur d'affiches stylisées qui défile lentement derrière
+  le verre (dessiné, aucune image réelle), marque de l'app, trois promesses de
+  l'app ; sur l'attente, les étapes de validation et une horloge qui respire.
+- Fiche : fond de page tiré de l'affiche, très flouté (calculé une fois, il ne
+  défile pas) ; fond du titre en parallaxe qui s'efface dans la page ; affiche
+  détourée avec une ombre.
+- Pastilles d'état (demandée, en cours, disponible, refusée) avec icône, texte
+  et teinte, dans la watchlist, la fiche et l'espace admin. Jetons `success`,
+  `warning` et `glassHighlight` dans `HeyTheme`, en sombre et en clair.
+- Barre d'onglets flottante à icônes (boussole, marque-page, curseurs) avec une
+  pastille qui glisse vers l'onglet choisi ; même barre dans l'espace admin.
+- Mouvement : fondu entre l'accueil, l'attente et les onglets, fondu entre
+  onglets, écran ouvert qui glisse depuis la droite, éléments touchables qui
+  s'enfoncent (ressort), carrousel dont les affiches voisines reculent. Tout se
+  fige quand les animations sont supprimées dans l'accessibilité.
+- Espace admin : demandes avec initiales des personnes qui suivent, comptes
+  avec initiale et état de l'accès.
+- Captures d'écran rendues par Robolectric sur la CI (job « Captures d'écran »,
+  artefact `captures-android`), avec des données et des images inventées :
+  `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest -Pscreenshots`.
+
+### Modifié
+
+- Verre : filet qui s'éclaircit vers le haut (reflet). Bouton principal en
+  léger dégradé (texte au moins 4,5:1 partout).
+- Watchlist : lignes en cartes translucides et nombre de titres sous le titre.
+
 ## [0.8.0] - 2026-11-27
 
 Plus de code d'invitation : le lien de l'app sert d'invitation, et chaque

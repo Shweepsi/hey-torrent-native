@@ -1,7 +1,7 @@
 package app.heywatchlist.admin
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,13 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,7 +26,6 @@ import app.heywatchlist.R
 import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeySegmented
-import app.heywatchlist.ui.components.HeyTag
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
 import app.heywatchlist.ui.theme.HeyTheme
@@ -77,20 +76,52 @@ fun RequestsScreen(viewModel: RequestsViewModel, onOpen: (AdminRequest) -> Unit)
 
 @Composable
 private fun RequestRow(request: AdminRequest, onClick: () -> Unit) {
-    AdminCard(modifier = Modifier.clickable(role = Role.Button, onClick = onClick)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            HeyPoster(url = request.posterUrl, modifier = Modifier.width(56.dp).aspectRatio(POSTER_ASPECT_RATIO))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    AdminCard(onClick = onClick) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            HeyPoster(
+                url = request.posterUrl,
+                modifier = Modifier.width(64.dp).aspectRatio(POSTER_ASPECT_RATIO),
+                shape = RoundedCornerShape(12.dp),
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 HeyText(
                     text = request.title,
-                    style = HeyTheme.typography.title,
+                    style = HeyTheme.typography.label,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                HeyText(text = requestSubtitle(request), color = HeyTheme.colors.onBackgroundMuted, maxLines = 2)
-                HeyText(text = followersLabel(request), style = HeyTheme.typography.caption, maxLines = 2)
-                HeyTag(text = stringResource(request.status.labelRes()))
+                HeyText(
+                    text = requestSubtitle(request),
+                    style = HeyTheme.typography.caption,
+                    color = HeyTheme.colors.onBackgroundMuted,
+                    maxLines = 2,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FollowerAvatars(request)
+                    HeyText(
+                        text = followersLabel(request),
+                        style = HeyTheme.typography.caption,
+                        color = HeyTheme.colors.onBackgroundMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                RequestStatusPill(request.status)
             }
+        }
+    }
+}
+
+/** Initiales des personnes qui suivent la demande (trois au plus), décoratives : le texte voisin les nomme. */
+@Composable
+private fun FollowerAvatars(request: AdminRequest) {
+    val names = request.followers.mapNotNull { it.displayName?.takeIf(String::isNotBlank) }.take(3)
+    if (names.isEmpty()) return
+    // Les pastilles se chevauchent un peu.
+    Box {
+        names.forEachIndexed { index, name ->
+            InitialAvatar(name = name, size = 22.dp, modifier = Modifier.padding(start = 16.dp * index))
         }
     }
 }

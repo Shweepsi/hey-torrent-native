@@ -195,6 +195,24 @@ de la barre d'état, ni le repli d'image de `HeyPoster`, ni l'action
 non enregistré puis nouvel essai, refus, listes, réglages des serveurs), avec
 une passerelle simulée (`FakeAdminGateway`).
 
+### Captures d'écran
+
+Les écrans sont rendus en PNG sur la JVM par Robolectric (graphismes natifs,
+rendu matériel pour les flous) et Roborazzi, avec des données inventées
+(`screenshots/SampleData.kt`) et des images factices dessinées à la volée :
+aucune affiche réelle dans le dépôt, aucun appel réseau. Elles ne tournent
+qu'avec `-Pscreenshots` (et alors seules) :
+
+```sh
+./gradlew testPublicDebugUnitTest testAdminDebugUnitTest -Pscreenshots
+```
+
+Les PNG vont dans `app/build/captures/`. Sur la CI, le job « Captures
+d'écran » les publie dans l'artefact `captures-android` à chaque pull request
+Android : de quoi juger une interface sans installer l'app. Ce ne sont pas des
+tests de non-régression (rien n'est comparé) ; les animations infinies y sont
+figées.
+
 ## Règles R8
 
 `app/proguard-rules.pro` garde JNA et `uniffi.**` : le code généré charge la

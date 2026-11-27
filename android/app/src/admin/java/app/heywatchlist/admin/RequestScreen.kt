@@ -141,7 +141,7 @@ private fun RequestSummary(request: AdminRequest) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             HeyPoster(url = request.posterUrl, modifier = Modifier.width(96.dp).aspectRatio(POSTER_ASPECT_RATIO))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                HeyTag(text = stringResource(request.status.labelRes()))
+                RequestStatusPill(request.status)
                 HeyText(text = requestSubtitle(request), color = HeyTheme.colors.onBackgroundMuted)
                 HeyText(text = followersLabel(request))
                 HeyText(

@@ -1,5 +1,7 @@
 package app.heywatchlist.ui.components
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,11 +26,21 @@ const val POSTER_ASPECT_RATIO = 2f / 3f
  */
 @Composable
 fun TitleCard(title: Title, onClick: () -> Unit, modifier: Modifier = Modifier, caption: String? = null) {
+    val press = rememberPress()
     Column(
-        modifier = modifier.clip(HeyTheme.shapes.poster).clickable(role = Role.Button, onClick = onClick),
+        modifier = modifier
+            .pressScale(press)
+            .clip(HeyTheme.shapes.poster)
+            .clickable(interactionSource = press.interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        HeyPoster(url = title.posterUrl, modifier = Modifier.fillMaxWidth().aspectRatio(POSTER_ASPECT_RATIO))
+        HeyPoster(
+            url = title.posterUrl,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(POSTER_ASPECT_RATIO)
+                .border(1.dp, HeyTheme.colors.glassBorder, HeyTheme.shapes.poster),
+        )
         HeyText(
             text = title.title,
             style = HeyTheme.typography.caption,
