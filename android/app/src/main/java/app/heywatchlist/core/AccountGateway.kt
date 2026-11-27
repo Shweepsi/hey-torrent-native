@@ -3,8 +3,19 @@ package app.heywatchlist.core
 import androidx.annotation.StringRes
 import app.heywatchlist.R
 
+/** Accès à l'app, décidé par l'administrateur. */
+enum class Access {
+    Active,
+
+    /** Nouveau compte en attente de validation : écran d'attente. */
+    Pending,
+
+    /** Accès refusé ou retiré. */
+    Refused,
+}
+
 /** Ce que l'interface affiche du compte connecté. */
-data class Profile(val firstName: String?, val isAdmin: Boolean)
+data class Profile(val firstName: String?, val isAdmin: Boolean, val access: Access = Access.Active)
 
 /** Jeton d'identité obtenu de Google, à faire vérifier par le serveur. */
 data class IdentityCredential(
@@ -14,14 +25,6 @@ data class IdentityCredential(
     val givenName: String?,
 )
 
-/** Issue d'une tentative de connexion. */
-sealed interface SignInOutcome {
-    data class SignedIn(val profile: Profile) : SignInOutcome
-
-    /** Personne inconnue du serveur : il faut un code d'invitation. */
-    data object InvitationRequired : SignInOutcome
-}
-
 /**
  * Cause d'un échec, traduite en français par ressource. Indépendante des types
  * générés par UniFFI : les écrans et leurs tests JVM n'en dépendent pas.
@@ -29,7 +32,6 @@ sealed interface SignInOutcome {
 enum class AccountFailure(@param:StringRes val messageRes: Int) {
     Network(R.string.error_network),
     InvalidIdentity(R.string.error_invalid_identity),
-    InvitationInvalid(R.string.error_invitation_invalid),
     SignedOut(R.string.error_signed_out),
     ProviderUnavailable(R.string.error_provider_unavailable),
     Cancelled(R.string.error_cancelled),
@@ -66,7 +68,8 @@ interface AccountGateway {
     /** Nonce brut pour une nouvelle connexion. */
     suspend fun newNonce(): String
 
-    suspend fun signIn(credential: IdentityCredential, invitationCode: String?): SignInOutcome
+    /** Une personne inconnue du serveur obtient un compte en attente ([Access.Pending]). */
+    suspend fun signIn(credential: IdentityCredential): Profile
 
     /** Toujours réussie : la session locale est effacée même sans réseau. */
     suspend fun signOut()

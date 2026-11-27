@@ -5,14 +5,14 @@
 
     <!-- Entrée dans Réglages -->
     <string name="admin_entry_title">Espace admin</string>
-    <string name="admin_entry_body">Demandes de tous les comptes, recherche dans tes sources, envoi à qBittorrent, suivi des téléchargements et invitations.</string>
+    <string name="admin_entry_body">Demandes de tous les comptes, recherche dans tes sources, envoi à qBittorrent, suivi des téléchargements et accès des comptes.</string>
     <string name="admin_entry_open">Ouvrir l’espace admin</string>
 
     <!-- Navigation -->
     <string name="admin_tab_requests">Demandes</string>
     <string name="admin_tab_downloads">Suivi</string>
     <string name="admin_tab_servers">Serveurs</string>
-    <string name="admin_tab_invitations">Invitations</string>
+    <string name="admin_tab_access">Accès</string>
     <string name="admin_close">Fermer l’espace admin</string>
     <string name="admin_cancel">Annuler</string>
     <string name="admin_working">Un instant…</string>
@@ -156,22 +156,43 @@
     <string name="admin_servers_saving">Enregistrement…</string>
     <string name="admin_servers_saved">Réglages enregistrés, chiffrés sur le serveur.</string>
 
-    <!-- Invitations -->
-    <string name="admin_invite_title">Inviter un proche</string>
-    <string name="admin_invite_body">Crée un code à lui transmettre. Il le saisira à sa première connexion. Chaque code ne sert qu’une fois.</string>
-    <string name="admin_invite_create">Créer un code d’invitation</string>
-    <string name="admin_invite_creating">Création…</string>
-    <string name="admin_invite_expires">Valable jusqu’au %1$s.</string>
-    <string name="admin_invite_share">Envoyer le code</string>
-    <string name="admin_invite_share_text">Je t’invite sur HeyWatchlist. Installe l’app, connecte-toi, puis saisis ce code : %1$s</string>
-    <string name="admin_invitations_none">Aucun code créé pour l’instant.</string>
-    <string name="admin_invitation_pending">Pas encore utilisé, valable jusqu’au %1$s</string>
-    <string name="admin_invitation_used">Utilisé le %1$s</string>
-    <string name="admin_invitation_used_by">Utilisé par %1$s le %2$s</string>
-    <string name="admin_invitation_revoked">Révoqué le %1$s</string>
-    <string name="admin_invitation_expired">Expiré le %1$s</string>
-    <string name="admin_invitation_created">Créé le %1$s</string>
-    <string name="admin_invitation_revoke">Révoquer</string>
+    <!-- Accès des comptes -->
+    <string name="admin_access_pending_title">Demandes d’accès</string>
+    <string name="admin_access_pending_none">Aucune demande en attente.</string>
+    <string name="admin_access_requested_on">Demande le %1$s</string>
+    <string name="admin_access_approve">Accepter</string>
+    <string name="admin_access_refuse">Refuser</string>
+    <string name="admin_access_members_title">Comptes</string>
+    <string name="admin_access_member_since">Accès depuis le %1$s</string>
+    <string name="admin_access_refused_on">Refusé le %1$s</string>
+    <string name="admin_access_is_admin">Administrateur</string>
+    <string name="admin_access_unnamed">Sans prénom</string>
+    <string name="admin_access_remove">Retirer</string>
+    <string name="admin_access_restore">Redonner l’accès</string>
+    <string name="admin_access_remove_title">Retirer l’accès de %1$s ?</string>
+    <string name="admin_access_remove_body">La personne ne pourra plus rien voir ni demander. Sa watchlist est gardée : tu peux lui redonner l’accès plus tard.</string>
+    <string name="admin_access_remove_confirm">Retirer l’accès</string>
+    <string name="admin_access_emails_title">Accepter une adresse d’avance</string>
+    <string name="admin_access_emails_body">Le compte qui se connectera avec cette adresse Apple ou Google aura accès tout de suite, sans validation. Pratique pour un proche prévenu, ou pour le compte de démonstration demandé par Apple.</string>
+    <string name="admin_access_email_label">Adresse e-mail</string>
+    <string name="admin_access_email_placeholder">prenom@example.com</string>
+    <string name="admin_access_email_add">Accepter cette adresse</string>
+    <string name="admin_access_email_adding">Ajout…</string>
+    <string name="admin_access_email_since">Acceptée d’avance le %1$s</string>
+    <string name="admin_access_email_remove">Oublier</string>
+    <plurals name="admin_access_email_approved">
+        <item quantity="one">%1$d demande en attente acceptée avec cette adresse.</item>
+        <item quantity="other">%1$d demandes en attente acceptées avec cette adresse.</item>
+    </plurals>
+
+    <!-- Premier administrateur, sur l’écran d’attente -->
+    <string name="admin_bootstrap_title">Code administrateur</string>
+    <string name="admin_bootstrap_body">Premier lancement du serveur : saisis le code administrateur (dans hey-kit, Mes apps) pour devenir l’administrateur. Il ne sert qu’une fois.</string>
+    <string name="admin_bootstrap_label">Code administrateur</string>
+    <string name="admin_bootstrap_placeholder">XXXX-XXXX-XXXX</string>
+    <string name="admin_bootstrap_submit">Valider le code</string>
+    <string name="admin_bootstrap_submitting">Vérification…</string>
+    <string name="admin_bootstrap_refused">Code refusé : il est faux, ou un administrateur existe déjà.</string>
 
     <!-- Échecs -->
     <string name="admin_error_network">Pas de connexion au serveur. Vérifie le réseau et réessaie.</string>

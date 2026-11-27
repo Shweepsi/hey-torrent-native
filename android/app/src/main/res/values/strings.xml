@@ -3,16 +3,19 @@
      édition (src/public et src/admin). -->
 <resources>
     <string name="welcome_title">Bienvenue</string>
-    <string name="welcome_body">HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. Découvrez des films et séries, demandez-les-lui et soyez prévenu quand ils sont disponibles.</string>
+    <string name="welcome_body">HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. Découvrez des films et séries, demandez-les-lui et soyez prévenu quand ils sont disponibles. À votre première connexion, votre proche valide votre accès.</string>
     <string name="welcome_google">Continuer avec Google</string>
     <string name="welcome_signing_in">Connexion…</string>
 
-    <string name="invitation_title">Code d’invitation</string>
-    <string name="invitation_body">C’est votre première connexion. Saisissez le code que vous a donné la personne qui vous invite.</string>
-    <string name="invitation_label">Code d’invitation</string>
-    <string name="invitation_placeholder">XXXX-XXXX-XXXX</string>
-    <string name="invitation_submit">Valider</string>
-    <string name="invitation_cancel">Annuler</string>
+    <!-- Attente de validation du compte -->
+    <string name="waiting_title">Demande d’accès envoyée</string>
+    <string name="waiting_title_named">Merci %1$s, votre demande est envoyée</string>
+    <string name="waiting_body">Votre proche doit valider votre accès. Vous serez prévenu par une notification dès que c’est fait. Vous pouvez fermer l’app en attendant.</string>
+    <string name="waiting_check">Vérifier maintenant</string>
+    <string name="waiting_checking">Vérification…</string>
+    <string name="waiting_withdraw">Retirer ma demande</string>
+    <string name="waiting_refused_title">Accès non accordé</string>
+    <string name="waiting_refused_body">La personne qui gère ce serveur n’a pas validé votre accès. Si c’est une erreur, contactez-la directement.</string>
 
     <string name="tab_discover">Découvrir</string>
     <string name="tab_watchlist">Watchlist</string>
@@ -125,14 +128,13 @@
     <string name="settings_version">Version %1$s</string>
 
     <string name="delete_title">Supprimer votre compte ?</string>
-    <string name="delete_body">Votre compte, votre watchlist et vos demandes seront effacés définitivement. Vous aurez besoin d’une nouvelle invitation pour revenir.</string>
+    <string name="delete_body">Votre compte, votre watchlist et vos demandes seront effacés définitivement. Pour revenir, votre accès devra de nouveau être validé.</string>
     <string name="delete_confirm">Supprimer définitivement</string>
     <string name="delete_in_progress">Suppression…</string>
     <string name="delete_cancel">Annuler</string>
 
     <string name="error_network">Pas de connexion au serveur. Vérifiez votre réseau et réessayez.</string>
     <string name="error_invalid_identity">La connexion a échoué. Réessayez.</string>
-    <string name="error_invitation_invalid">Ce code n’est pas valable : il a peut-être expiré ou déjà servi. Demandez-en un nouveau.</string>
     <string name="error_signed_out">Votre session a expiré. Reconnectez-vous.</string>
     <string name="error_provider_unavailable">La connexion avec Google n’est pas disponible pour le moment.</string>
     <string name="error_cancelled">Connexion annulée.</string>
@@ -160,6 +162,10 @@
     <string name="push_available_season">La saison %1$s est disponible sur Plex.</string>
     <string name="push_available_episode">Saison %1$s, épisode %2$s : disponible sur Plex.</string>
     <string name="push_test">Notification d’essai : tout fonctionne.</string>
+    <!-- Accès au compte : clés envoyées telles quelles par le serveur. -->
+    <string name="push_access_granted">Votre accès est validé. Bienvenue !</string>
+    <string name="push_access_request">Nouvelle demande d’accès à valider.</string>
+    <string name="push_access_request_named">%1$s demande l’accès à HeyWatchlist.</string>
 
     <string name="settings_push_title">Notifications</string>
     <string name="settings_push_body">Vous êtes prévenu dès qu’un titre de votre watchlist arrive sur Plex.</string>

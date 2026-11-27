@@ -63,7 +63,7 @@ class CatalogMappingTest {
     @Test
     fun accountFailuresAreTranslated() {
         assertEquals(CatalogFailure.SignedOut, AccountFailure.SignedOut.toCatalogFailure())
-        assertEquals(CatalogFailure.Unknown, AccountFailure.InvitationInvalid.toCatalogFailure())
+        assertEquals(CatalogFailure.Unknown, AccountFailure.InvalidIdentity.toCatalogFailure())
         assertEquals(CatalogFailure.NotConfigured, AccountFailure.NotConfigured.toCatalogFailure())
         assertEquals(CatalogFailure.CoreUnavailable, AccountFailure.Unavailable.toCatalogFailure())
     }

@@ -1,12 +1,12 @@
 package app.heywatchlist.ui.account
 
 import app.heywatchlist.R
+import app.heywatchlist.core.Access
 import app.heywatchlist.core.AccountFailure
 import app.heywatchlist.core.AccountFailureException
 import app.heywatchlist.core.AccountGateway
 import app.heywatchlist.core.IdentityCredential
 import app.heywatchlist.core.Profile
-import app.heywatchlist.core.SignInOutcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,11 +38,10 @@ class AccountViewModelTest {
     private class FakeGateway(
         var stored: Profile? = null,
         var refreshed: () -> Profile = { throw AccountFailureException(AccountFailure.Network) },
-        var signInAnswer: (String?) -> SignInOutcome = { SignInOutcome.InvitationRequired },
+        var signInAnswer: () -> Profile = { Profile(firstName = "Camille", isAdmin = false, access = Access.Pending) },
         var deleteAnswer: () -> Unit = {},
         var clientId: String? = "web.apps.googleusercontent.com",
     ) : AccountGateway {
-        val codes = mutableListOf<String?>()
         var signedOut = false
 
         override suspend fun coreVersion() = "0.2.0"
@@ -50,10 +49,7 @@ class AccountViewModelTest {
         override suspend fun refreshProfile() = refreshed()
         override suspend fun googleWebClientId() = clientId
         override suspend fun newNonce() = "nonce"
-        override suspend fun signIn(credential: IdentityCredential, invitationCode: String?): SignInOutcome {
-            codes += invitationCode
-            return signInAnswer(invitationCode)
-        }
+        override suspend fun signIn(credential: IdentityCredential): Profile = signInAnswer()
         override suspend fun signOut() {
             signedOut = true
         }
@@ -109,52 +105,44 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun anExpiredNoticeWhileSignedOutKeepsTheInvitationStep() = runTest(dispatcher) {
-        val expired = MutableSharedFlow<Unit>()
-        val viewModel = AccountViewModel(FakeGateway(), expired)
-        advanceUntilIdle()
-        viewModel.signInWithGoogle(google)
-        advanceUntilIdle()
-        assertEquals(AccountUiState.SignedOut(askInvitation = true), viewModel.uiState.value)
-
-        expired.emit(Unit)
-        advanceUntilIdle()
-
-        assertEquals(AccountUiState.SignedOut(askInvitation = true), viewModel.uiState.value)
-    }
-
-    @Test
-    fun asksForAnInvitationThenSignsInWithTheSameToken() = runTest(dispatcher) {
+    fun aNewAccountWaitsThenGetsInOnceAccepted() = runTest(dispatcher) {
+        val pending = camille.copy(access = Access.Pending)
         val gateway = FakeGateway()
         val viewModel = AccountViewModel(gateway)
         advanceUntilIdle()
 
         viewModel.signInWithGoogle(google)
         advanceUntilIdle()
-        assertEquals(AccountUiState.SignedOut(askInvitation = true), viewModel.uiState.value)
+        assertEquals(AccountUiState.SignedIn(pending, "0.2.0"), viewModel.uiState.value)
 
-        gateway.signInAnswer = { code ->
-            if (code == "ABCD-EFGH-JKMN") SignInOutcome.SignedIn(camille) else SignInOutcome.InvitationRequired
-        }
-        viewModel.submitInvitation("  ABCD-EFGH-JKMN ")
+        gateway.refreshed = { camille }
+        viewModel.checkAccess()
         advanceUntilIdle()
         assertEquals(AccountUiState.SignedIn(camille, "0.2.0"), viewModel.uiState.value)
-        assertEquals(listOf(null, "ABCD-EFGH-JKMN"), gateway.codes)
     }
 
     @Test
-    fun aWrongCodeKeepsTheInvitationStep() = runTest(dispatcher) {
-        val gateway = FakeGateway()
-        val viewModel = AccountViewModel(gateway)
-        advanceUntilIdle()
-        viewModel.signInWithGoogle(google)
+    fun aGrantedNotificationRereadsTheProfile() = runTest(dispatcher) {
+        val accessChanged = MutableSharedFlow<Unit>()
+        val gateway = FakeGateway(stored = camille.copy(access = Access.Pending))
+        val viewModel = AccountViewModel(gateway, accessChanged = accessChanged)
         advanceUntilIdle()
 
-        gateway.signInAnswer = { throw AccountFailureException(AccountFailure.InvitationInvalid) }
-        viewModel.submitInvitation("FAUX")
+        gateway.refreshed = { camille }
+        accessChanged.emit(Unit)
+        advanceUntilIdle()
+        assertEquals(AccountUiState.SignedIn(camille, "0.2.0"), viewModel.uiState.value)
+    }
+
+    @Test
+    fun aFailedCheckKeepsWaitingAndExplains() = runTest(dispatcher) {
+        val pending = camille.copy(access = Access.Pending)
+        val viewModel = AccountViewModel(FakeGateway(stored = pending))
+        advanceUntilIdle()
+        viewModel.checkAccess()
         advanceUntilIdle()
         assertEquals(
-            AccountUiState.SignedOut(askInvitation = true, errorRes = R.string.error_invitation_invalid),
+            AccountUiState.SignedIn(pending, "0.2.0", errorRes = R.string.error_network),
             viewModel.uiState.value,
         )
     }

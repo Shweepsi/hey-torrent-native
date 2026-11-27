@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import uniffi.heywatchlist_core.AccessStatus
 import uniffi.heywatchlist_core.Account
 import uniffi.heywatchlist_core.AccountException
 import uniffi.heywatchlist_core.IdentityProvider
@@ -55,20 +56,15 @@ class UniffiAccountGateway(
 
     override suspend fun newNonce(): String = call { newSignInNonce().raw }
 
-    override suspend fun signIn(credential: IdentityCredential, invitationCode: String?): SignInOutcome {
+    override suspend fun signIn(credential: IdentityCredential): Profile {
         val current = account()
         val request = SignInRequest(
             provider = IdentityProvider.GOOGLE,
             idToken = credential.idToken,
             nonce = credential.nonce,
-            invitationCode = invitationCode,
             givenName = credential.givenName,
         )
-        return try {
-            SignInOutcome.SignedIn(call { current.signIn(request).toProfile() })
-        } catch (error: AccountFailureException) {
-            if (error.cause is AccountException.InvitationRequired) SignInOutcome.InvitationRequired else throw error
-        }
+        return call { current.signIn(request).toProfile() }
     }
 
     override suspend fun signOut() {
@@ -101,14 +97,20 @@ class UniffiAccountGateway(
     }
 }
 
-private fun UserProfile.toProfile() = Profile(firstName = displayName, isAdmin = role == UserRole.ADMIN)
+/** Profil du cœur → profil de l'interface. Aussi utilisé par l'édition admin (amorçage). */
+fun UserProfile.toProfile() = Profile(
+    firstName = displayName,
+    isAdmin = role == UserRole.ADMIN,
+    access = when (access) {
+        AccessStatus.ACTIVE -> Access.Active
+        AccessStatus.PENDING -> Access.Pending
+        AccessStatus.REFUSED -> Access.Refused
+    },
+)
 
 private fun AccountException.toFailure(): AccountFailure = when (this) {
     is AccountException.Network -> AccountFailure.Network
     is AccountException.InvalidIdentity -> AccountFailure.InvalidIdentity
-    is AccountException.InvitationInvalid -> AccountFailure.InvitationInvalid
-    // Traitée à part par signIn ; ailleurs, la session est perdue.
-    is AccountException.InvitationRequired -> AccountFailure.SignedOut
     is AccountException.SignedOut -> AccountFailure.SignedOut
     is AccountException.ProviderUnavailable -> AccountFailure.ProviderUnavailable
     is AccountException.Cancelled -> AccountFailure.Cancelled

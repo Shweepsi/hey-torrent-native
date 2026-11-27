@@ -65,7 +65,7 @@ private enum class AdminTab(@param:StringRes val labelRes: Int) {
     Requests(R.string.admin_tab_requests),
     Downloads(R.string.admin_tab_downloads),
     Servers(R.string.admin_tab_servers),
-    Invitations(R.string.admin_tab_invitations),
+    Access(R.string.admin_tab_access),
 }
 
 @Composable
@@ -109,8 +109,8 @@ private fun AdminRoot(gateway: AdminGateway, onClose: () -> Unit) {
                             AdminTab.Servers -> ServersScreen(
                                 viewModel = viewModel(factory = remember(gateway) { ServersViewModel.factory(gateway) }),
                             )
-                            AdminTab.Invitations -> InvitationsScreen(
-                                viewModel = viewModel(factory = remember(gateway) { InvitationsViewModel.factory(gateway) }),
+                            AdminTab.Access -> AccessScreen(
+                                viewModel = viewModel(factory = remember(gateway) { AccessViewModel.factory(gateway) }),
                             )
                         }
                     }

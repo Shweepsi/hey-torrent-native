@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.heywatchlist.appServices
+import app.heywatchlist.core.Access
 import app.heywatchlist.core.CatalogGateway
 import app.heywatchlist.core.WatchlistGateway
 import app.heywatchlist.push.PushRegistrationEffect
@@ -20,11 +21,15 @@ import app.heywatchlist.ui.components.AuroraBackground
 import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.main.MainScreen
 import app.heywatchlist.ui.theme.HeyTheme
+import app.heywatchlist.ui.welcome.WaitingScreen
 import app.heywatchlist.ui.welcome.WelcomeScreen
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
-/** Racine de l'interface : accueil tant qu'on n'est pas connecté, sinon les onglets. */
+/**
+ * Racine de l'interface : accueil tant qu'on n'est pas connecté, écran
+ * d'attente tant que l'accès n'est pas accepté, sinon les onglets.
+ */
 @Composable
 fun AppRoot(
     viewModel: AccountViewModel = viewModel(factory = AccountViewModel.Factory),
@@ -41,14 +46,20 @@ fun AppRoot(
                 // Lecture locale très courte : on garde le décor seul.
                 AccountUiState.Starting -> Unit
                 is AccountUiState.SignedOut -> WelcomeScreen(state = current, viewModel = viewModel)
+                // L'appareil s'enregistre aussi pendant l'attente : la personne
+                // est prévenue quand son accès est accepté.
                 is AccountUiState.SignedIn -> {
                     PushRegistrationEffect()
-                    MainScreen(
-                        state = current,
-                        accountViewModel = viewModel,
-                        catalog = catalog,
-                        watchlistGateway = watchlist,
-                    )
+                    if (current.profile.access != Access.Active) {
+                        WaitingScreen(state = current, viewModel = viewModel)
+                    } else {
+                        MainScreen(
+                            state = current,
+                            accountViewModel = viewModel,
+                            catalog = catalog,
+                            watchlistGateway = watchlist,
+                        )
+                    }
                 }
             }
         }

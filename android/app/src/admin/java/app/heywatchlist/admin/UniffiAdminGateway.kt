@@ -12,10 +12,11 @@ import kotlinx.coroutines.withContext
 import uniffi.heywatchlist_core.AdminException
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AdminSpace
+import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.InternalException
-import uniffi.heywatchlist_core.InvitationInfo
 import uniffi.heywatchlist_core.MediaType
+import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.Release
 import uniffi.heywatchlist_core.RequestFilter
@@ -91,16 +92,17 @@ class UniffiAdminGateway(
     override suspend fun deleteDownload(hash: String, deleteFiles: Boolean) =
         space().let { call { it.deleteDownload(hash, deleteFiles) } }
 
-    override suspend fun createInvitation(): Pair<String, Long> = try {
-        val invitation = account.call { account.account().createInvitation() }
-        invitation.code to invitation.expiresAt
-    } catch (error: AccountFailureException) {
-        throw AdminFailureException(error.failure.toAdminFailure(), error)
+    override suspend fun members(): List<Member> = space().let { call { it.members() } }
+
+    override suspend fun decide(memberId: String, granted: Boolean) = space().let { space ->
+        call { if (granted) space.approveMember(memberId) else space.refuseMember(memberId) }
     }
 
-    override suspend fun invitations(): List<InvitationInfo> = space().let { call { it.invitations() } }
+    override suspend fun allowedEmails(): List<AllowedEmail> = space().let { call { it.allowedEmails() } }
 
-    override suspend fun revokeInvitation(id: String) = space().let { call { it.revokeInvitation(id) } }
+    override suspend fun allowEmail(email: String): Int = space().let { call { it.allowEmail(email).toInt() } }
+
+    override suspend fun removeAllowedEmail(email: String) = space().let { call { it.removeAllowedEmail(email) } }
 
     /** Exécute un appel au cœur hors du fil principal et traduit ses erreurs. */
     private suspend fun <T> call(block: suspend () -> T): T = withContext(dispatcher) {
@@ -124,7 +126,7 @@ private fun AccountFailure.toAdminFailure(): AdminFailure = when (this) {
     AccountFailure.Server, AccountFailure.ProviderUnavailable -> AdminFailure.Server
     AccountFailure.NotConfigured -> AdminFailure.NotConfigured
     AccountFailure.Unavailable -> AdminFailure.Unavailable
-    AccountFailure.InvitationInvalid, AccountFailure.Cancelled, AccountFailure.Unknown -> AdminFailure.Unknown
+    AccountFailure.Cancelled, AccountFailure.Unknown -> AdminFailure.Unknown
 }
 
 private fun AdminException.toFailure(): AdminFailure = when (this) {

@@ -10,16 +10,17 @@ sealed interface AccountUiState {
 
     data class SignedOut(
         val busy: Boolean = false,
-        /** Le serveur ne connaît pas cette personne : on demande son code. */
-        val askInvitation: Boolean = false,
         @param:StringRes val errorRes: Int? = null,
     ) : AccountUiState
 
+    /** Connecté ; tant que `profile.access` n'est pas actif, l'app montre l'écran d'attente. */
     data class SignedIn(
         val profile: Profile,
         val coreVersion: String,
         val busy: Boolean = false,
         val confirmingDeletion: Boolean = false,
+        /** Écran d'attente : relecture de l'accès demandée par la personne. */
+        val checking: Boolean = false,
         @param:StringRes val errorRes: Int? = null,
     ) : AccountUiState
 }

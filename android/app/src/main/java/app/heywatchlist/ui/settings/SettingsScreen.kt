@@ -111,7 +111,7 @@ internal fun SettingsContent(
 }
 
 @Composable
-private fun DeleteDialog(busy: Boolean, onConfirm: () -> Unit, onCancel: () -> Unit) {
+internal fun DeleteDialog(busy: Boolean, onConfirm: () -> Unit, onCancel: () -> Unit) {
     Dialog(onDismissRequest = { if (!busy) onCancel() }) {
         // Pas de décor derrière une fenêtre de dialogue : verre sans flou.
         GlassSurface(modifier = Modifier.fillMaxWidth(), hazeState = null) {
