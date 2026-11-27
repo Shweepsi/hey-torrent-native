@@ -139,8 +139,9 @@ jobs:
     env:
       # Robolectric télécharge lui-même ses images d'Android : par le miroir Google
       # de Maven Central, qui refuse souvent (429) les machines partagées de la CI.
-      # Variable lue par toute JVM, donc aussi pour un ancien commit (captures_ref).
-      JAVA_TOOL_OPTIONS: -Drobolectric.dependency.repo.url=https://maven-central.storage-download.googleapis.com/maven2/
+      # Variable lue par toute JVM, donc aussi pour un ancien commit (captures_ref),
+      # avec l'écriture des captures que 5d37bdb n'activait pas encore.
+      JAVA_TOOL_OPTIONS: -Drobolectric.dependency.repo.url=https://maven-central.storage-download.googleapis.com/maven2/ -Droborazzi.test.record=true
     steps:
       - uses: actions/checkout@v7
         with:
@@ -158,15 +159,14 @@ jobs:
         # pas : à la main, chaque capture est aussi écrite dans le journal, en JPEG
         # réduit et en base64, entre deux repères.
         if: always() && github.event_name == 'workflow_dispatch'
-        working-directory: android/app/build/captures
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in *.png; do
-            convert "$f" -resize 50% -quality 82 "/tmp/${f%.png}.jpg"
-            echo "=== capture ${f%.png} ==="
-            base64 "/tmp/${f%.png}.jpg"
-            echo
+          for f in android/app/build/captures/*.png; do
+            name="$(basename "$f" .png)"
+            convert "$f" -resize 50% -quality 82 "$RUNNER_TEMP/$name.jpg"
+            echo "=== capture $name ==="
+            base64 "$RUNNER_TEMP/$name.jpg"
             echo "=== fin ==="
           done
 

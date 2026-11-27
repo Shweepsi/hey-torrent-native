@@ -125,6 +125,8 @@ tasks.withType<Test>().configureEach {
         systemProperty("heywatchlist.captures.dir", layout.buildDirectory.dir("captures").get().asFile.absolutePath)
         // Rendu matériel : les flous (RenderEffect) et les ombres apparaissent.
         systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+        // Sans le greffon Gradle de Roborazzi, captureRoboImage n'écrit rien sans ce réglage.
+        systemProperty("roborazzi.test.record", "true")
         filter.isFailOnNoMatchingTests = false
         maxHeapSize = "3g"
     } else {
