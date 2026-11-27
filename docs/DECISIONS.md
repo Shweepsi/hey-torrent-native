@@ -249,7 +249,7 @@ facile.
 - Politique de confidentialité et page de suppression du compte servies par le
   Worker (`/confidentialite`, `/suppression-du-compte`) : pas d'hébergement à
   part. Lien dans les Réglages et mention TMDB sur les deux plateformes.
-- **Proposé, à confirmer** : pour la revue, pas de serveur de démonstration
+- **Décidé par le propriétaire le 2026-11-27** : pour la revue, pas de serveur de démonstration
   (§9.4) ; le relecteur reçoit un compte Google de démonstration accepté
   d'avance (accès validé par l'administrateur, PR #16). L'app publique n'a
   aucun écran qui touche aux serveurs de l'administrateur : un serveur de démo
