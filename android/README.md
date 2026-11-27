@@ -213,6 +213,12 @@ Android : de quoi juger une interface sans installer l'app. Ce ne sont pas des
 tests de non-régression (rien n'est comparé) ; les animations infinies y sont
 figées.
 
+Pour un avant/après, lancer « CI Android » à la main (Actions, Run workflow)
+avec `captures_ref` = le SHA d'un commit plus ancien qui a déjà ces tests :
+le job rend alors ce commit. Lancé à la main, il écrit aussi chaque capture
+dans son journal (JPEG réduit en base64, entre `=== capture <nom> ===` et
+`=== fin ===`).
+
 ## Règles R8
 
 `app/proguard-rules.pro` garde JNA et `uniffi.**` : le code généré charge la

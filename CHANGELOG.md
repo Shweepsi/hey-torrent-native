@@ -39,6 +39,8 @@ Passe de design sur Android, dans le style verre dépoli (pas de Material 3).
 - Watchlist : lignes en cartes translucides et nombre de titres sous le titre.
 - Build : Robolectric se télécharge par le miroir Google de Maven Central
   (Maven Central refusait souvent son runtime natif à la CI, erreur 429).
+- CI : « CI Android » lancé à la main accepte `captures_ref` (captures d'un
+  autre commit, pour un avant/après) et écrit les captures dans le journal.
 
 ## [0.8.0] - 2026-11-27
 
