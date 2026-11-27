@@ -1,4 +1,5 @@
-//! Compte HeyWatchlist : connexion Apple ou Google sur invitation, session
+//! Compte HeyWatchlist : connexion Apple ou Google, accès sur validation de
+//! l'administrateur, session
 //! (jeton d'accès court, jeton de rafraîchissement renouvelé automatiquement),
 //! déconnexion et suppression du compte.
 //!
@@ -27,16 +28,10 @@ pub enum AccountError {
     /// Le serveur a refusé le jeton d'Apple ou de Google : recommencer.
     #[error("identity token rejected")]
     InvalidIdentity,
-    /// Personne inconnue : un code d'invitation est nécessaire.
-    #[error("invitation required")]
-    InvitationRequired,
-    /// Code d'invitation inconnu, expiré ou déjà utilisé.
-    #[error("invitation invalid")]
-    InvitationInvalid,
     /// Session absente, expirée ou révoquée : se reconnecter.
     #[error("signed out")]
     SignedOut,
-    /// Action réservée à l'administrateur.
+    /// Action réservée à l'administrateur, ou code d'amorçage refusé.
     #[error("forbidden")]
     Forbidden,
     /// Connexion Google pas encore configurée sur le serveur, ou service
@@ -67,6 +62,17 @@ pub enum UserRole {
     Member,
 }
 
+/// Accès du compte à l'app, décidé par l'administrateur.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum AccessStatus {
+    /// Accès accordé : l'app entière.
+    Active,
+    /// Nouveau compte, en attente de l'administrateur : écran d'attente.
+    Pending,
+    /// Accès refusé ou retiré.
+    Refused,
+}
+
 /// Ce que l'app affiche du compte connecté.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct UserProfile {
@@ -74,6 +80,7 @@ pub struct UserProfile {
     /// Prénom, s'il est connu (Apple ne le donne qu'à la première connexion).
     pub display_name: Option<String>,
     pub role: UserRole,
+    pub access: AccessStatus,
     /// Compte rattaché à Apple : sa suppression demande de révoquer Apple.
     pub has_apple: bool,
 }
@@ -134,8 +141,6 @@ pub struct SignInRequest {
     pub id_token: String,
     /// `SignInNonce::raw` utilisé pour obtenir ce jeton.
     pub nonce: String,
-    /// Code saisi, après une réponse [`AccountError::InvitationRequired`].
-    pub invitation_code: Option<String>,
     /// Prénom donné par Apple (seulement à la première autorisation).
     pub given_name: Option<String>,
 }
@@ -241,15 +246,13 @@ impl Account {
         })
     }
 
-    /// Connexion avec le jeton d'Apple ou de Google. En cas de
-    /// [`AccountError::InvitationRequired`], redemander avec le code saisi et
-    /// le même jeton.
+    /// Connexion avec le jeton d'Apple ou de Google. Une personne inconnue du
+    /// serveur obtient un compte en attente ([`AccessStatus::Pending`]).
     pub async fn sign_in(&self, request: SignInRequest) -> Result<UserProfile, AccountError> {
         let body = serde_json::json!({
             "provider": request.provider.wire(),
             "id_token": request.id_token,
             "nonce": request.nonce,
-            "invitation_code": request.invitation_code.filter(|c| !c.trim().is_empty()),
             "given_name": request.given_name.filter(|n| !n.trim().is_empty()),
         });
         let response = self
@@ -267,7 +270,7 @@ impl Account {
         Ok(profile)
     }
 
-    /// Profil à jour depuis le serveur (le prénom, le rôle). Renouvelle la
+    /// Profil à jour depuis le serveur (le prénom, le rôle, l'accès). Renouvelle la
     /// session si besoin ; [`AccountError::SignedOut`] si elle a expiré.
     pub async fn refresh_profile(&self) -> Result<UserProfile, AccountError> {
         let response = self
@@ -488,19 +491,25 @@ impl Account {
 #[cfg(feature = "admin")]
 #[uniffi::export(async_runtime = "tokio")]
 impl Account {
-    /// Crée un code d'invitation (administrateur seulement), valable 14 jours.
-    pub async fn create_invitation(&self) -> Result<crate::admin::Invitation, AccountError> {
+    /// Premier déploiement : le code d'amorçage fait de ce compte
+    /// l'administrateur, tant qu'il n'y en a aucun.
+    /// [`AccountError::Forbidden`] si le code est faux ou déjà servi.
+    pub async fn claim_admin(&self, code: String) -> Result<UserProfile, AccountError> {
+        let body = serde_json::json!({ "code": code.trim() });
         let response = self
             .authorized(|http, token| {
-                http.post(self.base.join("/v1/invitations"))
+                http.post(self.base.join("/v1/auth/bootstrap"))
                     .bearer_auth(token)
-                    .json(&serde_json::json!({}))
+                    .json(&body)
             })
             .await?;
-        let invitation: api::InvitationResponse = api::read(response).await?;
-        Ok(crate::admin::Invitation {
-            code: invitation.code,
-            expires_at: invitation.expires_at,
-        })
+        let me: MeResponse = api::read(response).await?;
+        let profile = me.user.profile();
+        let mut guard = self.session.lock().await;
+        if let Some(session) = guard.as_mut() {
+            session.user = me.user;
+        }
+        self.persist(guard.as_ref());
+        Ok(profile)
     }
 }

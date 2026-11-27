@@ -6,7 +6,7 @@
 //! - [`qbittorrent`] : envoi et suivi des téléchargements ;
 //! - [`settings`] : réglages des serveurs ;
 //! - [`worker`] : routes d'administration du Worker (demandes, réglages
-//!   chiffrés, invitations) ;
+//!   chiffrés, accès des comptes) ;
 //! - [`space`] : l'objet exposé à l'app, qui relie le tout.
 
 mod qbittorrent;
@@ -26,16 +26,7 @@ pub use search::{
 };
 pub use settings::{QbitAuth, QbitSettings, ServerSettings, TorznabSource};
 pub use space::AdminSpace;
-pub use worker::{AdminRequest, InvitationInfo, RequestFilter, RequestFollower};
-
-/// Code d'invitation à transmettre à un proche.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct Invitation {
-    /// Code lisible, `XXXX-XXXX-XXXX`.
-    pub code: String,
-    /// Fin de validité, en secondes Unix.
-    pub expires_at: i64,
-}
+pub use worker::{AdminRequest, AllowedEmail, Member, RequestFilter, RequestFollower};
 
 /// Erreur d'une opération d'administration. L'app traduit chaque cas en
 /// français ; le texte ci-dessous ne sert qu'aux journaux et ne contient
@@ -51,16 +42,18 @@ pub enum AdminError {
     /// Le compte n'est pas administrateur.
     #[error("forbidden")]
     Forbidden,
-    /// Demande ou invitation introuvable (supprimée entre-temps).
+    /// Demande ou compte introuvable (supprimé entre-temps).
     #[error("not found")]
     NotFound,
-    /// L'état de la demande a changé entre-temps : relire la file.
+    /// L'état de la demande a changé entre-temps : relire la file. Pour un
+    /// compte : l'administrateur ne change pas d'état.
     #[error("conflict")]
     Conflict,
     /// Erreur du Worker (5xx).
     #[error("server error")]
     Server,
-    /// Réglages incomplets ou invalides (adresse non HTTPS, champ vide…).
+    /// Réglages incomplets ou invalides (adresse non HTTPS, champ vide…), ou
+    /// adresse e-mail mal formée.
     #[error("invalid settings")]
     InvalidSettings,
     /// Aucune source active ou qBittorrent non réglé.

@@ -5,8 +5,8 @@
 export type ErrorCode =
   | "invalid_request"
   | "invalid_token"
-  | "invitation_required"
-  | "invitation_invalid"
+  | "access_pending"
+  | "access_refused"
   | "unauthorized"
   | "forbidden"
   | "session_expired"
@@ -18,8 +18,8 @@ export type ErrorCode =
 const STATUS: Record<ErrorCode, number> = {
   invalid_request: 400,
   invalid_token: 401,
-  invitation_required: 403,
-  invitation_invalid: 403,
+  access_pending: 403,
+  access_refused: 403,
   unauthorized: 401,
   forbidden: 403,
   session_expired: 401,

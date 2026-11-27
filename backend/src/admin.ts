@@ -1,16 +1,18 @@
 /**
  * Routes d'administration (`/v1/admin/…`), réservées au compte
  * administrateur : file des demandes et leur traitement, réglages des
- * serveurs chiffrés, invitations. Le rôle est relu dans D1 à chaque appel,
+ * serveurs chiffrés, accès des comptes. Le rôle est relu dans D1 à chaque appel,
  * pas seulement dans le jeton.
  *
  * Rien de ce qui passe ici n'est journalisé : ni les réglages (adresses,
  * clés), ni les noms de releases.
  */
+import { findUser, type AccessStatus, type User } from "./accounts";
+import { devicesOfUsers, pushTo } from "./availability";
 import { decryptText, encryptText } from "./crypto";
-import { findUser, type User } from "./accounts";
 import type { Env } from "./env";
 import { ApiError, json, noContent, optionalString, readJson, requiredString } from "./http";
+import type { PushSender } from "./push";
 import { authenticate } from "./sessions";
 import type { MediaType, RequestStatus } from "./watchlist";
 
@@ -22,7 +24,9 @@ const MAX_REASON = 200;
 const MAX_RELEASE_TITLE = 300;
 /** Demandes renvoyées au plus par la file. */
 const MAX_REQUESTS = 500;
-const MAX_INVITATIONS = 50;
+/** Comptes renvoyés au plus par la liste des accès. */
+const MAX_MEMBERS = 300;
+const MAX_ALLOWED_EMAILS = 200;
 
 const STATUSES: readonly RequestStatus[] = ["requested", "in_progress", "available", "refused"];
 
@@ -265,42 +269,142 @@ async function deleteSettings(request: Request, env: Env, now: number): Promise<
   return noContent();
 }
 
-// ── Invitations ──────────────────────────────────────────────────
+// ── Accès des comptes ────────────────────────────────────────────
 
-/** `GET /v1/admin/invitations` : les dernières invitations, avec qui les a utilisées. */
-async function listInvitations(request: Request, env: Env, now: number): Promise<Response> {
-  await requireAdmin(request, env, now);
-  const rows = await env.DB.prepare(
-    `SELECT i.id, i.created_at, i.expires_at, i.used_at, i.revoked_at, u.display_name AS used_by_name
-     FROM invitations i LEFT JOIN users u ON u.id = i.used_by
-     ORDER BY i.created_at DESC LIMIT ${MAX_INVITATIONS}`,
-  ).all();
-  return json({ invitations: rows.results });
+interface MemberRow {
+  id: string;
+  role: string;
+  display_name: string | null;
+  status: AccessStatus;
+  /** Adresse vérifiée d'Apple ou de Google (la plus ancienne), pour reconnaître la personne. */
+  email: string | null;
+  created_at: number;
+  status_changed_at: number | null;
 }
 
-/** `DELETE /v1/admin/invitations/{id}` : révoque une invitation pas encore utilisée. */
-async function revokeInvitation(request: Request, env: Env, now: number, id: string): Promise<Response> {
+/**
+ * `GET /v1/admin/members` : les comptes, ceux en attente d'abord (les plus
+ * anciens en tête), puis les autres, les plus récents d'abord.
+ */
+async function listMembers(request: Request, env: Env, now: number): Promise<Response> {
   await requireAdmin(request, env, now);
-  const result = await env.DB.prepare(
-    "UPDATE invitations SET revoked_at = ? WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL",
-  )
-    .bind(now, id)
-    .run();
-  if (result.meta.changes !== 1) {
-    const exists = await env.DB.prepare("SELECT 1 FROM invitations WHERE id = ?").bind(id).first();
-    throw new ApiError(exists ? "conflict" : "not_found");
+  const rows = await env.DB.prepare(
+    `SELECT u.id, u.role, u.display_name, u.status, u.created_at, u.status_changed_at,
+       (SELECT i.email FROM identities i WHERE i.user_id = u.id AND i.email IS NOT NULL
+        ORDER BY i.created_at LIMIT 1) AS email
+     FROM users u
+     ORDER BY CASE u.status WHEN 'pending' THEN 0 ELSE 1 END,
+       CASE u.status WHEN 'pending' THEN u.created_at ELSE -u.created_at END
+     LIMIT ${MAX_MEMBERS}`,
+  ).all<MemberRow>();
+  return json({ members: rows.results });
+}
+
+/** Prévient ces personnes que leur accès est accepté. Jamais bloquant. */
+async function announceGranted(env: Env, push: PushSender, userIds: string[], now: number): Promise<void> {
+  if (userIds.length === 0) return;
+  try {
+    const devices = await devicesOfUsers(env, userIds, now);
+    await pushTo(env, push, devices, {
+      title: "HeyWatchlist",
+      bodyKey: "push_access_granted",
+      bodyArgs: [],
+      collapseKey: "access",
+      mediaType: "movie",
+      tmdbId: 0,
+    });
+  } catch (error) {
+    console.warn("access granted push failed", error instanceof Error ? error.name : typeof error);
   }
+}
+
+/**
+ * `POST /v1/admin/members/{id}/approve` ou `…/refuse` : accepte, refuse ou
+ * retire l'accès d'un compte. Un administrateur ne change pas d'état.
+ */
+async function decide(
+  request: Request,
+  env: Env,
+  now: number,
+  push: PushSender,
+  id: string,
+  status: "active" | "refused",
+): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const before = await env.DB.prepare("SELECT role, status FROM users WHERE id = ?")
+    .bind(id)
+    .first<{ role: string; status: AccessStatus }>();
+  if (!before) throw new ApiError("not_found");
+  if (before.role === "admin") throw new ApiError("conflict");
+  if (before.status !== status) {
+    await env.DB.prepare("UPDATE users SET status = ?, status_changed_at = ?, updated_at = ? WHERE id = ? AND role = 'member'")
+      .bind(status, now, now, id)
+      .run();
+    if (status === "active") await announceGranted(env, push, [id], now);
+  }
+  return noContent();
+}
+
+// ── Adresses acceptées d'avance ──────────────────────────────────
+
+/** Adresse saisie, en minuscules ; `invalid_request` si elle n'en a pas la forme. */
+function emailOf(body: Record<string, unknown>): string {
+  const email = requiredString(body, "email", 254).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ApiError("invalid_request");
+  return email;
+}
+
+/** `GET /v1/admin/allowed-emails` */
+async function listAllowedEmails(request: Request, env: Env, now: number): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const rows = await env.DB.prepare(
+    `SELECT email, created_at FROM allowed_emails ORDER BY created_at DESC LIMIT ${MAX_ALLOWED_EMAILS}`,
+  ).all();
+  return json({ emails: rows.results });
+}
+
+/**
+ * `POST /v1/admin/allowed-emails` `{email}` : le compte qui se connectera avec
+ * cette adresse vérifiée sera actif d'emblée. Un compte déjà en attente avec
+ * cette adresse est accepté tout de suite.
+ */
+async function allowEmail(request: Request, env: Env, now: number, push: PushSender): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const email = emailOf(await readJson(request));
+  const waiting = await env.DB.prepare(
+    `SELECT DISTINCT u.id FROM users u JOIN identities i ON i.user_id = u.id
+     WHERE i.email = ? AND u.status = 'pending'`,
+  )
+    .bind(email)
+    .all<{ id: string }>();
+  const ids = waiting.results.map((row) => row.id);
+  await env.DB.batch([
+    env.DB.prepare("INSERT OR IGNORE INTO allowed_emails (email, created_at) VALUES (?, ?)").bind(email, now),
+    env.DB.prepare(
+      `UPDATE users SET status = 'active', status_changed_at = ?1, updated_at = ?1
+       WHERE status = 'pending' AND id IN (SELECT value FROM json_each(?2))`,
+    ).bind(now, JSON.stringify(ids)),
+  ]);
+  await announceGranted(env, push, ids, now);
+  return json({ email, approved: ids.length }, 201);
+}
+
+/** `DELETE /v1/admin/allowed-emails` `{email}` : les comptes déjà créés gardent leur accès. */
+async function removeAllowedEmail(request: Request, env: Env, now: number): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const email = emailOf(await readJson(request));
+  await env.DB.prepare("DELETE FROM allowed_emails WHERE email = ?").bind(email).run();
   return noContent();
 }
 
 // ── Aiguillage ───────────────────────────────────────────────────
 
-type AdminHandler = (request: Request, env: Env, now: number) => Promise<Response>;
+type AdminHandler = (request: Request, env: Env, now: number, push: PushSender) => Promise<Response>;
 
 /** Identifiant tel que le Worker les crée (UUID). */
 const ID = "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})";
 const REQUEST_ACTION = new RegExp(`^/v1/admin/requests/${ID}/(start|refuse|reopen)$`);
-const INVITATION = new RegExp(`^/v1/admin/invitations/${ID}$`);
+const MEMBER_ACTION = new RegExp(`^/v1/admin/members/${ID}/(approve|refuse)$`);
 
 /** Route `/v1/admin/…` ; `undefined` si la méthode ou le chemin n'existe pas. */
 export function adminHandler(method: string, pathname: string): AdminHandler | undefined {
@@ -311,7 +415,13 @@ export function adminHandler(method: string, pathname: string): AdminHandler | u
     if (method === "DELETE") return deleteSettings;
     return undefined;
   }
-  if (pathname === "/v1/admin/invitations") return method === "GET" ? listInvitations : undefined;
+  if (pathname === "/v1/admin/members") return method === "GET" ? listMembers : undefined;
+  if (pathname === "/v1/admin/allowed-emails") {
+    if (method === "GET") return listAllowedEmails;
+    if (method === "POST") return allowEmail;
+    if (method === "DELETE") return removeAllowedEmail;
+    return undefined;
+  }
   const action = REQUEST_ACTION.exec(pathname);
   if (action?.[1] && action[2] && method === "POST") {
     const id = action[1];
@@ -319,10 +429,11 @@ export function adminHandler(method: string, pathname: string): AdminHandler | u
     const handler = handlers[action[2] as keyof typeof handlers];
     return (request, env, now) => handler(request, env, now, id);
   }
-  const invitation = INVITATION.exec(pathname);
-  if (invitation?.[1] && method === "DELETE") {
-    const id = invitation[1];
-    return (request, env, now) => revokeInvitation(request, env, now, id);
+  const member = MEMBER_ACTION.exec(pathname);
+  if (member?.[1] && member[2] && method === "POST") {
+    const id = member[1];
+    const status = member[2] === "approve" ? "active" : "refused";
+    return (request, env, now, push) => decide(request, env, now, push, id, status);
   }
   return undefined;
 }

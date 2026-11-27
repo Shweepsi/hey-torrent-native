@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
-use crate::account::{AccountError, UserProfile, UserRole};
+use crate::account::{AccessStatus, AccountError, UserProfile, UserRole};
 
 /// Délai maximal d'une requête complète.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
@@ -74,11 +74,9 @@ struct ErrorBody {
 fn server_error(status: u16, code: Option<&str>) -> AccountError {
     match code {
         Some("invalid_token") => AccountError::InvalidIdentity,
-        Some("invitation_required") => AccountError::InvitationRequired,
-        Some("invitation_invalid") => AccountError::InvitationInvalid,
         Some("unauthorized" | "session_expired") => AccountError::SignedOut,
         Some("provider_unavailable") => AccountError::ProviderUnavailable,
-        Some("forbidden") => AccountError::Forbidden,
+        Some("forbidden" | "access_pending" | "access_refused") => AccountError::Forbidden,
         _ if status == 401 => AccountError::SignedOut,
         _ if status >= 500 => AccountError::Server,
         _ => AccountError::Unexpected,
@@ -138,7 +136,10 @@ fn read_failure(status: u16, code: Option<&str>) -> ApiFailure {
         Some("unauthorized" | "session_expired") => ApiFailure::SignedOut,
         Some("not_found") => ApiFailure::NotFound,
         Some("provider_unavailable") => ApiFailure::Unavailable,
-        Some("invalid_request" | "forbidden") => ApiFailure::Rejected,
+        // Accès en attente ou retiré : l'app relit le profil et change d'écran.
+        Some("invalid_request" | "forbidden" | "access_pending" | "access_refused") => {
+            ApiFailure::Rejected
+        }
         _ if status == 401 => ApiFailure::SignedOut,
         _ if status >= 500 => ApiFailure::Server,
         _ => ApiFailure::Unexpected,
@@ -195,6 +196,10 @@ pub(crate) struct WireUser {
     /// Fournisseurs rattachés (`apple`, `google`) ; absent d'un vieux serveur.
     #[serde(default)]
     pub providers: Vec<String>,
+    /// `active`, `pending` ou `refused` ; absent d'un serveur d'avant la
+    /// validation des comptes, où tout compte était actif.
+    #[serde(default)]
+    pub status: Option<String>,
 }
 
 impl WireUser {
@@ -206,6 +211,12 @@ impl WireUser {
                 .clone()
                 .filter(|name| !name.trim().is_empty()),
             has_apple: self.providers.iter().any(|p| p == "apple"),
+            access: match self.status.as_deref() {
+                None | Some("active") => AccessStatus::Active,
+                Some("refused") => AccessStatus::Refused,
+                // État inconnu (version future du serveur) : pas d'accès.
+                Some(_) => AccessStatus::Pending,
+            },
             // Rôle inconnu (version future du serveur) : le moins de droits.
             role: if self.role == "admin" {
                 UserRole::Admin
@@ -239,13 +250,6 @@ pub(crate) struct MeResponse {
 pub(crate) struct ConfigResponse {
     pub google_web_client_id: Option<String>,
     pub google_ios_client_id: Option<String>,
-}
-
-#[cfg(feature = "admin")]
-#[derive(Deserialize)]
-pub(crate) struct InvitationResponse {
-    pub code: String,
-    pub expires_at: i64,
 }
 
 #[cfg(test)]
@@ -286,12 +290,8 @@ mod tests {
     #[test]
     fn server_codes_map_to_typed_errors() {
         assert!(matches!(
-            server_error(403, Some("invitation_required")),
-            AccountError::InvitationRequired
-        ));
-        assert!(matches!(
-            server_error(403, Some("invitation_invalid")),
-            AccountError::InvitationInvalid
+            server_error(403, Some("access_pending")),
+            AccountError::Forbidden
         ));
         assert!(matches!(
             server_error(401, Some("invalid_token")),
@@ -336,6 +336,10 @@ mod tests {
             ApiFailure::Rejected
         );
         assert_eq!(read_failure(403, Some("forbidden")), ApiFailure::Rejected);
+        assert_eq!(
+            read_failure(403, Some("access_refused")),
+            ApiFailure::Rejected
+        );
         assert_eq!(read_failure(400, None), ApiFailure::Unexpected);
         // Un 404 sans code reconnu n'est pas un « introuvable » du Worker.
         assert_eq!(read_failure(404, None), ApiFailure::Unexpected);
@@ -371,11 +375,28 @@ mod tests {
             role: "superuser".into(),
             display_name: Some("  ".into()),
             providers: vec!["google".into()],
+            status: None,
         };
         let profile = user.profile();
         assert_eq!(profile.role, UserRole::Member);
         assert_eq!(profile.display_name, None);
         assert!(!profile.has_apple);
-        assert!(!profile.has_apple);
+        // Serveur d'avant la validation : compte actif.
+        assert_eq!(profile.access, AccessStatus::Active);
+    }
+
+    #[test]
+    fn access_status_is_read_and_unknown_means_no_access() {
+        let with = |status: &str| WireUser {
+            id: "u".into(),
+            role: "member".into(),
+            display_name: None,
+            providers: vec![],
+            status: Some(status.into()),
+        };
+        assert_eq!(with("active").profile().access, AccessStatus::Active);
+        assert_eq!(with("pending").profile().access, AccessStatus::Pending);
+        assert_eq!(with("refused").profile().access, AccessStatus::Refused);
+        assert_eq!(with("suspended").profile().access, AccessStatus::Pending);
     }
 }

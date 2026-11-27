@@ -45,7 +45,6 @@ async fn signed_in(server: &MockServer) -> Arc<Account> {
             provider: IdentityProvider::Apple,
             id_token: "jeton-apple".into(),
             nonce: "nonce-brut".into(),
-            invitation_code: None,
             given_name: None,
         })
         .await

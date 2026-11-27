@@ -99,6 +99,11 @@ export async function pushTo(env: Env, sender: PushSender, devices: DeviceRow[],
   return outcomes.filter((outcome) => outcome === "sent").length;
 }
 
+/** Appareils encore valables de ces personnes (accès, demandes d'accès). */
+export function devicesOfUsers(env: Env, userIds: string[], now: number): Promise<DeviceRow[]> {
+  return devicesOf(env, userIds, now);
+}
+
 /** Appareils encore valables d'une seule personne (push d'essai). */
 export function devicesOfUser(env: Env, userId: string, now: number): Promise<DeviceRow[]> {
   return devicesOf(env, [userId], now);

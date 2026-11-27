@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { WatchlistItem } from "../src/watchlist";
-import { NOW, bootstrapAdmin, call, fetchCalls, invite, replyToFetch, setNow, signIn, type SessionBody } from "./fakes";
+import { NOW, bootstrapAdmin, call, fetchCalls, replyToFetch, setNow, signInMember, type SessionBody } from "./fakes";
 
 // TMDB est simulé : chaque fiche est servie par `replyToFetch` selon son chemin.
 
@@ -23,12 +23,10 @@ const TITLES: Record<string, unknown> = {
 let admin: SessionBody;
 let subjectCounter = 0;
 
-/** Nouveau membre invité, avec sa session. */
+/** Nouveau membre accepté, avec sa session. */
 async function member(): Promise<SessionBody> {
   subjectCounter += 1;
-  const code = await invite(admin.access_token);
-  const response = await signIn("google", { subject: `membre-${subjectCounter}`, invitation: code });
-  return response.json();
+  return signInMember("google", { subject: `membre-${subjectCounter}` });
 }
 
 beforeAll(async () => {

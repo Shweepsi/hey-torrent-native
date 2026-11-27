@@ -45,8 +45,12 @@ async function accessToken(env: Env, claims: AccessClaims, now: number): Promise
     .sign(signingKey(env));
 }
 
-/** Jeton d'accès de l'en-tête `Authorization: Bearer …`, ou `unauthorized`. */
-export async function authenticate(request: Request, env: Env, now: number): Promise<AccessClaims> {
+/**
+ * Jeton d'accès de l'en-tête `Authorization: Bearer …`, ou `unauthorized`,
+ * quel que soit l'état du compte : seulement pour les routes permises à un
+ * compte en attente (profil, suppression, appareil, amorçage).
+ */
+export async function authenticateSession(request: Request, env: Env, now: number): Promise<AccessClaims> {
   const header = request.headers.get("authorization") ?? "";
   const match = /^Bearer ([A-Za-z0-9._-]+)$/.exec(header);
   if (!match?.[1]) throw new ApiError("unauthorized");
@@ -65,6 +69,45 @@ export async function authenticate(request: Request, env: Env, now: number): Pro
   } catch {
     throw new ApiError("unauthorized");
   }
+}
+
+/**
+ * Comme `authenticateSession`, pour un compte actif seulement : l'état est relu
+ * dans D1 à chaque appel, pour qu'une acceptation ou un refus vaille aussitôt.
+ * `access_pending` ou `access_refused` sinon ; `unauthorized` si le compte
+ * n'existe plus.
+ */
+export async function authenticate(request: Request, env: Env, now: number): Promise<AccessClaims> {
+  const claims = await authenticateSession(request, env, now);
+  requireActive(await statusOf(env, claims.userId));
+  return claims;
+}
+
+/**
+ * Pour le relais TMDB, qui doit survivre à une panne de D1 : si l'état ne
+ * peut pas être relu, le jeton signé suffit (le catalogue TMDB est public).
+ */
+export async function authenticateCatalog(request: Request, env: Env, now: number): Promise<AccessClaims> {
+  const claims = await authenticateSession(request, env, now);
+  let status: string | null;
+  try {
+    status = await statusOf(env, claims.userId);
+  } catch {
+    return claims;
+  }
+  requireActive(status);
+  return claims;
+}
+
+async function statusOf(env: Env, userId: string): Promise<string | null> {
+  const row = await env.DB.prepare("SELECT status FROM users WHERE id = ?").bind(userId).first<{ status: string }>();
+  return row?.status ?? null;
+}
+
+function requireActive(status: string | null): void {
+  if (status === null) throw new ApiError("unauthorized");
+  if (status === "pending") throw new ApiError("access_pending");
+  if (status !== "active") throw new ApiError("access_refused");
 }
 
 /** Ouvre une session pour ce compte et renvoie ses premiers jetons. */

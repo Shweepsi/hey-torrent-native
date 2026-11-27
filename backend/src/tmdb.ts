@@ -8,7 +8,7 @@
 import type { FetchLike } from "./apple";
 import type { Env } from "./env";
 import { ApiError } from "./http";
-import { authenticate } from "./sessions";
+import { authenticateCatalog } from "./sessions";
 
 export const TMDB_PREFIX = "/v1/tmdb/";
 
@@ -248,7 +248,7 @@ async function writeCache(env: Env, key: string, body: string, ttl: number, now:
  * accepté mais hors bornes `invalid_request`.
  */
 export async function relayTmdb(request: Request, env: Env, fetcher: FetchLike, now: number): Promise<Response> {
-  await authenticate(request, env, now);
+  await authenticateCatalog(request, env, now);
   const url = new URL(request.url);
   return jsonText(await cachedTmdb(env, fetcher, url.pathname.slice(TMDB_PREFIX.length), url.searchParams, now));
 }

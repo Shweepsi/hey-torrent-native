@@ -1,12 +1,12 @@
 //! Routes d'administration du Worker (`/v1/admin/…`) : file des demandes et
-//! leur traitement, réglages des serveurs chiffrés, invitations.
+//! leur traitement, réglages des serveurs chiffrés, accès des comptes.
 //!
 //! Lecture tolérante : une demande illisible est ignorée, pas toute la file.
 
 use serde::Deserialize;
 
 use super::AdminError;
-use crate::account::{Account, AccountError};
+use crate::account::{AccessStatus, Account, AccountError};
 use crate::catalog::MediaType;
 use crate::watchlist::RequestStatus;
 
@@ -60,16 +60,26 @@ pub struct AdminRequest {
     pub seasons: Option<Vec<u32>>,
 }
 
-/// Une invitation créée par l'administrateur.
+/// Un compte, vu par l'administrateur.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct InvitationInfo {
+pub struct Member {
     pub id: String,
+    pub display_name: Option<String>,
+    /// Adresse vérifiée par Apple ou Google, pour reconnaître la personne.
+    pub email: Option<String>,
+    pub access: AccessStatus,
+    pub is_admin: bool,
+    /// Création du compte (la demande d'accès), en secondes Unix.
     pub created_at: i64,
-    pub expires_at: i64,
-    pub used_at: Option<i64>,
-    /// Prénom de la personne qui l'a utilisée, s'il est connu.
-    pub used_by_name: Option<String>,
-    pub revoked_at: Option<i64>,
+    /// Dernière décision de l'administrateur.
+    pub status_changed_at: Option<i64>,
+}
+
+/// Adresse acceptée d'avance : son compte sera actif dès sa création.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AllowedEmail {
+    pub email: String,
+    pub created_at: i64,
 }
 
 #[derive(Deserialize)]
@@ -149,18 +159,58 @@ struct SettingsBody {
 }
 
 #[derive(Deserialize)]
-struct WireInvitation {
+struct WireMember {
     id: String,
+    role: String,
+    display_name: Option<String>,
+    status: String,
+    email: Option<String>,
+    #[serde(default)]
     created_at: i64,
-    expires_at: i64,
-    used_at: Option<i64>,
-    used_by_name: Option<String>,
-    revoked_at: Option<i64>,
+    status_changed_at: Option<i64>,
+}
+
+impl WireMember {
+    fn into_member(self) -> Option<Member> {
+        let access = match self.status.as_str() {
+            "active" => AccessStatus::Active,
+            "pending" => AccessStatus::Pending,
+            "refused" => AccessStatus::Refused,
+            _ => return None,
+        };
+        Some(Member {
+            id: self.id,
+            display_name: self.display_name.filter(|n| !n.trim().is_empty()),
+            email: self.email.filter(|e| !e.trim().is_empty()),
+            access,
+            is_admin: self.role == "admin",
+            created_at: self.created_at,
+            status_changed_at: self.status_changed_at,
+        })
+    }
 }
 
 #[derive(Deserialize)]
-struct InvitationsBody {
-    invitations: Vec<serde_json::Value>,
+struct MembersBody {
+    members: Vec<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct WireAllowedEmail {
+    email: String,
+    #[serde(default)]
+    created_at: i64,
+}
+
+#[derive(Deserialize)]
+struct AllowedEmailsBody {
+    emails: Vec<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct AllowedBody {
+    #[serde(default)]
+    approved: u32,
 }
 
 #[derive(Deserialize)]
@@ -318,30 +368,83 @@ pub(crate) async fn save_settings(account: &Account, stored: &str) -> Result<(),
     .map(|_| ())
 }
 
-pub(crate) async fn invitations(account: &Account) -> Result<Vec<InvitationInfo>, AdminError> {
-    let bytes = call(account, reqwest::Method::GET, "/v1/admin/invitations", None).await?;
-    let body: InvitationsBody =
+/// Comptes : ceux en attente d'abord.
+pub(crate) async fn members(account: &Account) -> Result<Vec<Member>, AdminError> {
+    let bytes = call(account, reqwest::Method::GET, "/v1/admin/members", None).await?;
+    let body: MembersBody = serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
+    Ok(body
+        .members
+        .into_iter()
+        .filter_map(|v| serde_json::from_value::<WireMember>(v).ok())
+        .filter_map(WireMember::into_member)
+        .collect())
+}
+
+/// Accepte (`granted`) ou refuse l'accès d'un compte.
+pub(crate) async fn decide(account: &Account, id: &str, granted: bool) -> Result<(), AdminError> {
+    let verb = if granted { "approve" } else { "refuse" };
+    let target = format!("/v1/admin/members/{}/{verb}", path_id(id)?);
+    call(
+        account,
+        reqwest::Method::POST,
+        &target,
+        Some(&serde_json::json!({})),
+    )
+    .await
+    .map(|_| ())
+}
+
+pub(crate) async fn allowed_emails(account: &Account) -> Result<Vec<AllowedEmail>, AdminError> {
+    let bytes = call(
+        account,
+        reqwest::Method::GET,
+        "/v1/admin/allowed-emails",
+        None,
+    )
+    .await?;
+    let body: AllowedEmailsBody =
         serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
     Ok(body
-        .invitations
+        .emails
         .into_iter()
-        .filter_map(|v| serde_json::from_value::<WireInvitation>(v).ok())
-        .map(|i| InvitationInfo {
-            id: i.id,
-            created_at: i.created_at,
-            expires_at: i.expires_at,
-            used_at: i.used_at,
-            used_by_name: i.used_by_name.filter(|n| !n.trim().is_empty()),
-            revoked_at: i.revoked_at,
+        .filter_map(|v| serde_json::from_value::<WireAllowedEmail>(v).ok())
+        .map(|e| AllowedEmail {
+            email: e.email,
+            created_at: e.created_at,
         })
         .collect())
 }
 
-pub(crate) async fn revoke_invitation(account: &Account, id: &str) -> Result<(), AdminError> {
-    let target = format!("/v1/admin/invitations/{}", path_id(id)?);
-    call(account, reqwest::Method::DELETE, &target, None)
-        .await
-        .map(|_| ())
+/// Accepte d'avance une adresse ; rend le nombre de comptes en attente acceptés du même coup.
+pub(crate) async fn allow_email(account: &Account, email: &str) -> Result<u32, AdminError> {
+    let email = email.trim();
+    if email.is_empty() || !email.contains('@') {
+        return Err(AdminError::InvalidSettings);
+    }
+    let body = serde_json::json!({ "email": email });
+    let bytes = call(
+        account,
+        reqwest::Method::POST,
+        "/v1/admin/allowed-emails",
+        Some(&body),
+    )
+    .await?;
+    // Réponse illisible : l'adresse est quand même enregistrée.
+    Ok(serde_json::from_slice::<AllowedBody>(&bytes)
+        .map(|b| b.approved)
+        .unwrap_or(0))
+}
+
+pub(crate) async fn remove_allowed_email(account: &Account, email: &str) -> Result<(), AdminError> {
+    let body = serde_json::json!({ "email": email.trim() });
+    call(
+        account,
+        reqwest::Method::DELETE,
+        "/v1/admin/allowed-emails",
+        Some(&body),
+    )
+    .await
+    .map(|_| ())
 }
 
 #[cfg(test)]
@@ -372,6 +475,16 @@ mod tests {
         assert!(path_id("11111111-1111-4111-8111-111111111111").is_ok());
         assert!(path_id("../settings").is_err());
         assert!(path_id("").is_err());
+    }
+
+    #[test]
+    fn unreadable_members_are_skipped() {
+        let wire: WireMember = serde_json::from_value(serde_json::json!({
+            "id": "a", "role": "member", "display_name": " ", "status": "banni", "email": null,
+            "created_at": 1, "status_changed_at": null
+        }))
+        .unwrap();
+        assert!(wire.into_member().is_none());
     }
 
     #[test]
