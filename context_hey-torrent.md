@@ -466,9 +466,11 @@ choisie ; il peut préparer le code pour que le choix reste facile.
 - Le cœur rafraîchit le jeton d'accès automatiquement. Les jetons sont gardés
   dans le Keychain ou le Keystore.
 - Pas de mot de passe HeyWatchlist, pas de Cloudflare Access.
-- **Sur invitation** : l'administrateur crée un lien ou un code d'invitation
-  dans l'app ; une personne qui se connecte sans invitation valide n'a accès
-  à rien. Le premier compte, créé au déploiement, est l'administrateur.
+- **Accès validé** (2026-11-27, remplace les codes d'invitation) : le lien
+  de l'app (App Store non répertorié, test fermé Play) sert d'invitation ; un
+  nouveau compte attend que l'administrateur l'accepte et n'a accès à rien
+  d'ici là. Une adresse peut être acceptée d'avance (compte de démonstration
+  pour Apple). Le premier administrateur s'amorce avec un code au déploiement.
 - Sur iPhone, « Se connecter avec Apple » est **obligatoire** dès qu'une autre
   connexion (Google) est proposée (Apple 4.8).
 - **Suppression du compte depuis l'app** (Apple 5.1.1(v), Google Play) :

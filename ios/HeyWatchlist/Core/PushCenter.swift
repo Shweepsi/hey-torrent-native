@@ -10,6 +10,8 @@ import UserNotifications
 @MainActor
 final class PushCenter: NSObject, UNUserNotificationCenterDelegate {
     static let shared = PushCenter()
+    /// Publiée quand une notification annonce que l'accès du compte est accepté.
+    static let accessGranted = Notification.Name("HeyWatchlistAccessGranted")
 
     private var source: CoreAccountSource?
 
@@ -65,7 +67,12 @@ final class PushCenter: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+        let aps = notification.request.content.userInfo["aps"] as? [String: Any]
+        let alert = aps?["alert"] as? [String: Any]
+        if alert?["loc-key"] as? String == "push_access_granted" {
+            await MainActor.run { NotificationCenter.default.post(name: PushCenter.accessGranted, object: nil) }
+        }
+        return [.banner, .list, .sound]
     }
 }
 

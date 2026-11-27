@@ -14,9 +14,9 @@ Interface en français, style verre dépoli (voir `docs/DESIGN.md`).
 
 **Jalon 2 en cours : comptes et connexion.** L'app ouvre sur un écran
 d'accueil : « Se connecter avec Apple » (iPhone) ou avec Google (Android et
-iPhone), sur invitation. Une fois connecté, Réglages affiche le prénom, la
-déconnexion et la suppression du compte ; l'APK admin y ajoute la création
-d'invitations. Découvrir et Watchlist sont encore vides (jalons 3 et 4). Le
+iPhone) ; un nouveau compte attend que l'administrateur valide son accès.
+Une fois connecté, Réglages affiche le prénom, la déconnexion et la
+suppression du compte ; l'APK admin y ajoute l'espace admin. Découvrir et Watchlist sont encore vides (jalons 3 et 4). Le
 plan complet est dans `docs/PLAN.md`, le reste à faire dans `docs/TODO.md`.
 
 Le cœur Rust et le Worker sont testés en local ; les apps Android et iOS ne se
@@ -53,7 +53,7 @@ compilent que sur la CI.
   `#[uniffi::export]`. Elles ne sont jamais versionnées.
 - **Les interfaces** n'affichent que : aucune règle métier, aucun appel réseau.
 - **Le backend** (`backend/`, TypeScript) gère les comptes : vérification
-  des jetons Apple et Google, invitations, sessions (`backend/README.md`).
+  des jetons Apple et Google, accès validé par l'administrateur, sessions (`backend/README.md`).
 
 ### Deux apps, un seul projet
 
@@ -66,8 +66,8 @@ compilent que sur la CI.
 
 Le code d'administration n'existe que dans l'édition admin
 (`android/app/src/admin/` et la fonctionnalité Cargo `admin`) : l'app publique
-n'en contient aucun symbole. Au jalon 2, l'édition admin n'ajoute que la
-création d'invitations, dans Réglages.
+n'en contient aucun symbole. L'édition admin ajoute l'espace admin
+(demandes, suivi, serveurs, accès des comptes).
 
 ## Organisation du dépôt
 

@@ -36,7 +36,7 @@ signature (`DEVELOPMENT_TEAM`, profils) est fournie par la CI, jamais écrite ic
 - `HeyWatchlist/Core/` : la frontière avec le cœur Rust. Aucune règle métier ici.
   - Compte : `AccountClient` (protocole), `LiveAccountClient` (appelle UniFFI),
     `AccountFailure` (erreur du cœur vers texte), `AccountModel` (connexion,
-    invitation, Réglages), `KeychainSessionStore`.
+    attente de validation, Réglages), `KeychainSessionStore`.
   - `CoreAccountSource` : l'**unique** `Account` du processus. Le compte et le
     catalogue le partagent, donc la même session et le même renouvellement du
     jeton (deux `Account` auraient chacun leur jeton).
@@ -58,7 +58,7 @@ signature (`DEVELOPMENT_TEAM`, profils) est fournie par la CI, jamais écrite ic
   - Racine : `RootView` (accueil tant qu'on n'est pas connecté, sinon les
     onglets), `MainTabView` (onglets Découvrir, Watchlist, Réglages, et
     Rechercher en `Tab(role: .search)`), `WelcomeView` (accueil, connexion Apple
-    ou Google, code d'invitation) et `SettingsView` (Réglages : prénom,
+    ou Google), `WaitingView` (attente de validation du compte) et `SettingsView` (Réglages : prénom,
     déconnexion, suppression du compte, version).
   - Catalogue : `DiscoverView` (rangées, pastilles de genres), `HeroCarousel`
     (carrousel de tête), `TitleDetailView` (fiche) et `SeasonSheet` (épisodes

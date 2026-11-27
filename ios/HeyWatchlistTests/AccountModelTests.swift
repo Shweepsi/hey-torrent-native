@@ -36,30 +36,33 @@ struct AccountModelTests {
         #expect(model.state == .signedOut(.init(failure: .signedOut)))
     }
 
-    @Test func appleSignInAsksForAnInvitationThenUsesTheSameToken() async {
+    @Test func aNewAppleAccountWaitsThenGetsInOnceAccepted() async {
         let client = FakeAccountClient()
         let model = AccountModel(client: client)
         await model.start()
 
         await model.completeApple(idToken: "jeton-apple", givenName: "Camille")
-        #expect(model.state == .signedOut(.init(askInvitation: true)))
+        #expect(model.state == .signedIn(.init(profile: .camillePending, coreVersion: "0.2.0")))
 
-        await client.set(signIn: { code in
-            code == "ABCD-EFGH-JKMN" ? .success(.signedIn(.camille)) : .success(.invitationRequired)
-        })
-        await model.submitInvitation("  ABCD-EFGH-JKMN\n")
+        await client.set(refresh: .success(.camille))
+        await model.checkAccess()
         #expect(model.state == .signedIn(.init(profile: .camille, coreVersion: "0.2.0")))
-        #expect(await client.codes == [nil, "ABCD-EFGH-JKMN"])
     }
 
-    @Test func aWrongCodeKeepsTheInvitationStep() async {
-        let client = FakeAccountClient()
+    @Test func aFailedCheckKeepsWaitingAndExplains() async {
+        let model = AccountModel(client: FakeAccountClient(stored: .camillePending))
+        await model.start()
+        await model.checkAccess()
+        #expect(model.state == .signedIn(.init(profile: .camillePending, coreVersion: "0.2.0", failure: .network)))
+    }
+
+    @Test func aRefusedAccountStaysSignedIn() async {
+        let client = FakeAccountClient(stored: .camillePending)
+        let refused = Profile(firstName: "Camille", isAdmin: false, hasApple: true, access: .refused)
+        await client.set(refresh: .success(refused))
         let model = AccountModel(client: client)
         await model.start()
-        await model.signInWithGoogle(authenticate: fakeWebAuthentication)
-        await client.set(signIn: { _ in .failure(.invitationInvalid) })
-        await model.submitInvitation("FAUX")
-        #expect(model.state == .signedOut(.init(askInvitation: true, failure: .invitationInvalid)))
+        #expect(model.state == .signedIn(.init(profile: refused, coreVersion: "0.2.0")))
     }
 
     @Test func closingTheGoogleWindowShowsNoError() async {

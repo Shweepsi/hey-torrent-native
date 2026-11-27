@@ -73,7 +73,7 @@ struct SettingsView: View {
 
 /// Confirmation de la suppression. Pour un compte Apple, la confirmation passe
 /// par une nouvelle autorisation Apple, qui permet au serveur de la révoquer.
-private struct DeleteAccountSheet: View {
+struct DeleteAccountSheet: View {
     let model: AccountModel
     let state: AccountModel.SignedIn
     @Binding var isPresented: Bool

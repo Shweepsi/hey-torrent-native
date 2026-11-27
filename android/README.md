@@ -44,7 +44,8 @@ dans `src/admin/`, où il affiche l'entrée de l'espace admin. L'espace admin
 `AdminActivity`, déclarée par le manifeste de `src/admin/` : Demandes (fiche,
 recherche dans les sources, envoi à qBittorrent, refus), Suivi des
 téléchargements, Serveurs (réglages chiffrés sur le serveur, copie chiffrée
-par le Keystore sur l'appareil) et Invitations. Les textes admin ne sont que
+par le Keystore sur l'appareil) et Accès (demandes d'accès à accepter ou
+refuser, accès retirable, adresses acceptées d'avance). Les textes admin ne sont que
 dans `src/admin/res/`.
 
 ## Version et signature

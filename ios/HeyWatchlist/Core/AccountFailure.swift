@@ -8,7 +8,6 @@ import Foundation
 enum AccountFailure: Error, Equatable, Sendable {
     case network
     case invalidIdentity
-    case invitationInvalid
     case signedOut
     case providerUnavailable
     case cancelled
@@ -25,9 +24,7 @@ enum AccountFailure: Error, Equatable, Sendable {
         switch error as? AccountError {
         case .Network?: self = .network
         case .InvalidIdentity?: self = .invalidIdentity
-        case .InvitationInvalid?: self = .invitationInvalid
-        // Traitée à part par la connexion ; ailleurs, la session est perdue.
-        case .InvitationRequired?, .SignedOut?: self = .signedOut
+        case .SignedOut?: self = .signedOut
         case .ProviderUnavailable?: self = .providerUnavailable
         case .Cancelled?: self = .cancelled
         case .Server?: self = .server
@@ -41,7 +38,6 @@ enum AccountFailure: Error, Equatable, Sendable {
         switch self {
         case .network: "error.network"
         case .invalidIdentity: "error.invalidIdentity"
-        case .invitationInvalid: "error.invitationInvalid"
         case .signedOut: "error.signedOut"
         case .providerUnavailable: "error.providerUnavailable"
         case .cancelled: "error.cancelled"
