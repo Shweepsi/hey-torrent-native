@@ -5,6 +5,21 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.6.1] - 2026-11-27
+
+### Corrigé
+
+- Android : « Se connecter avec Google » ne reste plus muet après le choix du
+  compte. Le refus des services Google (code 16, app non déclarée chez Google)
+  affiche « La connexion avec Google n’est pas disponible pour le moment », et
+  une fenêtre fermée affiche « Connexion annulée ».
+
+### Ajouté
+
+- CI Android : les empreintes SHA-1 et SHA-256 du certificat de signature des
+  APK admin et public s'affichent dans le résumé du job de release, pour les
+  déclarer dans la console Google.
+
 ## [0.6.0] - 2026-11-26
 
 Jalon 6 : notifications « Disponible sur Plex ». Quand un film ou un épisode
