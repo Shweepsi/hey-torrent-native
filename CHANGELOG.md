@@ -19,6 +19,15 @@ récentes sont en tête.
 - CI Android : les empreintes SHA-1 et SHA-256 du certificat de signature des
   APK admin et public s'affichent dans le résumé du job de release, pour les
   déclarer dans la console Google.
+- Android : après un plantage, l'app affiche au lancement suivant le rapport
+  (pile de l'exception, ou raison d'arrêt donnée par Android pour un plantage
+  natif ou une app figée), à copier. L'app reste en pause tant qu'il est
+  affiché. Rien n'est envoyé.
+
+### Modifié
+
+- Android : une erreur de Firebase en demandant le jeton des notifications ne
+  fait plus planter l'app ; les notifications sont simplement coupées.
 
 ## [0.6.0] - 2026-11-26
 
