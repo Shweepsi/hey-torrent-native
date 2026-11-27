@@ -23,7 +23,7 @@ quel ordre, et où lire les résultats**.
 | Fichier | Se lance | Machine | Sert à |
 |---|---|---|---|
 | `ci-core.yml` | PR et `main`, si le cœur, les outils, les scripts ou Cargo changent | Linux | `cargo fmt`, `clippy -D warnings`, tests (sans puis avec `admin`) ; génération des liaisons Kotlin et Swift et contrôle du contrat (`admin_ping` seulement dans l'édition admin) ; ShellCheck |
-| `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests de `buildSrc`, `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié), APK admin de debug ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé, APK public signé et AAB public |
+| `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests du script d'envoi Google Play, tests de `buildSrc`, `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié), APK admin de debug ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé, APK public signé et AAB public ; sur un tag `v*` ou à la demande, **si la clé Google Play existe** : AAB envoyé sur le test fermé |
 | `ci-ios.yml` | PR (hors brouillons), `main`, tags `v*`, si iOS, le cœur, `build-ios-xcframework.sh`, `generate-bindings.sh` ou Cargo changent (jamais pour un `.md`) | **macOS** | XCFramework du cœur, XcodeGen, tests sur simulateur iPhone ; sur `main`, un tag ou un lancement manuel, **si les secrets iOS existent** : signature et envoi TestFlight |
 | `ios-setup-signing.yml` | À la main seulement | **macOS** | Crée le certificat et le profil de distribution (fastlane match) |
 | `ci-backend.yml` | PR et `main`, si `backend/` change | Linux | TypeScript et tests du Worker (Vitest dans `workerd`, rien n'appelle Cloudflare) ; sur `main`, **si les réglages Cloudflare existent** : migrations D1 puis déploiement du Worker `heywatchlist-api` |
@@ -65,6 +65,8 @@ Dépôt GitHub > **Settings** > **Secrets and variables** > **Actions**. Les
 | `ANDROID_KEYSTORE_PASSWORD` | secret | Mot de passe du keystore |
 | `ANDROID_KEY_ALIAS` | secret | Alias de la clé (`heywatchlist` ci-dessous) |
 | `ANDROID_KEY_PASSWORD` | secret | Mot de passe de la clé (le même que celui du keystore) |
+| `PLAY_SERVICE_ACCOUNT_JSON` | secret | Clé JSON du compte de service Google Play (brute ou en base64), posée par hey-kit : envoi de l'AAB public sur le test fermé (`docs/PUBLICATION.md`, étape 7) |
+| `PLAY_TRACK` | variable, facultative | Piste Google Play : `alpha` (test fermé, par défaut), `internal`, `beta` |
 
 Notifications (jalon 6) : `GOOGLE_SERVICES_JSON`, le contenu de
 `google-services.json` encodé en base64 (le JSON brut est aussi accepté). Lu par
@@ -240,7 +242,9 @@ d'échec iOS, le journal complet de `xcodebuild` est dans l'étape en erreur de
 l'exécution (sans Mac, c'est lui qui explique l'échec).
 
 Le lancement manuel (**Run workflow**) de `CI Android` a une case « Produire
-aussi les APK signés et l'AAB public » ; celui de `CI iOS`, une case pour
+aussi les APK signés et l'AAB public » et une case « Envoyer aussi l'AAB sur
+Google Play » (piste test fermé ; la version de `Cargo.toml` ne doit jamais
+avoir été envoyée) ; celui de `CI iOS`, une case pour
 envoyer ou non sur TestFlight.
 
 ## Coût des minutes macOS
@@ -278,6 +282,10 @@ contrôles qui tournent toujours, ou aucun.
 | Notice « Envoi ignoré : secrets ou variables absents » | Il manque le ou les noms listés : les créer (voir plus haut). Les tests, eux, ont tourné. |
 | match : « readonly » ou aucun certificat trouvé | L'étape 5 n'a pas été faite, ou a échoué : relancer **iOS - configurer la signature**. |
 | « The bundle version must be higher » (Apple) | Numéro de build déjà reçu : relancer par **Run workflow**, pas « Re-run jobs ». |
+| Google Play : « ce numéro de version a déjà été envoyé » | Monter la version dans `Cargo.toml` (le `versionCode` en découle), puis nouveau tag. |
+| Google Play : « app introuvable » | L'app n'existe pas encore dans la Play Console, ou son premier AAB n'a pas été déposé à la main (`docs/PUBLICATION.md`, étape 6). |
+| Google Play : « The caller does not have permission » | Le compte de service n'est pas invité dans la Play Console, ou sans les autorisations des canaux de test (`docs/PUBLICATION.md`, étape 7). |
+| Google Play : avertissement « envoyée en brouillon » | L'app n'a jamais été publiée : finir les déclarations et publier la version depuis la Play Console. Les envois suivants partent directement. |
 | « Bundle ID not found » / app introuvable | Étape 2.2 ou 2.3 manquante, ou identifiant différent de `ios/project.yml`. |
 | Avertissement « NDK … absent de l'image : repli sur … » | L'image Linux a changé de NDK par défaut : la CI continue avec celui de l'image ; mettre à jour `NDK_VERSION` dans `.github/actions/setup-android/action.yml` pour le faire disparaître. |
 | « Error cloning certificates repo » (match) | `MATCH_GIT_URL` fausse, ou `MATCH_GIT_TOKEN` expiré, sans accès **Contents** en écriture au dépôt des certificats, ou d'un autre compte que le propriétaire de `hey-torrent-native`. |

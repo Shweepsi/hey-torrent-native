@@ -245,6 +245,25 @@ facile.
 - Un épisode Plex ne porte que les identifiants de **l'épisode** : le Worker
   retrouve la série par TMDB (`/find`, identifiant TVDB ou IMDb).
 
+## Décidé le 2026-11-27 : distribution privée
+
+- **iPhone : App Store, distribution non répertoriée** ; **Android : Google
+  Play, test fermé** sur invitation, sans passage en production. Choix du
+  propriétaire. TestFlight interne sert seulement à vérifier un build.
+  Détail et étapes : `docs/PUBLICATION.md`.
+- L'APK admin n'est jamais envoyé sur Google Play.
+- Envoi automatique sur la piste « Test fermé » (`alpha`) par la CI, sur un
+  tag `v*` ou à la demande, avec un script Node sans dépendance (API Google
+  Play Developer v3) plutôt que fastlane : pas de Ruby sur la machine Linux.
+- Politique de confidentialité et page de suppression du compte servies par le
+  Worker (`/confidentialite`, `/suppression-du-compte`) : pas d'hébergement à
+  part. Lien dans les Réglages et mention TMDB sur les deux plateformes.
+- **Décidé par le propriétaire le 2026-11-27** : pour la revue, pas de serveur de démonstration
+  (§9.4) ; le relecteur reçoit un compte Google de démonstration accepté
+  d'avance (accès validé par l'administrateur, PR #16). L'app publique n'a
+  aucun écran qui touche aux serveurs de l'administrateur : un serveur de démo
+  ne montrerait rien de plus.
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

@@ -1,7 +1,7 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Réglages : prénom du compte, déconnexion, suppression du compte, version.
+/// Réglages : prénom du compte, déconnexion, suppression du compte, version, mentions.
 struct SettingsView: View {
     let model: AccountModel
     let state: AccountModel.SignedIn
@@ -39,6 +39,15 @@ struct SettingsView: View {
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
+                            if let privacyURL {
+                                Link(destination: privacyURL) {
+                                    Text("settings.privacy").frame(maxWidth: .infinity, minHeight: 34)
+                                }
+                                .buttonStyle(.glass)
+                            }
+                            Text("settings.tmdbNotice")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .padding(24)
@@ -51,6 +60,13 @@ struct SettingsView: View {
                     .presentationDetents([.medium])
             }
         }
+    }
+
+    /// Politique de confidentialité, adresse construite par le cœur ; absente
+    /// si l'adresse du serveur n'est pas réglée.
+    private var privacyURL: URL? {
+        let base = Bundle.main.object(forInfoDictionaryKey: "HeyWatchlistAPIURL") as? String ?? ""
+        return HeyWatchlist.privacyPolicyUrl(baseUrl: base).flatMap(URL.init(string:))
     }
 
     private var accountCard: some View {

@@ -18,6 +18,7 @@ import {
 import { revokeAppleAuthorization, type FetchLike } from "./apple";
 import type { Env } from "./env";
 import { ApiError, errorResponse, json, noContent, optionalString, readJson, requiredString } from "./http";
+import { ACCOUNT_DELETION_PATH, PRIVACY_PATH, accountDeletion, privacyPolicy } from "./legal";
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
 import { devicesOfUser, devicesOfUsers, pushTo } from "./availability";
 import { DEVICES_PATH, registerDevice, unregisterDevice } from "./devices";
@@ -152,6 +153,8 @@ type Handler = (request: Request, env: Env, deps: Deps) => Promise<Response> | R
 
 const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
   "/v1/health": { GET: () => json({ status: "ok" }) },
+  [PRIVACY_PATH]: { GET: (_request, env) => privacyPolicy(env) },
+  [ACCOUNT_DELETION_PATH]: { GET: (_request, env) => accountDeletion(env) },
   "/v1/config": { GET: (_request, env) => config(env) },
   "/v1/auth/sign-in": { POST: signIn },
   "/v1/auth/refresh": { POST: refresh },

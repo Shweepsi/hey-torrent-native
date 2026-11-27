@@ -1,8 +1,9 @@
 # Android : tests (buildSrc et édition publique), contrôle de la release publique
 # (R8), APK admin de debug en artefact, puis, sur main ou un tag et si les
 # secrets de signature existent, APK admin signé, APK public signé (installation
-# directe) et AAB public (Play Store). Linux seulement
-# (aucune minute macOS).
+# directe) et AAB public (Play Store). Sur un tag de version `v*`, ou à la main,
+# l'AAB part sur Google Play (test fermé) si la clé du compte de service existe.
+# Linux seulement (aucune minute macOS).
 name: CI Android
 
 on:
@@ -22,6 +23,7 @@ on:
       - .github/actions/setup-android/**
       - .github/actions/setup-rust/**
       - .github/scripts/check-secrets.sh
+      - .github/scripts/play-upload*.mjs
   push:
     branches: [main]
     tags: ["v*"]
@@ -39,10 +41,15 @@ on:
       - .github/actions/setup-android/**
       - .github/actions/setup-rust/**
       - .github/scripts/check-secrets.sh
+      - .github/scripts/play-upload*.mjs
   workflow_dispatch:
     inputs:
       release:
         description: Produire aussi les APK signés et l'AAB public (secrets de signature requis)
+        type: boolean
+        default: false
+      play:
+        description: Envoyer aussi l'AAB sur Google Play, test fermé (implique les versions signées ; version jamais envoyée)
         type: boolean
         default: false
 
@@ -81,6 +88,9 @@ jobs:
         working-directory: android
         run: ./gradlew -p buildSrc test --stacktrace
 
+      - name: Tests du script d'envoi Google Play
+        run: node --test .github/scripts/play-upload.test.mjs
+
       - name: Tests des deux éditions et APK admin de debug
         working-directory: android
         run: ./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug --stacktrace
@@ -117,7 +127,7 @@ jobs:
   release:
     name: APK signés et AAB public
     needs: build
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release)
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.release || inputs.play))
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -184,3 +194,27 @@ jobs:
           path: android/app/build/outputs/bundle/publicRelease/*.aab
           if-no-files-found: error
           retention-days: 30
+
+      # Google Play : seulement sur un tag de version ou avec la case « Envoyer
+      # sur Google Play ». Chaque envoi exige un numéro de version nouveau
+      # (versionCode tiré de Cargo.toml) : un tag par version.
+      - name: Vérifier la clé Google Play
+        id: play
+        if: steps.secrets.outputs.ready == 'true' && (startsWith(github.ref, 'refs/tags/v') || inputs.play)
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bash .github/scripts/check-secrets.sh PLAY_SERVICE_ACCOUNT_JSON
+
+      - name: Envoyer l'AAB sur Google Play
+        if: steps.play.outputs.ready == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          # Édition publique seulement : l'APK admin ne va jamais sur Google Play.
+          PLAY_PACKAGE_NAME: io.github.shweepsi.heywatchlist
+          # « alpha » est la piste « Test fermé » de la Play Console.
+          PLAY_TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
+          PLAY_CHANGELOG: CHANGELOG.md
+        run: |
+          set -euo pipefail
+          aab="$(find android/app/build/outputs/bundle/publicRelease -name '*.aab' | head -n 1)"
+          node .github/scripts/play-upload.mjs "$aab"
