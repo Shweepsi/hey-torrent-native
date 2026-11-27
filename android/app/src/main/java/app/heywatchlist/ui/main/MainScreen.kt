@@ -186,7 +186,7 @@ private fun WatchlistMessages(watchlist: WatchlistViewModel) {
 }
 
 @Composable
-private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
+internal fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
     GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(6.dp)) {
             Tab.entries.forEach { tab ->

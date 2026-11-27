@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,15 +34,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.heywatchlist.R
 import app.heywatchlist.appServices
 import app.heywatchlist.core.KeystoreSessionStore
-import app.heywatchlist.ui.components.AuroraBackground
+import app.heywatchlist.ui.components.AppBackdrop
 import app.heywatchlist.ui.components.GlassSurface
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyText
-import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.theme.HeyTheme
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import uniffi.heywatchlist_core.AdminRequest
 
 /** Espace admin, ouvert depuis Réglages : une activité à part, absente de l'app publique. */
@@ -61,7 +57,7 @@ class AdminActivity : ComponentActivity() {
 }
 
 /** Sections de l'espace admin. */
-private enum class AdminTab(@param:StringRes val labelRes: Int) {
+internal enum class AdminTab(@param:StringRes val labelRes: Int) {
     Requests(R.string.admin_tab_requests),
     Downloads(R.string.admin_tab_downloads),
     Servers(R.string.admin_tab_servers),
@@ -70,7 +66,6 @@ private enum class AdminTab(@param:StringRes val labelRes: Int) {
 
 @Composable
 private fun AdminRoot(gateway: AdminGateway, onClose: () -> Unit) {
-    val hazeState = rememberHazeState()
     var tab by rememberSaveable { mutableStateOf(AdminTab.Requests) }
     // La fiche ouverte garde la demande telle qu'à l'ouverture, même si elle sort de la liste
     // (refusée depuis « À traiter ») ; après une rotation, on la retrouve dans la liste.
@@ -82,47 +77,44 @@ private fun AdminRoot(gateway: AdminGateway, onClose: () -> Unit) {
         opened?.takeIf { it.id == id } ?: requestsState.requests.firstOrNull { it.id == id }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AuroraBackground(Modifier.fillMaxSize().hazeSource(hazeState))
-        CompositionLocalProvider(LocalHazeState provides hazeState) {
-            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    if (openRequest != null) {
-                        BackHandler { openRequestId = null }
-                        val detail: RequestViewModel = viewModel(
-                            key = "request-${openRequest.id}",
-                            factory = remember(gateway, openRequest.id) { RequestViewModel.factory(gateway, openRequest) },
+    AppBackdrop {
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (openRequest != null) {
+                    BackHandler { openRequestId = null }
+                    val detail: RequestViewModel = viewModel(
+                        key = "request-${openRequest.id}",
+                        factory = remember(gateway, openRequest.id) { RequestViewModel.factory(gateway, openRequest) },
+                    )
+                    RequestScreen(viewModel = detail, onBack = { openRequestId = null }, onChanged = requests::replace)
+                } else {
+                    when (tab) {
+                        AdminTab.Requests -> RequestsScreen(
+                            viewModel = requests,
+                            onOpen = {
+                                opened = it
+                                openRequestId = it.id
+                            },
                         )
-                        RequestScreen(viewModel = detail, onBack = { openRequestId = null }, onChanged = requests::replace)
-                    } else {
-                        when (tab) {
-                            AdminTab.Requests -> RequestsScreen(
-                                viewModel = requests,
-                                onOpen = {
-                                    opened = it
-                                    openRequestId = it.id
-                                },
-                            )
-                            AdminTab.Downloads -> DownloadsScreen(
-                                viewModel = viewModel(factory = remember(gateway) { DownloadsViewModel.factory(gateway) }),
-                            )
-                            AdminTab.Servers -> ServersScreen(
-                                viewModel = viewModel(factory = remember(gateway) { ServersViewModel.factory(gateway) }),
-                            )
-                            AdminTab.Access -> AccessScreen(
-                                viewModel = viewModel(factory = remember(gateway) { AccessViewModel.factory(gateway) }),
-                            )
-                        }
+                        AdminTab.Downloads -> DownloadsScreen(
+                            viewModel = viewModel(factory = remember(gateway) { DownloadsViewModel.factory(gateway) }),
+                        )
+                        AdminTab.Servers -> ServersScreen(
+                            viewModel = viewModel(factory = remember(gateway) { ServersViewModel.factory(gateway) }),
+                        )
+                        AdminTab.Access -> AccessScreen(
+                            viewModel = viewModel(factory = remember(gateway) { AccessViewModel.factory(gateway) }),
+                        )
                     }
                 }
-                if (openRequest == null) TabBar(selected = tab, onSelect = { tab = it }, onClose = onClose)
             }
+            if (openRequest == null) AdminTabBar(selected = tab, onSelect = { tab = it }, onClose = onClose)
         }
     }
 }
 
 @Composable
-private fun TabBar(selected: AdminTab, onSelect: (AdminTab) -> Unit, onClose: () -> Unit) {
+internal fun AdminTabBar(selected: AdminTab, onSelect: (AdminTab) -> Unit, onClose: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

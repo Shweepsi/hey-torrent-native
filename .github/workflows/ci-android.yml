@@ -124,6 +124,45 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Captures des écrans (données et images inventées), rendues sur la JVM par
+  # Robolectric : de quoi juger l'interface sans installer l'app. Artefact
+  # `captures-android`, des PNG.
+  captures:
+    name: Captures d'écran
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-android
+
+      - name: Rendre les captures
+        working-directory: android
+        run: ./gradlew testPublicDebugUnitTest testAdminDebugUnitTest -Pscreenshots --stacktrace
+
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: captures-android
+          path: android/app/build/captures/*.png
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publier les rapports de tests (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: captures-rapports
+          path: |
+            android/app/build/reports/tests
+            android/app/build/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
   release:
     name: APK signés et AAB public
     needs: build

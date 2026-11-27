@@ -108,6 +108,28 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Robolectric (captures d'écran) lit les ressources de l'app.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+// Captures d'écran (paquet `app.heywatchlist.screenshots`) : seulement avec
+// `-Pscreenshots`, et alors seules elles tournent. Les PNG vont dans
+// app/build/captures/ (job « Captures d'écran » de la CI Android).
+val screenshots = providers.gradleProperty("screenshots").isPresent
+tasks.withType<Test>().configureEach {
+    if (screenshots) {
+        filter.includeTestsMatching("app.heywatchlist.screenshots.*")
+        systemProperty("heywatchlist.captures.dir", layout.buildDirectory.dir("captures").get().asFile.absolutePath)
+        // Rendu matériel : les flous (RenderEffect) et les ombres apparaissent.
+        systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+        filter.isFailOnNoMatchingTests = false
+        maxHeapSize = "3g"
+    } else {
+        exclude("app/heywatchlist/screenshots/**")
+    }
 }
 
 kotlin {
@@ -135,6 +157,11 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }
 
 // Cœur Rust : scripts/build-android-core.sh est lancé par Gradle, une tâche
