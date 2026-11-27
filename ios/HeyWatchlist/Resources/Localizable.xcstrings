@@ -1021,6 +1021,18 @@
         }
       }
     },
+    "settings.privacy" : {
+      "comment" : "Lien vers la politique de confidentialité, dans les Réglages.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Politique de confidentialité"
+          }
+        }
+      }
+    },
     "settings.push.body" : {
       "comment" : "Réglages, notifications permises.",
       "extractionState" : "manual",
@@ -1161,6 +1173,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Se déconnecter"
+          }
+        }
+      }
+    },
+    "settings.tmdbNotice" : {
+      "comment" : "Mention exigée par TMDB, en bas des Réglages.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Données des films et séries : TMDB. Cette app utilise l’API de TMDB sans être approuvée ni certifiée par TMDB."
           }
         }
       }

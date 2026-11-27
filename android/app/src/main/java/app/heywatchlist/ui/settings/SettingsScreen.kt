@@ -1,5 +1,9 @@
 package app.heywatchlist.ui.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -16,6 +22,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import app.heywatchlist.BuildConfig
 import app.heywatchlist.EditionContent
 import app.heywatchlist.R
 import app.heywatchlist.ui.account.AccountUiState
@@ -25,12 +32,16 @@ import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.theme.HeyTheme
+import uniffi.heywatchlist_core.privacyPolicyUrl
 
-/** Réglages : prénom du compte, déconnexion, suppression du compte, version. */
+/** Réglages : prénom du compte, déconnexion, suppression du compte, version, mentions. */
 @Composable
 fun SettingsScreen(state: AccountUiState.SignedIn, viewModel: AccountViewModel) {
+    // Adresse construite par le cœur ; absente si le serveur n'est pas réglé.
+    val privacyUrl = remember { privacyPolicyUrl(BuildConfig.API_BASE_URL) }
     SettingsContent(
         state = state,
+        privacyUrl = privacyUrl,
         onSignOut = viewModel::signOut,
         onDelete = viewModel::requestDeletion,
         onConfirmDelete = viewModel::confirmDeletion,
@@ -45,6 +56,7 @@ fun SettingsScreen(state: AccountUiState.SignedIn, viewModel: AccountViewModel) 
 @Composable
 internal fun SettingsContent(
     state: AccountUiState.SignedIn,
+    privacyUrl: String?,
     onSignOut: () -> Unit,
     onDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
@@ -104,10 +116,35 @@ internal fun SettingsContent(
                 color = HeyTheme.colors.onBackgroundMuted,
             )
         }
+        privacyUrl?.let { url -> PrivacyButton(url) }
+        HeyText(
+            text = stringResource(R.string.settings_tmdb_notice),
+            style = HeyTheme.typography.caption,
+            color = HeyTheme.colors.onBackgroundMuted,
+        )
     }
     if (state.confirmingDeletion) {
         DeleteDialog(busy = state.busy, onConfirm = onConfirmDelete, onCancel = onCancelDelete)
     }
+}
+
+/** Ouvre la politique de confidentialité dans le navigateur du système. */
+@Composable
+private fun PrivacyButton(url: String) {
+    val context = LocalContext.current
+    val unavailable = stringResource(R.string.settings_privacy_unavailable)
+    HeyButton(
+        text = stringResource(R.string.settings_privacy),
+        onClick = {
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(context, unavailable, Toast.LENGTH_SHORT).show()
+            }
+        },
+        kind = HeyButtonKind.Secondary,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
