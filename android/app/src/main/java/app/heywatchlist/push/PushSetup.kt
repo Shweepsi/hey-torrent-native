@@ -53,8 +53,8 @@ object PushSetup {
             FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 continuation.resume(if (task.isSuccessful) task.result else null)
             }
-        } catch (_: IllegalStateException) {
-            // Firebase non initialisé.
+        } catch (_: Exception) {
+            // Firebase non initialisé ou mal réglé : pas de notifications, sans planter.
             continuation.resume(null)
         }
     }

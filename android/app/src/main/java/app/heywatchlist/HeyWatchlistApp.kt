@@ -10,6 +10,7 @@ import app.heywatchlist.core.UniffiAccountGateway
 import app.heywatchlist.core.UniffiCatalogGateway
 import app.heywatchlist.core.UniffiWatchlistGateway
 import app.heywatchlist.core.WatchlistGateway
+import app.heywatchlist.diagnostics.CrashReport
 import app.heywatchlist.push.PushSetup
 import java.io.File
 import kotlinx.coroutines.channels.BufferOverflow
@@ -22,6 +23,7 @@ class HeyWatchlistApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashReport.install(this)
         PushSetup.initialize(this)
     }
 }
