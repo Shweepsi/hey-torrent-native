@@ -171,7 +171,9 @@ jobs:
             name="$(basename "$f" .png)"
             convert "$f" -resize 50% -quality 82 "$RUNNER_TEMP/$name.jpg"
             echo "=== capture $name ==="
-            base64 "$RUNNER_TEMP/$name.jpg"
+            # Une ligne par capture : le journal reste court en nombre de lignes.
+            base64 -w 0 "$RUNNER_TEMP/$name.jpg"
+            echo
             echo "=== fin ==="
           done
 
