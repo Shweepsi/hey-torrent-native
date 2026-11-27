@@ -245,6 +245,22 @@ facile.
 - Un épisode Plex ne porte que les identifiants de **l'épisode** : le Worker
   retrouve la série par TMDB (`/find`, identifiant TVDB ou IMDb).
 
+## Choisi le 2026-11-27 : rapports de plantage
+
+- **Firebase Crashlytics** dans les deux APK Android (demande du
+  propriétaire) : les plantages remontent seuls dans la console Firebase
+  (projet de `google-services.json`), piles lisibles grâce à la table R8
+  envoyée par la CI. Pas sur iOS pour l'instant (pas de SDK Firebase).
+- Le plugin Crashlytics exige le plugin Google Services pour envoyer la table
+  R8 : il est désormais appliqué quand les réglages Firebase existent (le
+  secret de la CI est écrit en `app/google-services.json`, ignoré par git).
+  Cela remplace « sans le plugin Google Services » du jalon 6 ; l'app garde
+  son initialisation manuelle, sans effet quand Firebase s'est déjà initialisé.
+- En secours, l'app garde le rapport du dernier plantage et l'affiche au
+  lancement suivant, à copier (rien n'est envoyé par ce rapport-là).
+- À déclarer dans la politique de confidentialité et « Data safety »
+  (diagnostics : plantages, modèle d'appareil, version).
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

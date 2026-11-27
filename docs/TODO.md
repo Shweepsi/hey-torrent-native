@@ -144,6 +144,8 @@ iPhone ne se compilent que sur la CI. Rien n'a encore été reçu sur un télép
 
 - [ ] Politique de confidentialité, conditions, écran « À propos » avec
       l'attribution TMDB.
+- [ ] Déclarer Firebase Crashlytics (diagnostics de plantage, Android) dans la
+      politique de confidentialité et « Data safety ».
 - [ ] Serveur de démonstration (contenu libre uniquement) et compte de démo.
 - [ ] Bêta TestFlight avec les proches, test interne Play Store.
 - [ ] Fiches store, captures, questionnaires de confidentialité (« App
