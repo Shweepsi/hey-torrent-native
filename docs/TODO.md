@@ -142,15 +142,23 @@ iPhone ne se compilent que sur la CI. Rien n'a encore été reçu sur un télép
 
 ## Jalon 7 : préparation des stores
 
-- [ ] Politique de confidentialité, conditions, écran « À propos » avec
-      l'attribution TMDB.
-- [ ] Déclarer Firebase Crashlytics (diagnostics de plantage, Android) dans la
-      politique de confidentialité et « Data safety ».
-- [ ] Serveur de démonstration (contenu libre uniquement) et compte de démo.
-- [ ] Bêta TestFlight avec les proches, test interne Play Store.
-- [ ] Fiches store, captures, questionnaires de confidentialité (« App
-      Privacy », « Data safety »), envoi en revue.
-- [ ] Réserver le nom HeyWatchlist sur App Store Connect et la Play Console.
+Choix du 2026-11-27 : App Store non répertorié et test fermé Google Play.
+Étapes du propriétaire : `docs/PUBLICATION.md`.
+
+- [x] Politique de confidentialité et page de suppression du compte (Worker),
+      lien dans les Réglages, mention TMDB (v0.7.0).
+- [x] Envoi automatique de l'AAB sur le test fermé Google Play (tag `v*`).
+- [x] Textes des fiches, réponses « App Privacy » et « Data safety », notes de
+      revue : `docs/PUBLICATION.md`, Firebase Crashlytics (Android) déclaré.
+- [ ] `PRIVACY_CONTACT` sur le Worker (hey-kit), puis relire les deux pages.
+- [ ] Clés Sign in with Apple et APNs, essai complet sur TestFlight interne.
+- [ ] Captures iPhone 6,9 ou 6,5 pouces, fiche App Store, envoi en revue,
+      demande de distribution non répertoriée.
+- [ ] Compte Google Play, fiche, déclarations, premier AAB à la main,
+      empreinte de la clé de signature Google déclarée (OAuth et Firebase).
+- [ ] Compte de service Google Play (`PLAY_SERVICE_ACCOUNT_JSON`, hey-kit).
+- [ ] Compte Google de démonstration accepté d'avance (`docs/PUBLICATION.md`,
+      « Notes de revue »).
 
 ## Points à trancher (par défaut, à confirmer)
 

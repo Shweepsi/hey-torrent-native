@@ -63,6 +63,8 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | Méthode et chemin | Accès | Rôle |
 |---|---|---|
 | `GET /v1/health` | libre | `{"status":"ok"}` |
+| `GET /confidentialite` | libre | Politique de confidentialité (HTML), liée depuis les Réglages et les fiches des stores |
+| `GET /suppression-du-compte` | libre | Comment supprimer son compte (HTML), demandé par Google Play |
 | `GET /v1/config` | libre | Identifiants publics des clients Google (`google_web_client_id`, `google_ios_client_id`, ou `null`) |
 | `POST /v1/auth/sign-in` | libre | `{provider, id_token, nonce, given_name?}` → jetons et profil (nouveau compte : `status: "pending"`) |
 | `POST /v1/auth/bootstrap` | jeton d'accès, tout état | `{code}` : premier administrateur, tant qu'il n'y en a aucun → `{user}` ; sinon `403 forbidden` |
@@ -209,6 +211,7 @@ le dépôt.
 | `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` | avant la publication | Clé « Sign in with Apple » : révocation à la suppression d'un compte |
 | `FCM_SERVICE_ACCOUNT` | pour les push Android | Compte de service Google (JSON) limité à FCM ; déjà posé |
 | `APNS_KEY_ID`, `APNS_PRIVATE_KEY` (et `APPLE_TEAM_ID`) | pour les push iPhone | Clé « Apple Push Notifications service » (`.p8`) |
+| `PRIVACY_CONTACT` | avant la publication | Contact du responsable des données (e-mail ou texte), affiché par `/confidentialite` et `/suppression-du-compte` ; posé par hey-kit. Sans lui, les pages renvoient vers « l’administrateur du serveur ». |
 
 `APPLE_CLIENT_ID` (l'identifiant de l'app iPhone) est une variable publique de
 `wrangler.toml`.

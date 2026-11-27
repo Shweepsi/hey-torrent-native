@@ -33,4 +33,10 @@ export interface Env {
   /** Clé APNs (fichier `.p8`, PEM) et son identifiant : push iPhone. Secrets. */
   APNS_KEY_ID?: string;
   APNS_PRIVATE_KEY?: string;
+  /**
+   * Contact du responsable des données (adresse e-mail ou texte), affiché sur
+   * les pages publiques `/confidentialite` et `/suppression-du-compte`.
+   * Facultatif ; pas un secret, mais gardé hors du dépôt.
+   */
+  PRIVACY_CONTACT?: string;
 }
