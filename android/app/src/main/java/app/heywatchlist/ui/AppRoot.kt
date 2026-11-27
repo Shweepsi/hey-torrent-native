@@ -9,6 +9,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,6 +20,8 @@ import app.heywatchlist.appServices
 import app.heywatchlist.core.Access
 import app.heywatchlist.core.CatalogGateway
 import app.heywatchlist.core.WatchlistGateway
+import app.heywatchlist.diagnostics.CrashReport
+import app.heywatchlist.diagnostics.CrashReportPanel
 import app.heywatchlist.push.PushRegistrationEffect
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
@@ -24,6 +30,8 @@ import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.main.MainScreen
 import app.heywatchlist.ui.welcome.WaitingScreen
 import app.heywatchlist.ui.welcome.WelcomeScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Racine de l'interface : accueil tant qu'on n'est pas connecté, écran
@@ -37,24 +45,38 @@ fun AppRoot(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val animations = rememberAnimationsEnabled()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // Lu tout de suite (petit fichier) : l'app reste en pause tant que le rapport
+    // est affiché, sinon un plantage immédiat empêcherait de le copier.
+    var crashReport by remember { mutableStateOf(runCatching { CrashReport.pending(context) }.getOrNull()) }
     // L'appareil s'enregistre aussi pendant l'attente : la personne est
     // prévenue quand son accès est accepté. Hors du fondu : une seule fois.
     if (state is AccountUiState.SignedIn) PushRegistrationEffect()
     AppBackdrop {
-        // Fondu entre l'accueil, l'attente et les onglets ; pas entre deux états d'un même écran.
-        AnimatedContent(
-            targetState = state,
-            contentKey = { it.screen },
-            transitionSpec = {
-                if (animations) {
-                    fadeIn(tween(durationMillis = 320)) togetherWith fadeOut(tween(durationMillis = 200))
-                } else {
-                    EnterTransition.None togetherWith ExitTransition.None
-                }
-            },
-            label = "root",
-        ) { current ->
-            RootScreen(current, viewModel, catalog, watchlist)
+        val report = crashReport
+        if (report != null) {
+            // Après un plantage : le rapport passe devant tout, pour être copié.
+            CrashReportPanel(report = report, onDismiss = {
+                crashReport = null
+                scope.launch(Dispatchers.IO) { runCatching { CrashReport.dismiss(context) } }
+            })
+        } else {
+            // Fondu entre l'accueil, l'attente et les onglets ; pas entre deux états d'un même écran.
+            AnimatedContent(
+                targetState = state,
+                contentKey = { it.screen },
+                transitionSpec = {
+                    if (animations) {
+                        fadeIn(tween(durationMillis = 320)) togetherWith fadeOut(tween(durationMillis = 200))
+                    } else {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    }
+                },
+                label = "root",
+            ) { current ->
+                RootScreen(current, viewModel, catalog, watchlist)
+            }
         }
     }
 }

@@ -26,6 +26,10 @@ coil = "3.3.0"
 # Push « Disponible sur Plex » (FCM), sans le plugin Google Services ni la
 # BoM : l'app initialise Firebase elle-même (app/build.gradle.kts).
 firebase-messaging = "26.0.2"
+# Même nomenclature Firebase (BoM 35.2.0) que firebase-messaging.
+firebase-crashlytics = "21.1.0"
+firebase-crashlytics-plugin = "3.0.8"
+google-services = "4.6.0"
 junit = "4.13.2"
 # Captures d'écran rendues sur la JVM (Robolectric, graphismes natifs) par la
 # CI, pour juger l'interface sans installer l'app. Tests seulement.
@@ -45,6 +49,7 @@ androidx-credentials = { module = "androidx.credentials:credentials", version.re
 androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebase-messaging" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics", version.ref = "firebase-crashlytics" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 # Dépendance requise par le code UniFFI Kotlin. Elle est utilisée sous sa forme
 # `aar` (qui embarque libjnidispatch.so) : voir app/build.gradle.kts.
@@ -63,3 +68,5 @@ compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", ve
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }

@@ -16,7 +16,7 @@ import uniffi.heywatchlist_core.SessionStore
 import uniffi.heywatchlist_core.SignInRequest
 import uniffi.heywatchlist_core.UserProfile
 import uniffi.heywatchlist_core.UserRole
-import uniffi.heywatchlist_core.coreVersion
+import uniffi.heywatchlist_core.coreVersion as nativeCoreVersion
 import uniffi.heywatchlist_core.newSignInNonce
 
 /** Appelle le cœur par les liaisons UniFFI, sur un thread d'arrière-plan. */
@@ -37,7 +37,8 @@ class UniffiAccountGateway(
         }.also { account = it }
     }
 
-    override suspend fun coreVersion(): String = call { coreVersion() }
+    // Nom distinct : `coreVersion()` désignerait cette méthode (récursion sans fin).
+    override suspend fun coreVersion(): String = call { nativeCoreVersion() }
 
     override suspend fun currentUser(): Profile? {
         val current = account()

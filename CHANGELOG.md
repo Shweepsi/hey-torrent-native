@@ -96,6 +96,36 @@ iPhone, test fermé Google Play sur Android (`docs/PUBLICATION.md`).
   (`.github/scripts/play-upload.mjs`) et ses tests.
 - `docs/PUBLICATION.md` : étapes de publication, textes des fiches, réponses
   « Confidentialité de l'app » et « Sécurité des données », notes de revue.
+## [0.6.1] - 2026-11-27
+
+### Corrigé
+
+- Android : « Se connecter avec Google » ne reste plus muet après le choix du
+  compte. Le refus des services Google (code 16, app non déclarée chez Google)
+  affiche « La connexion avec Google n’est pas disponible pour le moment », et
+  une fenêtre fermée affiche « Connexion annulée ».
+- Android : l'app ne plante plus juste après la connexion. La lecture de la
+  version du cœur, pour les Réglages, s'appelait elle-même sans fin
+  (`StackOverflowError`).
+
+### Ajouté
+
+- CI Android : les empreintes SHA-1 et SHA-256 du certificat de signature des
+  APK admin et public s'affichent dans le résumé du job de release, pour les
+  déclarer dans la console Google.
+- Android : après un plantage, l'app affiche au lancement suivant le rapport
+  (pile de l'exception, ou raison d'arrêt donnée par Android pour un plantage
+  natif ou une app figée), à copier. L'app reste en pause tant qu'il est
+  affiché. Rien n'est envoyé.
+- Android : Firebase Crashlytics (BoM 35.2.0 : `firebase-crashlytics` 21.1.0,
+  plugin 3.0.8) dans les deux APK. Les plantages remontent dans la console
+  Firebase ; la CI envoie la table R8 pour des piles lisibles. Le plugin
+  Google Services (4.6.0) est appliqué quand les réglages Firebase existent.
+
+### Modifié
+
+- Android : une erreur de Firebase en demandant le jeton des notifications ne
+  fait plus planter l'app ; les notifications sont simplement coupées.
 
 ## [0.6.0] - 2026-11-26
 

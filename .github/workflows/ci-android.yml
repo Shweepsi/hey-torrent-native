@@ -232,6 +232,27 @@ jobs:
         if: always() && steps.secrets.outputs.ready == 'true'
         run: rm -f "$RUNNER_TEMP/heywatchlist-release.jks"
 
+      # Empreintes du certificat de signature, à déclarer dans la console Google
+      # (client OAuth Android, un par nom de paquet) pour « Se connecter avec
+      # Google ». Information publique : elle figure dans chaque APK.
+      - name: Afficher les empreintes de signature
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: android/app/build/outputs/apk
+        run: |
+          set -euo pipefail
+          apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          {
+            echo "### Empreintes de signature (console Google, client OAuth Android)"
+            for flavor in admin public; do
+              apk="$(find "$flavor/release" -name '*.apk' | head -n 1)"
+              echo
+              echo "**$flavor** \`$apk\`"
+              echo '```'
+              "$apksigner" verify --print-certs "$apk" | grep -E 'SHA-(1|256) digest'
+              echo '```'
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Publier l'APK admin signé
         if: steps.secrets.outputs.ready == 'true'
         uses: actions/upload-artifact@v7

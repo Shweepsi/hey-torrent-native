@@ -1,10 +1,12 @@
 import com.android.build.api.variant.BuildConfigField
+import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 // Le dépôt est un niveau au-dessus du projet Gradle (android/).
@@ -37,6 +39,15 @@ val apiBaseUrl = envOrNull("HEYWATCHLIST_API_URL")?.trim().orEmpty().also { url 
 // compile et fonctionne, sans notifications.
 val googleServicesJson: String? = envOrNull("GOOGLE_SERVICES_JSON")?.let(FirebaseConfig::decode)
     ?: layout.projectDirectory.file("google-services.json").asFile.takeIf { it.isFile }?.readText()
+
+// Avec ces réglages, le plugin Google Services en tire les ressources Firebase
+// (`google_app_id`…) : le plugin Crashlytics en a besoin pour envoyer la table
+// R8. Le secret de la CI devient le fichier attendu (ignoré par git).
+if (googleServicesJson != null) {
+    val file = layout.projectDirectory.file("google-services.json").asFile
+    if (!file.isFile || file.readText() != googleServicesJson) file.writeText(googleServicesJson)
+    apply(plugin = "com.google.gms.google-services")
+}
 
 android {
     // Paquet du code Kotlin et de la classe R : distinct de l'identifiant publié.
@@ -96,6 +107,11 @@ android {
                 "proguard-rules.pro",
             )
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // Table R8 envoyée à Crashlytics : piles lisibles dans la console.
+            // Seulement avec les réglages Firebase (CI), sinon rien à qui l'envoyer.
+            configure<CrashlyticsExtension> {
+                mappingFileUploadEnabled = googleServicesJson != null
+            }
         }
     }
 
@@ -149,6 +165,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.coil.network.okhttp)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
