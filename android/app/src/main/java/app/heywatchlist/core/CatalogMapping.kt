@@ -160,7 +160,6 @@ internal fun AccountFailure.toCatalogFailure(): CatalogFailure = when (this) {
     AccountFailure.SignedOut -> CatalogFailure.SignedOut
     AccountFailure.ProviderUnavailable -> CatalogFailure.Unavailable
     AccountFailure.InvalidIdentity,
-    AccountFailure.InvitationInvalid,
     AccountFailure.Cancelled,
     AccountFailure.Unknown,
     -> CatalogFailure.Unknown

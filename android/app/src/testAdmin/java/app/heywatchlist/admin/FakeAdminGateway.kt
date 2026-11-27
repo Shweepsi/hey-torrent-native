@@ -4,7 +4,8 @@ import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AudioLanguage
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.DownloadState
-import uniffi.heywatchlist_core.InvitationInfo
+import uniffi.heywatchlist_core.AllowedEmail
+import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.MediaType
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.Release
@@ -103,12 +104,29 @@ class FakeAdminGateway : AdminGateway {
         calls += "delete:$hash:$deleteFiles"
     }
 
-    override suspend fun createInvitation(): Pair<String, Long> = "ABCD-EFGH" to 1_800_000_000L
+    var membersResult: List<Member> = emptyList()
 
-    override suspend fun invitations(): List<InvitationInfo> = emptyList()
+    override suspend fun members(): List<Member> {
+        calls += "members"
+        return membersResult
+    }
 
-    override suspend fun revokeInvitation(id: String) {
-        calls += "revoke:$id"
+    override suspend fun decide(memberId: String, granted: Boolean) {
+        calls += "decide:$memberId:$granted"
+    }
+
+    override suspend fun allowedEmails(): List<AllowedEmail> {
+        calls += "emails"
+        return emptyList()
+    }
+
+    override suspend fun allowEmail(email: String): Int {
+        calls += "allow:$email"
+        return 1
+    }
+
+    override suspend fun removeAllowedEmail(email: String) {
+        calls += "remove:$email"
     }
 }
 

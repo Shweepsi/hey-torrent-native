@@ -6,7 +6,7 @@
 use std::sync::{Arc, Mutex};
 
 use heywatchlist_core::{
-    Account, AccountError, IdentityProvider, SessionStore, SignInRequest, UserRole,
+    AccessStatus, Account, AccountError, IdentityProvider, SessionStore, SignInRequest, UserRole,
 };
 use serde_json::json;
 use wiremock::matchers::{body_partial_json, header, method, path};
@@ -61,12 +61,11 @@ fn session_body(access: &str, refresh: &str, expires_in: u64) -> serde_json::Val
     })
 }
 
-fn request(code: Option<&str>) -> SignInRequest {
+fn request() -> SignInRequest {
     SignInRequest {
         provider: IdentityProvider::Apple,
         id_token: "jeton-apple".into(),
         nonce: "nonce-brut".into(),
-        invitation_code: code.map(Into::into),
         given_name: Some("Camille".into()),
     }
 }
@@ -83,7 +82,7 @@ async fn signed_in(server: &MockServer, store: Arc<MemoryStore>, expires_in: u64
         .mount(server)
         .await;
     let account = Account::new(server.uri(), store).unwrap();
-    account.sign_in(request(None)).await.unwrap();
+    account.sign_in(request()).await.unwrap();
     account
 }
 
@@ -110,7 +109,7 @@ async fn sign_in_sends_the_token_and_keeps_the_session() {
     let account = Account::new(server.uri(), store.clone()).unwrap();
     assert_eq!(account.current_user().await, None);
 
-    let profile = account.sign_in(request(None)).await.unwrap();
+    let profile = account.sign_in(request()).await.unwrap();
     assert_eq!(profile.display_name.as_deref(), Some("Camille"));
     assert_eq!(profile.role, UserRole::Member);
     assert!(profile.has_apple);
@@ -127,42 +126,42 @@ async fn sign_in_sends_the_token_and_keeps_the_session() {
 }
 
 #[tokio::test]
-async fn sign_in_reports_a_missing_or_invalid_invitation() {
+async fn a_new_account_waits_for_approval_then_gets_access() {
     let server = MockServer::start().await;
+    let mut pending = session_body("acces-1", "refresh-1", 900);
+    pending["user"]["status"] = json!("pending");
     Mock::given(method("POST"))
         .and(path("/v1/auth/sign-in"))
-        .and(body_partial_json(
-            json!({ "invitation_code": "AAAA-BBBB-CCCC" }),
-        ))
-        .respond_with(
-            ResponseTemplate::new(403).set_body_json(json!({ "error": "invitation_invalid" })),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(pending))
         .mount(&server)
         .await;
-    Mock::given(method("POST"))
-        .and(path("/v1/auth/sign-in"))
-        .respond_with(
-            ResponseTemplate::new(403).set_body_json(json!({ "error": "invitation_required" })),
-        )
+    let mut active = user(Some("Camille"));
+    active["status"] = json!("active");
+    Mock::given(method("GET"))
+        .and(path("/v1/me"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "user": active })))
         .mount(&server)
         .await;
     let store = Arc::new(MemoryStore::default());
     let account = Account::new(server.uri(), store.clone()).unwrap();
 
-    assert!(matches!(
-        account.sign_in(request(None)).await,
-        Err(AccountError::InvitationRequired)
-    ));
-    // Un code vide n'est pas envoyé.
-    assert!(matches!(
-        account.sign_in(request(Some("  "))).await,
-        Err(AccountError::InvitationRequired)
-    ));
-    assert!(matches!(
-        account.sign_in(request(Some("AAAA-BBBB-CCCC"))).await,
-        Err(AccountError::InvitationInvalid)
-    ));
-    assert_eq!(store.value(), None);
+    let profile = account.sign_in(request()).await.unwrap();
+    assert_eq!(profile.access, AccessStatus::Pending);
+    // L'attente survit à un redémarrage de l'app.
+    let relaunched = Account::new(server.uri(), store).unwrap();
+    assert_eq!(
+        relaunched.current_user().await.map(|p| p.access),
+        Some(AccessStatus::Pending)
+    );
+    // L'administrateur a accepté : le profil relu le dit, et le garde.
+    assert_eq!(
+        account.refresh_profile().await.unwrap().access,
+        AccessStatus::Active
+    );
+    assert_eq!(
+        account.current_user().await.map(|p| p.access),
+        Some(AccessStatus::Active)
+    );
 }
 
 #[tokio::test]
@@ -191,26 +190,26 @@ async fn sign_in_maps_server_and_transport_failures() {
         .await;
     let account = Account::new(server.uri(), Arc::new(MemoryStore::default())).unwrap();
     assert!(matches!(
-        account.sign_in(request(None)).await,
+        account.sign_in(request()).await,
         Err(AccountError::InvalidIdentity)
     ));
     assert!(matches!(
-        account.sign_in(request(None)).await,
+        account.sign_in(request()).await,
         Err(AccountError::ProviderUnavailable)
     ));
     assert!(matches!(
-        account.sign_in(request(None)).await,
+        account.sign_in(request()).await,
         Err(AccountError::Server)
     ));
     assert!(matches!(
-        account.sign_in(request(None)).await,
+        account.sign_in(request()).await,
         Err(AccountError::Unexpected)
     ));
 
     // Serveur injoignable : erreur réseau, pas de plantage.
     let offline = Account::new(unreachable_uri(), Arc::new(MemoryStore::default())).unwrap();
     assert!(matches!(
-        offline.sign_in(request(None)).await,
+        offline.sign_in(request()).await,
         Err(AccountError::Network)
     ));
 }
@@ -462,34 +461,32 @@ fn nonces_are_random_and_hashed_for_apple() {
 
 #[cfg(feature = "admin")]
 #[tokio::test]
-async fn admin_creates_an_invitation() {
+async fn the_bootstrap_code_makes_the_first_admin() {
     let server = MockServer::start().await;
     let account = signed_in(&server, Arc::new(MemoryStore::default()), 900).await;
     Mock::given(method("POST"))
-        .and(path("/v1/invitations"))
+        .and(path("/v1/auth/bootstrap"))
         .and(header("authorization", "Bearer acces-1"))
-        .respond_with(ResponseTemplate::new(201).set_body_json(json!({
-            "code": "ABCD-EFGH-JKMN", "expires_at": 1_800_000_000
-        })))
+        .and(body_partial_json(json!({ "code": "ABCD-EFGH-JKMN" })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "user": {
+            "id": "u-1", "role": "admin", "display_name": "Loïc", "status": "active", "providers": ["apple"]
+        }})))
         .mount(&server)
         .await;
-    let invitation = account.create_invitation().await.unwrap();
-    assert_eq!(invitation.code, "ABCD-EFGH-JKMN");
-    assert_eq!(invitation.expires_at, 1_800_000_000);
-}
-
-#[cfg(feature = "admin")]
-#[tokio::test]
-async fn a_member_cannot_create_an_invitation() {
-    let server = MockServer::start().await;
-    let account = signed_in(&server, Arc::new(MemoryStore::default()), 900).await;
     Mock::given(method("POST"))
-        .and(path("/v1/invitations"))
+        .and(path("/v1/auth/bootstrap"))
         .respond_with(ResponseTemplate::new(403).set_body_json(json!({ "error": "forbidden" })))
         .mount(&server)
         .await;
     assert!(matches!(
-        account.create_invitation().await,
+        account.claim_admin("FAUX".into()).await,
         Err(AccountError::Forbidden)
     ));
+    let profile = account
+        .claim_admin(" ABCD-EFGH-JKMN ".into())
+        .await
+        .unwrap();
+    assert_eq!(profile.role, UserRole::Admin);
+    assert_eq!(profile.access, AccessStatus::Active);
+    assert_eq!(account.current_user().await, Some(profile));
 }

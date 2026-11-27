@@ -2,12 +2,13 @@
  * Appareils qui reçoivent les push : `PUT /v1/devices` enregistre le jeton de
  * l'appareil pour la session en cours, `DELETE /v1/devices` l'oublie. Un jeton
  * déjà connu passe au compte qui l'enregistre (téléphone prêté, changement de
- * compte). Le jeton n'est jamais journalisé ni renvoyé.
+ * compte). Permis à un compte en attente : il est ainsi prévenu quand son
+ * accès est accepté. Le jeton n'est jamais journalisé ni renvoyé.
  */
 import type { Env } from "./env";
 import { ApiError, noContent, readJson, requiredString } from "./http";
 import type { Platform } from "./push";
-import { authenticate } from "./sessions";
+import { authenticateSession } from "./sessions";
 
 export const DEVICES_PATH = "/v1/devices";
 
@@ -29,7 +30,7 @@ function pushToken(body: Record<string, unknown>, which: Platform): string {
 }
 
 export async function registerDevice(request: Request, env: Env, now: number): Promise<Response> {
-  const claims = await authenticate(request, env, now);
+  const claims = await authenticateSession(request, env, now);
   const body = await readJson(request);
   const which = platform(body);
   const token = pushToken(body, which);
@@ -50,7 +51,7 @@ export async function registerDevice(request: Request, env: Env, now: number): P
 }
 
 export async function unregisterDevice(request: Request, env: Env, now: number): Promise<Response> {
-  const claims = await authenticate(request, env, now);
+  const claims = await authenticateSession(request, env, now);
   await env.DB.prepare("DELETE FROM devices WHERE session_id = ?").bind(claims.sessionId).run();
   return noContent();
 }

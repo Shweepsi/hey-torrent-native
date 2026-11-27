@@ -2,6 +2,7 @@ package app.heywatchlist
 
 import androidx.compose.runtime.Composable
 import app.heywatchlist.core.AccountGateway
+import app.heywatchlist.core.Profile
 
 /**
  * Points d'extension propres à l'édition. L'édition publique n'ajoute rien :
@@ -12,4 +13,9 @@ object EditionContent {
     @Composable
     @Suppress("UNUSED_PARAMETER")
     fun SettingsExtras(gateway: AccountGateway, isAdmin: Boolean) = Unit
+
+    /** Sur l'écran d'attente de validation. */
+    @Composable
+    @Suppress("UNUSED_PARAMETER")
+    fun WaitingExtras(gateway: AccountGateway, onProfileChanged: (Profile) -> Unit) = Unit
 }

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminRequest } from "../src/admin";
-import { NOW, bootstrapAdmin, call, invite, setNow, signIn, type SessionBody } from "./fakes";
+import { NOW, bootstrapAdmin, call, pushes, setNow, signIn, signInMember, type SessionBody } from "./fakes";
 
 // Les demandes sont écrites directement dans D1 : leur création par la
 // watchlist est testée dans watchlist.test.ts.
@@ -11,9 +11,7 @@ let member: SessionBody;
 let other: SessionBody;
 
 async function newMember(subject: string, name: string): Promise<SessionBody> {
-  const code = await invite(admin.access_token);
-  const response = await signIn("google", { subject, invitation: code, givenName: name });
-  return response.json();
+  return signInMember("google", { subject, givenName: name });
 }
 
 beforeAll(async () => {
@@ -77,7 +75,9 @@ describe("accès", () => {
       ["GET", "/v1/admin/requests"],
       ["GET", "/v1/admin/settings"],
       ["PUT", "/v1/admin/settings"],
-      ["GET", "/v1/admin/invitations"],
+      ["GET", "/v1/admin/members"],
+      ["POST", `/v1/admin/members/${MOVIE_ID}/approve`],
+      ["GET", "/v1/admin/allowed-emails"],
       ["POST", `/v1/admin/requests/${MOVIE_ID}/refuse`],
     ] as const) {
       const body = method === "GET" ? undefined : method === "PUT" ? { settings: "{}" } : {};
@@ -251,30 +251,96 @@ describe("réglages chiffrés", () => {
   });
 });
 
-describe("invitations", () => {
-  interface InvitationRow {
+describe("accès des comptes", () => {
+  interface MemberRow {
     id: string;
-    used_at: number | null;
-    revoked_at: number | null;
-    used_by_name: string | null;
+    role: string;
+    display_name: string | null;
+    status: string;
+    email: string | null;
   }
-  const list = async () =>
-    ((await (await call("GET", "/v1/admin/invitations", undefined, admin.access_token)).json()) as { invitations: InvitationRow[] })
-      .invitations;
+  const members = async () =>
+    ((await (await call("GET", "/v1/admin/members", undefined, admin.access_token)).json()) as { members: MemberRow[] })
+      .members;
+  const decide = (id: string, verb: "approve" | "refuse") =>
+    call("POST", `/v1/admin/members/${id}/${verb}`, {}, admin.access_token);
 
-  it("liste les invitations avec la personne qui les a utilisées", async () => {
-    const invitations = await list();
-    expect(invitations.some((i) => i.used_by_name === "Camille")).toBe(true);
+  async function pending(subject: string, email?: string): Promise<SessionBody> {
+    const response = await signIn("google", { subject, givenName: "Lina", ...(email ? { email } : {}) });
+    return response.json();
+  }
+
+  it("liste les comptes en attente d'abord, avec leur adresse", async () => {
+    const waiting = await pending("attente-liste", "lina@example.com");
+    const list = await members();
+    expect(list[0]).toMatchObject({ id: waiting.user.id, status: "pending", email: "lina@example.com", display_name: "Lina" });
+    expect(list.some((m) => m.role === "admin" && m.status === "active")).toBe(true);
   });
 
-  it("révoque une invitation inutilisée, qui ne sert plus", async () => {
-    const code = await invite(admin.access_token);
-    const fresh = (await list()).find((i) => i.used_at === null && i.revoked_at === null)!;
-    expect((await call("DELETE", `/v1/admin/invitations/${fresh.id}`, undefined, admin.access_token)).status).toBe(204);
-    const response = await signIn("google", { subject: "trop-tard", invitation: code });
-    expect(response.status).toBe(403);
-    // Une deuxième fois : déjà révoquée.
-    expect((await call("DELETE", `/v1/admin/invitations/${fresh.id}`, undefined, admin.access_token)).status).toBe(409);
-    expect((await call("DELETE", `/v1/admin/invitations/${UNKNOWN_ID}`, undefined, admin.access_token)).status).toBe(404);
+  it("accepte un compte en attente et le prévient", async () => {
+    const waiting = await pending("attente-accept");
+    await call("PUT", "/v1/devices", { platform: "android", token: "fcm-attente_ABCDEFGHIJKLMNOPQRSTU" }, waiting.access_token);
+    pushes.length = 0;
+    expect((await decide(waiting.user.id, "approve")).status).toBe(204);
+    expect(pushes.map((p) => p.message.bodyKey)).toEqual(["push_access_granted"]);
+    expect((await call("GET", "/v1/watchlist", undefined, waiting.access_token)).status).toBe(200);
+    // Accepter de nouveau ne renvoie pas de notification.
+    pushes.length = 0;
+    expect((await decide(waiting.user.id, "approve")).status).toBe(204);
+    expect(pushes).toHaveLength(0);
+  });
+
+  it("refuse ou retire l'accès, qui ne donne plus rien", async () => {
+    const waiting = await pending("attente-refus");
+    expect((await decide(waiting.user.id, "refuse")).status).toBe(204);
+    expect(await errorOf(await call("GET", "/v1/watchlist", undefined, waiting.access_token))).toBe("access_refused");
+    const me = (await (await call("GET", "/v1/me", undefined, waiting.access_token)).json()) as SessionBody;
+    expect(me.user.status).toBe("refused");
+
+    const removed = await newMember("membre-retire", "Noé");
+    expect((await decide(removed.user.id, "refuse")).status).toBe(204);
+    expect(await errorOf(await call("GET", "/v1/watchlist", undefined, removed.access_token))).toBe("access_refused");
+  });
+
+  it("ne change pas l'état d'un administrateur ni d'un compte inconnu", async () => {
+    expect(await errorOf(await decide(admin.user.id, "refuse"))).toBe("conflict");
+    expect(await errorOf(await decide(UNKNOWN_ID, "approve"))).toBe("not_found");
+  });
+});
+
+describe("adresses acceptées d'avance", () => {
+  const emails = async () =>
+    ((await (await call("GET", "/v1/admin/allowed-emails", undefined, admin.access_token)).json()) as {
+      emails: { email: string }[];
+    }).emails.map((e) => e.email);
+
+  it("rend actif d'emblée le compte de cette adresse (compte de démonstration)", async () => {
+    const response = await call("POST", "/v1/admin/allowed-emails", { email: " Demo@Example.com " }, admin.access_token);
+    expect(response.status).toBe(201);
+    expect(await emails()).toContain("demo@example.com");
+    const demo = (await (await signIn("google", { subject: "demo", email: "demo@example.com" })).json()) as SessionBody;
+    expect(demo.user.status).toBe("active");
+  });
+
+  it("accepte tout de suite un compte déjà en attente avec cette adresse", async () => {
+    const waiting = (await (await signIn("google", { subject: "deja-la", email: "deja@example.com" })).json()) as SessionBody;
+    expect(waiting.user.status).toBe("pending");
+    const response = await call("POST", "/v1/admin/allowed-emails", { email: "deja@example.com" }, admin.access_token);
+    expect(await response.json()).toEqual({ email: "deja@example.com", approved: 1 });
+    expect((await call("GET", "/v1/watchlist", undefined, waiting.access_token)).status).toBe(200);
+  });
+
+  it("oublie une adresse sans retirer l'accès déjà donné", async () => {
+    await call("POST", "/v1/admin/allowed-emails", { email: "oubli@example.com" }, admin.access_token);
+    expect((await call("DELETE", "/v1/admin/allowed-emails", { email: "oubli@example.com" }, admin.access_token)).status).toBe(204);
+    expect(await emails()).not.toContain("oubli@example.com");
+    const later = (await (await signIn("google", { subject: "oubli", email: "oubli@example.com" })).json()) as SessionBody;
+    expect(later.user.status).toBe("pending");
+  });
+
+  it("refuse ce qui n'est pas une adresse", async () => {
+    expect(await errorOf(await call("POST", "/v1/admin/allowed-emails", { email: "pas-une-adresse" }, admin.access_token))).toBe(
+      "invalid_request",
+    );
   });
 });

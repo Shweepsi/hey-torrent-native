@@ -3,9 +3,10 @@ package app.heywatchlist.admin
 import androidx.annotation.StringRes
 import app.heywatchlist.R
 import uniffi.heywatchlist_core.AdminRequest
+import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.Download
-import uniffi.heywatchlist_core.InvitationInfo
 import uniffi.heywatchlist_core.MediaType
+import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.Release
 import uniffi.heywatchlist_core.RequestFilter
@@ -84,12 +85,18 @@ interface AdminGateway {
 
     suspend fun deleteDownload(hash: String, deleteFiles: Boolean)
 
-    /** Nouveau code d'invitation et sa date d'expiration (secondes). */
-    suspend fun createInvitation(): Pair<String, Long>
+    /** Comptes, ceux en attente de validation d'abord. */
+    suspend fun members(): List<Member>
 
-    suspend fun invitations(): List<InvitationInfo>
+    /** Accepte un compte (la personne est prévenue) ; [granted] faux : refuse ou retire l'accès. */
+    suspend fun decide(memberId: String, granted: Boolean)
 
-    suspend fun revokeInvitation(id: String)
+    suspend fun allowedEmails(): List<AllowedEmail>
+
+    /** Nombre de comptes en attente acceptés du même coup. */
+    suspend fun allowEmail(email: String): Int
+
+    suspend fun removeAllowedEmail(email: String)
 }
 
 /** Avancement d'une recherche : tout ce qui est arrivé, trié, et le nombre de sources attendues. */

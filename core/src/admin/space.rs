@@ -13,7 +13,7 @@ use super::search::{
 };
 use super::settings::{QbitSettings, ServerSettings, TorznabSource};
 use super::torznab;
-use super::worker::{self, AdminRequest, InvitationInfo, RequestFilter};
+use super::worker::{self, AdminRequest, AllowedEmail, Member, RequestFilter};
 use crate::account::{Account, SessionStore};
 use crate::cache::unix_now;
 use crate::catalog::MediaType;
@@ -277,14 +277,34 @@ impl AdminSpace {
         self.qbit().await?.delete(&hash, delete_files).await
     }
 
-    /// Dernières invitations.
-    pub async fn invitations(&self) -> Result<Vec<InvitationInfo>, AdminError> {
-        worker::invitations(&self.account).await
+    /// Comptes, ceux en attente de validation d'abord.
+    pub async fn members(&self) -> Result<Vec<Member>, AdminError> {
+        worker::members(&self.account).await
     }
 
-    /// Révoque une invitation pas encore utilisée.
-    pub async fn revoke_invitation(&self, id: String) -> Result<(), AdminError> {
-        worker::revoke_invitation(&self.account, &id).await
+    /// Accepte un compte en attente (ou rend l'accès) ; la personne est prévenue.
+    pub async fn approve_member(&self, id: String) -> Result<(), AdminError> {
+        worker::decide(&self.account, &id, true).await
+    }
+
+    /// Refuse un compte en attente, ou retire l'accès d'un membre.
+    pub async fn refuse_member(&self, id: String) -> Result<(), AdminError> {
+        worker::decide(&self.account, &id, false).await
+    }
+
+    /// Adresses acceptées d'avance.
+    pub async fn allowed_emails(&self) -> Result<Vec<AllowedEmail>, AdminError> {
+        worker::allowed_emails(&self.account).await
+    }
+
+    /// Accepte d'avance cette adresse (proche, compte de démonstration).
+    /// Rend le nombre de comptes en attente acceptés du même coup.
+    pub async fn allow_email(&self, email: String) -> Result<u32, AdminError> {
+        worker::allow_email(&self.account, &email).await
+    }
+
+    pub async fn remove_allowed_email(&self, email: String) -> Result<(), AdminError> {
+        worker::remove_allowed_email(&self.account, &email).await
     }
 }
 

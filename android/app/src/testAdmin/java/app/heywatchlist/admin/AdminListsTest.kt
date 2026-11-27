@@ -8,7 +8,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
+import uniffi.heywatchlist_core.AccessStatus
 import uniffi.heywatchlist_core.DownloadState
+import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.RequestFilter
 import uniffi.heywatchlist_core.RequestStatus
 
@@ -78,11 +80,36 @@ class AdminListsTest {
     }
 
     @Test
-    fun `une invitation créée s'affiche`() = runTest(main.dispatcher) {
-        val model = InvitationsViewModel(FakeAdminGateway())
-        model.create()
+    fun `accepter une demande d'accès relit la liste`() = runTest(main.dispatcher) {
+        val lina = Member(
+            id = "m1",
+            displayName = "Lina",
+            email = "lina@example.com",
+            access = AccessStatus.PENDING,
+            isAdmin = false,
+            createdAt = 1_800_000_000L,
+            statusChangedAt = null,
+        )
+        val gateway = FakeAdminGateway().apply { membersResult = listOf(lina) }
+        val model = AccessViewModel(gateway)
+        advanceUntilIdle()
+        assertEquals(listOf(lina), model.uiState.value.members)
+
+        model.decide(lina, granted = true)
+        advanceUntilIdle()
+        assertEquals(listOf("members", "emails", "decide:m1:true", "members", "emails"), gateway.calls)
+        assertEquals(emptySet<String>(), model.uiState.value.busy)
+    }
+
+    @Test
+    fun `une adresse acceptée d'avance dit combien de demandes elle a acceptées`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway()
+        val model = AccessViewModel(gateway)
         advanceUntilIdle()
 
-        assertEquals(CreatedInvitation("ABCD-EFGH", 1_800_000_000L), model.uiState.value.created)
+        model.addEmail("  demo@example.com ")
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.approvedByEmail)
+        assertEquals("allow:demo@example.com", gateway.calls[2])
     }
 }

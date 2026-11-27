@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Racine de l'interface : accueil tant qu'on n'est pas connecté, sinon les onglets.
+/// Racine de l'interface : accueil tant qu'on n'est pas connecté, écran
+/// d'attente tant que l'accès n'est pas accepté, sinon les onglets.
 struct RootView: View {
     let model: AccountModel
     let catalog: any CatalogClient
@@ -15,6 +16,11 @@ struct RootView: View {
                 Color.clear
             case .signedOut(let state):
                 WelcomeView(model: model, state: state)
+            case .signedIn(let state) where state.profile.access != .active:
+                // Les notifications servent aussi pendant l'attente : la
+                // personne est prévenue quand son accès est accepté.
+                WaitingView(model: model, state: state)
+                    .task { await PushCenter.shared.start() }
             case .signedIn(let state):
                 MainTabView(model: model, state: state, catalog: catalog, watchlist: watchlist)
                     .task { await PushCenter.shared.start() }

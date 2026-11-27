@@ -1,11 +1,21 @@
 import Foundation
 
+/// Accès à l'app, décidé par l'administrateur.
+enum Access: Equatable, Sendable {
+    case active
+    /// Nouveau compte en attente de validation : écran d'attente.
+    case pending
+    /// Accès refusé ou retiré.
+    case refused
+}
+
 /// Ce que l'interface affiche du compte connecté.
 struct Profile: Equatable, Sendable {
     let firstName: String?
     let isAdmin: Bool
     /// Compte rattaché à Apple : la suppression demande une nouvelle autorisation Apple.
     let hasApple: Bool
+    var access: Access = .active
 }
 
 /// Fournisseur d'identité. Pas « Provider » : le cœur exporte déjà un type de
@@ -41,12 +51,6 @@ struct GoogleAttempt: Equatable, Sendable {
     let nonce: String
 }
 
-enum SignInOutcome: Equatable, Sendable {
-    case signedIn(Profile)
-    /// Personne inconnue du serveur : il faut un code d'invitation.
-    case invitationRequired
-}
-
 /// Seul point d'entrée de l'interface vers le compte géré par le cœur.
 ///
 /// Les appels se font hors du fil principal ; l'implémentation réelle
@@ -61,7 +65,8 @@ protocol AccountClient: Sendable {
     func newAppleNonce() async throws -> AppleNonce
     func beginGoogle() async throws -> GoogleAttempt
     func completeGoogle(_ attempt: GoogleAttempt, callback: URL) async throws -> IdentityCredential
-    func signIn(_ credential: IdentityCredential, invitationCode: String?) async throws -> SignInOutcome
+    /// Une personne inconnue du serveur obtient un compte en attente (`.pending`).
+    func signIn(_ credential: IdentityCredential) async throws -> Profile
     /// Toujours réussie : la session locale est effacée même sans réseau.
     func signOut() async
     func deleteAccount(appleAuthorizationCode: String?) async throws

@@ -5,6 +5,39 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.8.0] - 2026-11-27
+
+Plus de code d'invitation : le lien de l'app sert d'invitation, et chaque
+nouveau compte attend que l'administrateur valide son accès.
+
+### Ajouté
+
+- Worker : comptes `pending`, `active` ou `refused` (migration
+  `0006_acces.sql`, les comptes existants restent actifs). Un compte en attente
+  ou refusé n'a droit qu'à son profil, à la suppression de son compte et à
+  l'enregistrement de son appareil ; tout le reste répond `access_pending` ou
+  `access_refused`. Notification à l'administrateur à chaque nouvelle demande,
+  et à la personne quand elle est acceptée. Routes `/v1/admin/members`
+  (accepter, refuser, retirer l'accès) et `/v1/admin/allowed-emails` (adresses
+  acceptées d'avance, par exemple le compte de démonstration pour Apple).
+  `POST /v1/auth/bootstrap` pour le premier administrateur. Tests Vitest.
+- Cœur : `AccessStatus` dans `UserProfile` ; derrière `admin`,
+  `Account::claim_admin` et, dans `AdminSpace`, `members`, `approve_member`,
+  `refuse_member`, `allowed_emails`, `allow_email`, `remove_allowed_email`.
+  Tests `wiremock`.
+- Android et iPhone : écran d'attente (vérifier, se déconnecter, retirer sa
+  demande), relu au retour dans l'app et à la notification d'acceptation ;
+  écran « Accès non accordé ».
+- APK admin : onglet Accès (demandes à accepter ou refuser d'un geste,
+  comptes dont on peut retirer l'accès, adresses acceptées d'avance) et code
+  administrateur sur l'écran d'attente.
+
+### Retiré
+
+- Codes d'invitation : écran de saisie, table `invitations`, routes
+  `/v1/invitations` et `/v1/admin/invitations`, erreurs `InvitationRequired` et
+  `InvitationInvalid` du cœur.
+
 ## [0.7.0] - 2026-11-27
 
 Préparation des stores : App Store en distribution non répertoriée sur
@@ -25,6 +58,7 @@ iPhone, test fermé Google Play sur Android (`docs/PUBLICATION.md`).
   (`.github/scripts/play-upload.mjs`) et ses tests.
 - `docs/PUBLICATION.md` : étapes de publication, textes des fiches, réponses
   « Confidentialité de l'app » et « Sécurité des données », notes de revue.
+
 ## [0.6.1] - 2026-11-27
 
 ### Corrigé

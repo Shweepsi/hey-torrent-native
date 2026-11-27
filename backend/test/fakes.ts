@@ -145,15 +145,13 @@ export interface SignInBody {
   provider: Provider;
   id_token: string;
   nonce: string;
-  invitation_code?: string;
   given_name?: string;
 }
 
 /** Connexion complète ; renvoie la réponse brute. */
-export async function signIn(provider: Provider, options: TokenOptions & { invitation?: string; givenNameField?: string } = {}) {
+export async function signIn(provider: Provider, options: TokenOptions & { givenNameField?: string } = {}) {
   const nonce = freshNonce();
   const body: SignInBody = { provider, id_token: await idToken(provider, nonce, options), nonce };
-  if (options.invitation) body.invitation_code = options.invitation;
   if (options.givenNameField) body.given_name = options.givenNameField;
   return call("POST", "/v1/auth/sign-in", body);
 }
@@ -162,23 +160,29 @@ export interface SessionBody {
   access_token: string;
   access_expires_in: number;
   refresh_token: string;
-  user: { id: string; role: string; display_name: string | null; providers: string[] };
+  user: { id: string; role: string; display_name: string | null; status: string; providers: string[] };
 }
 
-/** Crée l'administrateur avec le code d'amorçage. */
+/** Crée l'administrateur : connexion (compte en attente), puis code d'amorçage. */
 export async function bootstrapAdmin(): Promise<SessionBody> {
-  const response = await signIn("apple", {
-    subject: "admin-apple",
-    invitation: env.BOOTSTRAP_CODE ?? "",
-    givenNameField: "Loïc",
-  });
-  if (response.status !== 200) throw new Error(`amorçage refusé : ${response.status}`);
-  return response.json();
+  const response = await signIn("apple", { subject: "admin-apple", givenNameField: "Loïc" });
+  if (response.status !== 200) throw new Error(`connexion refusée : ${response.status}`);
+  const session = (await response.json()) as SessionBody;
+  const claimed = await call("POST", "/v1/auth/bootstrap", { code: env.BOOTSTRAP_CODE ?? "" }, session.access_token);
+  if (claimed.status !== 200) throw new Error(`amorçage refusé : ${claimed.status}`);
+  return { ...session, user: ((await claimed.json()) as { user: SessionBody["user"] }).user };
 }
 
-/** Nouveau code d'invitation créé par cet administrateur. */
-export async function invite(adminToken: string): Promise<string> {
-  const response = await call("POST", "/v1/invitations", {}, adminToken);
-  if (response.status !== 201) throw new Error(`invitation refusée : ${response.status}`);
-  return ((await response.json()) as { code: string }).code;
+/** Accepte ce compte, comme l'administrateur le ferait. */
+export async function approve(userId: string): Promise<void> {
+  await env.DB.prepare("UPDATE users SET status = 'active' WHERE id = ?").bind(userId).run();
+}
+
+/** Connexion d'un nouveau membre, accepté aussitôt. */
+export async function signInMember(provider: Provider, options: TokenOptions & { givenNameField?: string } = {}): Promise<SessionBody> {
+  const response = await signIn(provider, options);
+  if (response.status !== 200) throw new Error(`connexion refusée : ${response.status}`);
+  const session = (await response.json()) as SessionBody;
+  await approve(session.user.id);
+  return { ...session, user: { ...session.user, status: "active" } };
 }

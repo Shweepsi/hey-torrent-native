@@ -35,22 +35,7 @@ export async function safeEqual(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
-// Sans 0, O, 1, I ni L : un code se recopie sans ambiguïté.
-const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-
-/** Code d'invitation lisible, `XXXX-XXXX-XXXX` (environ 59 bits d'aléa). */
-export function invitationCode(): string {
-  const chars: string[] = [];
-  // Tirage par rejet : pas de biais de modulo.
-  while (chars.length < 12) {
-    for (const byte of crypto.getRandomValues(new Uint8Array(16))) {
-      if (byte < 248 && chars.length < 12) chars.push(CODE_ALPHABET.charAt(byte % CODE_ALPHABET.length));
-    }
-  }
-  return `${chars.slice(0, 4).join("")}-${chars.slice(4, 8).join("")}-${chars.slice(8).join("")}`;
-}
-
-/** Forme canonique d'un code saisi : majuscules, sans espaces ni tirets. */
+/** Forme canonique d'un code saisi (code d'amorçage) : majuscules, sans espaces ni tirets. */
 export function normalizeCode(code: string): string {
   return code.toUpperCase().replace(/[\s-]/g, "");
 }

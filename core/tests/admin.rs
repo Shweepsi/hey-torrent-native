@@ -9,9 +9,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use heywatchlist_core::{
-    Account, AdminError, AdminSpace, AudioLanguage, DownloadState, IdentityProvider, MediaType,
-    QbitAuth, QbitSettings, Release, RequestFilter, RequestStatus, SearchObserver, SearchQuery,
-    ServerSettings, SessionStore, SignInRequest, SourceFailure, SourceReport, TorznabSource,
+    AccessStatus, Account, AdminError, AdminSpace, AudioLanguage, DownloadState, IdentityProvider,
+    MediaType, QbitAuth, QbitSettings, Release, RequestFilter, RequestStatus, SearchObserver,
+    SearchQuery, ServerSettings, SessionStore, SignInRequest, SourceFailure, SourceReport,
+    TorznabSource,
 };
 use serde_json::json;
 use wiremock::matchers::{body_string_contains, header, method, path, query_param};
@@ -71,7 +72,6 @@ async fn admin_account(worker: &MockServer) -> Arc<Account> {
             provider: IdentityProvider::Google,
             id_token: "jeton".into(),
             nonce: "nonce".into(),
-            invitation_code: None,
             given_name: None,
         })
         .await
@@ -871,14 +871,7 @@ async fn worker_refusals_are_typed() {
         .respond_with(ResponseTemplate::new(403).set_body_json(json!({ "error": "forbidden" })))
         .mount(&worker)
         .await;
-    Mock::given(method("GET"))
-        .and(path("/v1/admin/invitations"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "invitations": [
-            { "id": "i-1", "created_at": 1, "expires_at": 2, "used_at": 3, "used_by_name": "Camille", "revoked_at": null },
-            { "id": 42 }
-        ]})))
-        .mount(&worker)
-        .await;
+
     let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
     assert!(matches!(
         space
@@ -894,7 +887,101 @@ async fn worker_refusals_are_typed() {
         space.reopen("../settings".into()).await,
         Err(AdminError::NotFound)
     ));
-    let invitations = space.invitations().await.unwrap();
-    assert_eq!(invitations.len(), 1);
-    assert_eq!(invitations[0].used_by_name.as_deref(), Some("Camille"));
+}
+
+const MEMBER_ID: &str = "33333333-3333-4333-8333-333333333333";
+
+#[tokio::test]
+async fn members_are_listed_approved_and_refused() {
+    let worker = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/admin/members"))
+        .and(header("authorization", "Bearer acces-admin"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({ "members": [
+                { "id": MEMBER_ID, "role": "member", "display_name": "Lina", "status": "pending",
+                  "email": "lina@example.com", "created_at": 10, "status_changed_at": null },
+                { "id": "admin", "role": "admin", "display_name": "Loïc", "status": "active",
+                  "email": null, "created_at": 1, "status_changed_at": 1 },
+                { "id": "x", "status": "banni" }
+            ]})),
+        )
+        .mount(&worker)
+        .await;
+    Mock::given(method("POST"))
+        .and(path(format!("/v1/admin/members/{MEMBER_ID}/approve")))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&worker)
+        .await;
+    Mock::given(method("POST"))
+        .and(path(format!("/v1/admin/members/{MEMBER_ID}/refuse")))
+        .respond_with(ResponseTemplate::new(409).set_body_json(json!({ "error": "conflict" })))
+        .mount(&worker)
+        .await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+
+    let members = space.members().await.unwrap();
+    assert_eq!(members.len(), 2);
+    assert_eq!(members[0].access, AccessStatus::Pending);
+    assert_eq!(members[0].email.as_deref(), Some("lina@example.com"));
+    assert!(members[1].is_admin);
+
+    space.approve_member(MEMBER_ID.into()).await.unwrap();
+    assert!(matches!(
+        space.refuse_member(MEMBER_ID.into()).await,
+        Err(AdminError::Conflict)
+    ));
+    assert!(matches!(
+        space.refuse_member("../settings".into()).await,
+        Err(AdminError::NotFound)
+    ));
+}
+
+#[tokio::test]
+async fn emails_can_be_allowed_in_advance() {
+    let worker = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/admin/allowed-emails"))
+        .and(body_string_contains("\"email\":\"demo@example.com\""))
+        .respond_with(
+            ResponseTemplate::new(201)
+                .set_body_json(json!({ "email": "demo@example.com", "approved": 1 })),
+        )
+        .mount(&worker)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/admin/allowed-emails"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "emails": [
+            { "email": "demo@example.com", "created_at": 5 }, { "email": 7 }
+        ]})))
+        .mount(&worker)
+        .await;
+    Mock::given(method("DELETE"))
+        .and(path("/v1/admin/allowed-emails"))
+        .and(body_string_contains("demo@example.com"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&worker)
+        .await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+
+    assert_eq!(
+        space
+            .allow_email(" demo@example.com ".into())
+            .await
+            .unwrap(),
+        1
+    );
+    assert!(matches!(
+        space.allow_email("pas une adresse".into()).await,
+        Err(AdminError::InvalidSettings)
+    ));
+    let emails = space.allowed_emails().await.unwrap();
+    assert_eq!(emails.len(), 1);
+    assert_eq!(emails[0].email, "demo@example.com");
+    space
+        .remove_allowed_email("demo@example.com".into())
+        .await
+        .unwrap();
 }

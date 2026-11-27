@@ -5,7 +5,7 @@ import Testing
 struct AccountFailureTests {
     @Test func coreErrorsMapToTheirFailure() {
         #expect(AccountFailure(AccountError.Network) == .network)
-        #expect(AccountFailure(AccountError.InvitationInvalid) == .invitationInvalid)
+        #expect(AccountFailure(AccountError.InvalidIdentity) == .invalidIdentity)
         #expect(AccountFailure(AccountError.SignedOut) == .signedOut)
         #expect(AccountFailure(AccountError.InvalidConfiguration) == .notConfigured)
         #expect(AccountFailure(AccountError.Internal) == .unexpected)

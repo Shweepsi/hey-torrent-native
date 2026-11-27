@@ -41,9 +41,11 @@ vrai :
       `WebAuthenticationSession`, Keychain, Keystore n'ont jamais été compilés.
 - [ ] Capacité « Sign in with Apple » ajoutée par la CI à l'identifiant d'app,
       profil régénéré.
-- [ ] Fini quand : le propriétaire se connecte avec Apple sur iPhone (code
-      administrateur), crée une invitation depuis l'APK admin, et un invité se
-      connecte avec Apple et voit son prénom dans Réglages.
+- [ ] Fini quand : un proche se connecte avec Apple sur iPhone, le
+      propriétaire accepte sa demande dans l'onglet Accès de l'APK admin, et
+      le proche voit son prénom dans Réglages.
+- [ ] App Review : accepter d'avance l'adresse du compte Google de
+      démonstration (onglet Accès) et la donner dans les notes de vérification.
 - [ ] Clients Google (Web, Android ×2 avec SHA-1, iOS) et écran de
       consentement en production, puis relancer le script pour les poser.
 - [ ] Clé « Sign in with Apple » pour la révocation à la suppression du compte

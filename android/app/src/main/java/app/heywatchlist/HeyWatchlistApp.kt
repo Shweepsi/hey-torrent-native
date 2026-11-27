@@ -44,6 +44,19 @@ class AppServices(context: Context) {
     /** Émet quand le catalogue ou la watchlist constate que la session n'est plus valable. */
     val sessionExpired: SharedFlow<Unit> = _sessionExpired
 
+    private val _accessChanged = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    /** Émet quand une notification annonce que l'accès du compte a été accepté. */
+    val accessChanged: SharedFlow<Unit> = _accessChanged
+
+    /** Appelé par le service des notifications. */
+    fun notifyAccessChanged() {
+        _accessChanged.tryEmit(Unit)
+    }
+
     /** Cache hors ligne dans le dossier privé exclu de la sauvegarde. */
     val catalog: CatalogGateway by lazy {
         SessionAwareCatalogGateway(

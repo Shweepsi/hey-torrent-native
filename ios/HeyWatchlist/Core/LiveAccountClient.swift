@@ -81,22 +81,14 @@ actor LiveAccountClient: AccountClient {
         }
     }
 
-    func signIn(_ credential: IdentityCredential, invitationCode: String?) async throws -> SignInOutcome {
+    func signIn(_ credential: IdentityCredential) async throws -> Profile {
         let request = SignInRequest(
             provider: credential.provider == .apple ? .apple : .google,
             idToken: credential.idToken,
             nonce: credential.nonce,
-            invitationCode: invitationCode,
             givenName: credential.givenName
         )
-        let account = try await source.account()
-        do {
-            return .signedIn(try await account.signIn(request: request).profile)
-        } catch AccountError.InvitationRequired {
-            return .invitationRequired
-        } catch {
-            throw AccountFailure(error)
-        }
+        return try await call { try await $0.signIn(request: request).profile }
     }
 
     func signOut() async {
@@ -111,6 +103,11 @@ actor LiveAccountClient: AccountClient {
 
 private extension UserProfile {
     var profile: Profile {
-        Profile(firstName: displayName, isAdmin: role == .admin, hasApple: hasApple)
+        let access: Access = switch self.access {
+        case .active: .active
+        case .pending: .pending
+        case .refused: .refused
+        }
+        return Profile(firstName: displayName, isAdmin: role == .admin, hasApple: hasApple, access: access)
     }
 }

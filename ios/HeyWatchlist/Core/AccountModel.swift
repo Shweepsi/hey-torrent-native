@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// État de l'app vis-à-vis du compte : connexion, invitation, Réglages.
+/// État de l'app vis-à-vis du compte : connexion, attente de validation, Réglages.
 @MainActor
 @Observable
 final class AccountModel {
@@ -14,15 +14,16 @@ final class AccountModel {
 
     struct SignedOut: Equatable, Sendable {
         var busy = false
-        /// Le serveur ne connaît pas cette personne : on demande son code.
-        var askInvitation = false
         var failure: AccountFailure?
     }
 
+    /// Connecté ; tant que `profile.access` n'est pas `.active`, l'app montre l'écran d'attente.
     struct SignedIn: Equatable, Sendable {
         var profile: Profile
         var coreVersion: String
         var busy = false
+        /// Écran d'attente : relecture de l'accès en cours.
+        var checking = false
         var failure: AccountFailure?
     }
 
@@ -31,8 +32,6 @@ final class AccountModel {
     private(set) var appleNonce: AppleNonce?
 
     private let client: any AccountClient
-    /// Jeton en attente d'un code d'invitation (le serveur l'accepte de nouveau).
-    private var pendingCredential: IdentityCredential?
 
     init(client: any AccountClient) {
         self.client = client
@@ -52,15 +51,36 @@ final class AccountModel {
         }
     }
 
-    /// Met à jour le prénom ; sans réseau, on garde ce qu'on sait.
+    /// Met à jour le prénom et l'accès ; sans réseau, on garde ce qu'on sait.
     func refresh() async {
-        guard case .signedIn(var signedIn) = state else { return }
+        guard case .signedIn = state else { return }
         do {
-            signedIn.profile = try await client.refreshProfile()
-            if case .signedIn = state { state = .signedIn(signedIn) }
+            let profile = try await client.refreshProfile()
+            if case .signedIn(var current) = state {
+                current.profile = profile
+                state = .signedIn(current)
+            }
         } catch AccountFailure.signedOut {
             await prepareSignedOut(SignedOut(failure: .signedOut))
         } catch {}
+    }
+
+    /// Écran d'attente : la personne demande si son accès a été accepté.
+    func checkAccess() async {
+        guard case .signedIn(var signedIn) = state, !signedIn.busy, !signedIn.checking else { return }
+        signedIn.checking = true
+        signedIn.failure = nil
+        state = .signedIn(signedIn)
+        do {
+            signedIn.profile = try await client.refreshProfile()
+        } catch AccountFailure.signedOut {
+            await prepareSignedOut(SignedOut(failure: .signedOut))
+            return
+        } catch {
+            signedIn.failure = AccountFailure(error)
+        }
+        signedIn.checking = false
+        if case .signedIn = state { state = .signedIn(signedIn) }
     }
 
     /// Le catalogue a constaté que la session n'est plus valable (le cœur l'a
@@ -100,44 +120,24 @@ final class AccountModel {
             let attempt = try await client.beginGoogle()
             let callback = try await authenticate(attempt.url, attempt.callbackScheme)
             let credential = try await client.completeGoogle(attempt, callback: callback)
-            try await submit(credential, code: nil)
+            try await submit(credential)
         } catch {
             await fail(AccountFailure(error))
         }
-    }
-
-    func submitInvitation(_ code: String) async {
-        guard let credential = pendingCredential, begin() else { return }
-        do {
-            try await submit(credential, code: code.trimmingCharacters(in: .whitespacesAndNewlines))
-        } catch {
-            await fail(AccountFailure(error))
-        }
-    }
-
-    func cancelInvitation() async {
-        pendingCredential = nil
-        await prepareSignedOut(SignedOut())
     }
 
     private func signIn(with credential: IdentityCredential) async {
         guard begin() else { return }
         do {
-            try await submit(credential, code: nil)
+            try await submit(credential)
         } catch {
             await fail(AccountFailure(error))
         }
     }
 
-    private func submit(_ credential: IdentityCredential, code: String?) async throws {
-        pendingCredential = credential
-        switch try await client.signIn(credential, invitationCode: code) {
-        case .invitationRequired:
-            state = .signedOut(SignedOut(askInvitation: true))
-        case .signedIn(let profile):
-            pendingCredential = nil
-            state = .signedIn(SignedIn(profile: profile, coreVersion: await client.coreVersion()))
-        }
+    private func submit(_ credential: IdentityCredential) async throws {
+        let profile = try await client.signIn(credential)
+        state = .signedIn(SignedIn(profile: profile, coreVersion: await client.coreVersion()))
     }
 
     /// Passe l'écran de connexion en « occupé » ; faux s'il l'était déjà.

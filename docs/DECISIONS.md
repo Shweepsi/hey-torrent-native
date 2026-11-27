@@ -44,11 +44,20 @@ facile.
 
 ## Compte, synchronisation, identifiants
 
-- **Connexion Apple et Google, sur invitation.** Pas de mot de passe
-  HeyWatchlist, pas de Cloudflare Access. Le Worker vérifie le jeton d'identité
-  puis émet son propre jeton court et un jeton de rafraîchissement révocable.
-  Le premier compte, créé au déploiement, est l'administrateur. Suppression du
-  compte depuis l'app.
+- **Connexion Apple et Google, accès validé par l'administrateur**
+  (2026-11-27, choix du propriétaire : plus de code d'invitation). L'app est
+  distribuée par un lien App Store non répertorié et un test fermé Play : le
+  lien sert d'invitation. Comme un lien peut circuler, tout nouveau compte est
+  créé « en attente » et ne voit qu'un écran d'attente ; l'administrateur
+  l'accepte ou le refuse d'un geste dans l'onglet Accès de l'APK admin, et la
+  personne est prévenue par une notification. Le serveur refuse tout le reste
+  (catalogue, watchlist, push d'essai) à un compte en attente ou refusé. Une
+  adresse peut être acceptée d'avance (proche prévenu, compte de démonstration
+  pour la vérification d'Apple). Pas de mot de passe HeyWatchlist, pas de
+  Cloudflare Access. Le Worker vérifie le jeton d'identité puis émet son
+  propre jeton court et un jeton de rafraîchissement révocable. Le premier
+  administrateur saisit le code d'amorçage sur l'écran d'attente de l'APK
+  admin. Suppression du compte depuis l'app, y compris en attente.
 - **Watchlist et demandes synchronisées, la dernière modification gagne**
   (champ par champ, horodatage posé par le Worker, suppression logique). D1 est
   la source de vérité ; SQLite sur le téléphone sert de cache hors ligne avec

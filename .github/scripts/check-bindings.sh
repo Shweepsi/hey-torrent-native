@@ -4,7 +4,7 @@
 # deux apps :
 #   - core_version, ping, ping_async, has_admin et les fonctions du compte
 #     sont exportées ;
-#   - admin_ping et create_invitation n'existent que dans la compilation
+#   - admin_ping et claim_admin n'existent que dans la compilation
 #     admin : ni l'édition publique d'Android ni l'app iPhone ne doivent en
 #     avoir la moindre trace.
 #
@@ -80,10 +80,10 @@ check_edition() {
 
   if [[ "$edition" == "admin" ]]; then
     expect_function "$kotlin_file" adminPing
-    expect_function "$kotlin_file" createInvitation
-    echo "    admin_ping et create_invitation présentes (attendu pour l'édition admin)."
-  elif grep -Eqi 'adminPing|admin_ping|createInvitation|create_invitation' "$kotlin_file" "$swift_file" "$header_file"; then
-    fail "l'édition publique expose du code d'administration (admin_ping ou create_invitation)."
+    expect_function "$kotlin_file" claimAdmin
+    echo "    admin_ping et claim_admin présentes (attendu pour l'édition admin)."
+  elif grep -Eqi 'adminPing|admin_ping|claimAdmin|claim_admin' "$kotlin_file" "$swift_file" "$header_file"; then
+    fail "l'édition publique expose du code d'administration (admin_ping ou claim_admin)."
   else
     echo "    aucune trace du code d'administration (attendu pour l'édition publique)."
   fi

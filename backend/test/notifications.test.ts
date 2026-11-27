@@ -7,13 +7,12 @@ import {
   bootstrapAdmin,
   call,
   fetchCalls,
-  invite,
   pushes,
   replyToFetch,
   replyToPush,
   send,
   setNow,
-  signIn,
+  signInMember,
   type SessionBody,
 } from "./fakes";
 
@@ -28,8 +27,7 @@ let counter = 0;
 
 async function member(): Promise<SessionBody> {
   counter += 1;
-  const code = await invite(admin.access_token);
-  return (await signIn("google", { subject: `notif-${counter}`, invitation: code })).json();
+  return signInMember("google", { subject: `notif-${counter}` });
 }
 
 async function errorOf(response: Response): Promise<string> {

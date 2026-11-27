@@ -10,7 +10,7 @@ import app.heywatchlist.core.AccountFailure
 import app.heywatchlist.core.AccountFailureException
 import app.heywatchlist.core.AccountGateway
 import app.heywatchlist.core.IdentityCredential
-import app.heywatchlist.core.SignInOutcome
+import app.heywatchlist.core.Profile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,23 +24,24 @@ import kotlinx.coroutines.launch
 typealias GoogleCredentialRequester = suspend (serverClientId: String, nonce: String) -> IdentityCredential
 
 /**
- * Connexion, invitation, déconnexion et suppression du compte. [sessionExpired]
- * émet quand le catalogue constate que la session n'est plus valable : on
- * revient alors à l'accueil, comme quand le renouvellement du profil échoue.
+ * Connexion, attente de validation, déconnexion et suppression du compte.
+ * [sessionExpired] émet quand le catalogue constate que la session n'est plus
+ * valable : on revient alors à l'accueil, comme quand le renouvellement du
+ * profil échoue. [accessChanged] émet quand une notification annonce que
+ * l'accès a été accepté : le profil est relu.
  */
 class AccountViewModel(
     val gateway: AccountGateway,
     sessionExpired: Flow<Unit> = emptyFlow(),
+    accessChanged: Flow<Unit> = emptyFlow(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AccountUiState>(AccountUiState.Starting)
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
 
-    /** Jeton en attente d'un code d'invitation (le serveur l'accepte de nouveau). */
-    private var pendingCredential: IdentityCredential? = null
-
     init {
         viewModelScope.launch { start() }
         viewModelScope.launch { sessionExpired.collect { returnToWelcome() } }
+        viewModelScope.launch { accessChanged.collect { refresh() } }
     }
 
     private suspend fun start() {
@@ -58,7 +59,7 @@ class AccountViewModel(
         refresh()
     }
 
-    /** Met à jour le prénom ; sans réseau, on garde ce qu'on sait. */
+    /** Met à jour le prénom et l'accès ; sans réseau, on garde ce qu'on sait. */
     private suspend fun refresh() {
         try {
             val profile = gateway.refreshProfile()
@@ -81,30 +82,37 @@ class AccountViewModel(
         val clientId = gateway.googleWebClientId()
             ?: throw AccountFailureException(AccountFailure.ProviderUnavailable)
         val credential = requestCredential(clientId, gateway.newNonce())
-        pendingCredential = credential
-        complete(gateway.signIn(credential, invitationCode = null))
+        val profile = gateway.signIn(credential)
+        _uiState.value = AccountUiState.SignedIn(profile, coreVersionOrEmpty())
     }
 
-    fun submitInvitation(code: String) = runSignedOut {
-        val credential = pendingCredential ?: throw AccountFailureException(AccountFailure.InvalidIdentity)
-        complete(gateway.signIn(credential, code.trim()))
-    }
-
-    fun cancelInvitation() {
-        pendingCredential = null
-        _uiState.value = AccountUiState.SignedOut()
-    }
-
-    private suspend fun complete(outcome: SignInOutcome) {
-        when (outcome) {
-            SignInOutcome.InvitationRequired ->
-                _uiState.value = AccountUiState.SignedOut(askInvitation = true)
-
-            is SignInOutcome.SignedIn -> {
-                pendingCredential = null
-                _uiState.value = AccountUiState.SignedIn(outcome.profile, coreVersionOrEmpty())
+    /** Écran d'attente : la personne demande si son accès a été accepté. */
+    fun checkAccess() {
+        val start = _uiState.value as? AccountUiState.SignedIn ?: return
+        if (start.busy || start.checking) return
+        _uiState.value = start.copy(checking = true, errorRes = null)
+        viewModelScope.launch {
+            try {
+                val profile = gateway.refreshProfile()
+                _uiState.update { state ->
+                    if (state is AccountUiState.SignedIn) state.copy(profile = profile, checking = false) else state
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                val failure = (error as? AccountFailureException)?.failure ?: AccountFailure.Unknown
+                _uiState.value = if (failure == AccountFailure.SignedOut) {
+                    AccountUiState.SignedOut(errorRes = failure.messageRes)
+                } else {
+                    start.copy(checking = false, errorRes = failure.messageRes)
+                }
             }
         }
+    }
+
+    /** Profil changé ailleurs (code d'amorçage de l'édition admin). */
+    fun profileChanged(profile: Profile) = _uiState.update { state ->
+        if (state is AccountUiState.SignedIn) state.copy(profile = profile, errorRes = null) else state
     }
 
     fun signOut() = runSignedIn {
@@ -177,7 +185,7 @@ class AccountViewModel(
                 val application = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
                 // Le compte du cœur est partagé avec le catalogue : un seul par processus.
                 val services = (application as HeyWatchlistApp).services
-                AccountViewModel(services.account, services.sessionExpired)
+                AccountViewModel(services.account, services.sessionExpired, services.accessChanged)
             }
         }
     }

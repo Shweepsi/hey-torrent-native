@@ -10,11 +10,12 @@ import {
   fetchCalls,
   freshNonce,
   idToken,
-  invite,
   replyToFetch,
   rogue,
   setNow,
+  pushes,
   signIn,
+  signInMember,
   type SessionBody,
 } from "./fakes";
 
@@ -70,14 +71,24 @@ describe("routes publiques", () => {
 describe("amorçage de l'administrateur", () => {
   it("crée l'administrateur avec son prénom", () => {
     expect(admin.user.role).toBe("admin");
+    expect(admin.user.status).toBe("active");
     expect(admin.user.display_name).toBe("Loïc");
     expect(admin.user.providers).toEqual(["apple"]);
     expect(admin.access_expires_in).toBe(900);
   });
 
   it("n'accepte plus le code d'amorçage ensuite", async () => {
-    const response = await signIn("apple", { subject: subject(), invitation: env.BOOTSTRAP_CODE ?? "" });
-    expect(await error(response)).toBe("invitation_invalid");
+    const session = (await (await signIn("apple", { subject: subject() })).json()) as SessionBody;
+    const response = await call("POST", "/v1/auth/bootstrap", { code: env.BOOTSTRAP_CODE ?? "" }, session.access_token);
+    expect(await error(response)).toBe("forbidden");
+  });
+
+  it("refuse un code faux, et sans session", async () => {
+    const session = (await (await signIn("apple", { subject: subject() })).json()) as SessionBody;
+    expect(await error(await call("POST", "/v1/auth/bootstrap", { code: "AAAA-BBBB-CCCC" }, session.access_token))).toBe(
+      "forbidden",
+    );
+    expect(await error(await call("POST", "/v1/auth/bootstrap", { code: env.BOOTSTRAP_CODE ?? "" }))).toBe("unauthorized");
   });
 
   it("reconnaît l'administrateur à sa connexion suivante", async () => {
@@ -87,58 +98,51 @@ describe("amorçage de l'administrateur", () => {
   });
 });
 
-describe("invitations", () => {
-  it("exige une invitation pour une identité inconnue, sans rien créer", async () => {
+describe("accès sur validation", () => {
+  it("crée un compte en attente pour une identité inconnue", async () => {
     const before = await userCount();
-    expect(await error(await signIn("google", { subject: subject() }))).toBe("invitation_required");
-    expect(await userCount()).toBe(before);
+    const response = await signIn("google", { subject: subject(), givenName: "Camille" });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as SessionBody;
+    expect(body.user).toMatchObject({ role: "member", status: "pending", display_name: "Camille" });
+    expect(await userCount()).toBe(before + 1);
   });
 
-  it("accepte le même jeton une seconde fois avec le code saisi", async () => {
-    const code = await invite(admin.access_token);
-    const nonce = freshNonce();
-    const token = await idToken("google", nonce, { subject: subject(), givenName: "Camille" });
-    const first = await call("POST", "/v1/auth/sign-in", { provider: "google", id_token: token, nonce });
-    expect(await error(first)).toBe("invitation_required");
-    const second = await call("POST", "/v1/auth/sign-in", {
-      provider: "google",
-      id_token: token,
-      nonce,
-      invitation_code: code.toLowerCase().replaceAll("-", " "),
-    });
-    expect(second.status).toBe(200);
-    const body = (await second.json()) as SessionBody;
-    expect(body.user.role).toBe("member");
-    expect(body.user.display_name).toBe("Camille");
+  it("prévient l'administrateur d'une nouvelle demande, avec le prénom", async () => {
+    await call("PUT", "/v1/devices", { platform: "ios", token: "b2".repeat(32) }, admin.access_token);
+    pushes.length = 0;
+    await signIn("google", { subject: subject(), givenName: "Inès" });
+    expect(pushes.map((p) => [p.message.bodyKey, p.message.bodyArgs])).toEqual([["push_access_request_named", ["Inès"]]]);
+    pushes.length = 0;
+    await signIn("apple", { subject: subject() });
+    expect(pushes.map((p) => p.message.bodyKey)).toEqual(["push_access_request"]);
+    // Une connexion suivante du même compte ne prévient pas de nouveau.
+    pushes.length = 0;
+    await signIn("apple", { subject: "admin-apple" });
+    expect(pushes).toHaveLength(0);
   });
 
-  it("ne sert qu'une fois", async () => {
-    const code = await invite(admin.access_token);
-    expect((await signIn("google", { subject: subject(), invitation: code })).status).toBe(200);
-    expect(await error(await signIn("google", { subject: subject(), invitation: code }))).toBe("invitation_invalid");
-  });
-
-  it("expire après 14 jours", async () => {
-    const code = await invite(admin.access_token);
-    setNow(NOW + 14 * 24 * 3600 + 1);
-    expect(await error(await signIn("apple", { subject: subject(), invitation: code }))).toBe("invitation_invalid");
-  });
-
-  it("refuse un code inventé", async () => {
-    expect(await error(await signIn("apple", { subject: subject(), invitation: "AAAA-BBBB-CCCC" }))).toBe(
-      "invitation_invalid",
+  it("ne donne rien à un compte en attente, sauf son profil", async () => {
+    const session = (await (await signIn("google", { subject: subject() })).json()) as SessionBody;
+    expect(await error(await call("GET", "/v1/watchlist", undefined, session.access_token))).toBe("access_pending");
+    expect(await error(await call("GET", "/v1/tmdb/trending/all/week", undefined, session.access_token))).toBe(
+      "access_pending",
     );
+    expect(await error(await call("POST", "/v1/notifications/test", {}, session.access_token))).toBe("access_pending");
+    const me = (await (await call("GET", "/v1/me", undefined, session.access_token)).json()) as SessionBody;
+    expect(me.user.status).toBe("pending");
+    // L'appareil s'enregistre quand même : il sera prévenu de l'acceptation.
+    expect(
+      (await call("PUT", "/v1/devices", { platform: "android", token: "fcm-pending_ABCDEFGHIJKLMNOPQRST" }, session.access_token))
+        .status,
+    ).toBe(204);
   });
 
-  it("ne peut être créée que par l'administrateur", async () => {
-    const code = await invite(admin.access_token);
-    const member = (await (await signIn("apple", { subject: subject(), invitation: code })).json()) as SessionBody;
-    expect(await error(await call("POST", "/v1/invitations", {}, member.access_token))).toBe("forbidden");
-    expect(await error(await call("POST", "/v1/invitations", {}))).toBe("unauthorized");
-  });
-
-  it("produit des codes lisibles", async () => {
-    expect(await invite(admin.access_token)).toMatch(/^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
+  it("ignore un ancien code d'invitation envoyé par une ancienne app", async () => {
+    const nonce = freshNonce();
+    const token = await idToken("google", nonce, { subject: subject() });
+    const response = await call("POST", "/v1/auth/sign-in", { provider: "google", id_token: token, nonce, invitation_code: "X" });
+    expect(((await response.json()) as SessionBody).user.status).toBe("pending");
   });
 });
 
@@ -181,9 +185,7 @@ describe("vérification des jetons d'identité", () => {
   it("accepte le client iOS de Google", async () => {
     const nonce = freshNonce();
     const token = await idToken("google", nonce, { subject: subject(), audience: env.GOOGLE_IOS_CLIENT_ID ?? "" });
-    expect(await error(await call("POST", "/v1/auth/sign-in", { provider: "google", id_token: token, nonce }))).toBe(
-      "invitation_required",
-    );
+    expect((await call("POST", "/v1/auth/sign-in", { provider: "google", id_token: token, nonce })).status).toBe(200);
   });
 
   it("signale Google non configuré", async () => {
@@ -197,29 +199,26 @@ describe("vérification des jetons d'identité", () => {
 
 describe("même personne, deux fournisseurs", () => {
   it("rattache Google au compte Apple de même adresse vérifiée", async () => {
-    const code = await invite(admin.access_token);
     const email = `${subject()}@example.com`;
-    const apple = (await (
-      await signIn("apple", { subject: subject(), email, invitation: code, givenNameField: "Sam" })
-    ).json()) as SessionBody;
+    const apple = await signInMember("apple", { subject: subject(), email, givenNameField: "Sam" });
     const google = (await (await signIn("google", { subject: subject(), email: email.toUpperCase() })).json()) as SessionBody;
     expect(google.user).toEqual({ ...apple.user, providers: ["apple", "google"] });
   });
 
   it("ne rattache pas une adresse non vérifiée", async () => {
-    const code = await invite(admin.access_token);
     const email = `${subject()}@example.com`;
-    await signIn("apple", { subject: subject(), email, invitation: code });
+    const apple = await signInMember("apple", { subject: subject(), email });
     const response = await signIn("google", { subject: subject(), email, emailVerified: false });
-    expect(await error(response)).toBe("invitation_required");
+    const google = (await response.json()) as SessionBody;
+    expect(google.user.id).not.toBe(apple.user.id);
+    expect(google.user.status).toBe("pending");
   });
 });
 
 describe("prénom", () => {
   it("garde le prénom donné par Apple à la première connexion", async () => {
-    const code = await invite(admin.access_token);
     const sub = subject();
-    await signIn("apple", { subject: sub, invitation: code, givenNameField: "Alex" });
+    await signIn("apple", { subject: sub, givenNameField: "Alex" });
     // Les connexions suivantes n'ont plus de prénom ; un autre ne le remplace pas.
     const again = (await (await signIn("apple", { subject: sub })).json()) as SessionBody;
     expect(again.user.display_name).toBe("Alex");
@@ -228,9 +227,8 @@ describe("prénom", () => {
   });
 
   it("complète un compte sans prénom", async () => {
-    const code = await invite(admin.access_token);
     const sub = subject();
-    const first = (await (await signIn("apple", { subject: sub, invitation: code })).json()) as SessionBody;
+    const first = (await (await signIn("apple", { subject: sub })).json()) as SessionBody;
     expect(first.user.display_name).toBeNull();
     const second = (await (await signIn("apple", { subject: sub, givenNameField: "Noa" })).json()) as SessionBody;
     expect(second.user.display_name).toBe("Noa");
@@ -239,8 +237,7 @@ describe("prénom", () => {
 
 describe("sessions", () => {
   async function member(): Promise<SessionBody> {
-    const code = await invite(admin.access_token);
-    return (await (await signIn("google", { subject: subject(), invitation: code, givenName: "Lou" })).json()) as SessionBody;
+    return signInMember("google", { subject: subject(), givenName: "Lou" });
   }
 
   it("donne le compte avec le jeton d'accès", async () => {
@@ -295,10 +292,15 @@ describe("sessions", () => {
 });
 
 describe("suppression du compte", () => {
+  it("est permise à un compte en attente (retirer sa demande)", async () => {
+    const session = (await (await signIn("google", { subject: subject() })).json()) as SessionBody;
+    expect((await call("DELETE", "/v1/me", {}, session.access_token)).status).toBe(204);
+    expect(await env.DB.prepare("SELECT 1 FROM users WHERE id = ?").bind(session.user.id).first()).toBeNull();
+  });
+
   it("efface le compte, ses identités et ses sessions", async () => {
-    const code = await invite(admin.access_token);
     const sub = subject();
-    const session = (await (await signIn("google", { subject: sub, invitation: code })).json()) as SessionBody;
+    const session = await signInMember("google", { subject: sub });
     expect((await call("DELETE", "/v1/me", {}, session.access_token)).status).toBe(204);
 
     expect(await env.DB.prepare("SELECT 1 FROM users WHERE id = ?").bind(session.user.id).first()).toBeNull();
@@ -308,8 +310,9 @@ describe("suppression du compte", () => {
     expect(await error(await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token }))).toBe(
       "session_expired",
     );
-    // Revenir demande une nouvelle invitation.
-    expect(await error(await signIn("google", { subject: sub }))).toBe("invitation_required");
+    // Revenir crée un nouveau compte, de nouveau en attente.
+    const back = (await (await signIn("google", { subject: sub })).json()) as SessionBody;
+    expect(back.user.status).toBe("pending");
     expect(fetchCalls).toHaveLength(0);
   });
 
@@ -326,8 +329,7 @@ describe("suppression du compte", () => {
         ? Response.json({ refresh_token: "apple-refresh", access_token: "apple-access" })
         : new Response(null, { status: 200 }),
     );
-    const code = await invite(admin.access_token);
-    const session = (await (await signIn("apple", { subject: subject(), invitation: code })).json()) as SessionBody;
+    const session = await signInMember("apple", { subject: subject() });
     const response = await call("DELETE", "/v1/me", { apple_authorization_code: "code-apple" }, session.access_token, appleEnv);
     expect(response.status).toBe(204);
     expect(fetchCalls.map((c) => new URL(c.url).pathname)).toEqual(["/auth/token", "/auth/revoke"]);
@@ -349,8 +351,7 @@ describe("suppression du compte", () => {
       APPLE_SIGNIN_PRIVATE_KEY: await exportPKCS8(privateKey),
     };
     replyToFetch(() => new Response("{}", { status: 503 }));
-    const code = await invite(admin.access_token);
-    const session = (await (await signIn("apple", { subject: subject(), invitation: code })).json()) as SessionBody;
+    const session = await signInMember("apple", { subject: subject() });
     expect((await call("DELETE", "/v1/me", { apple_authorization_code: "x" }, session.access_token, appleEnv)).status).toBe(
       204,
     );

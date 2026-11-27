@@ -176,7 +176,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Votre compte, votre watchlist et vos demandes seront effacés définitivement. Vous aurez besoin d’une nouvelle invitation pour revenir."
+            "value" : "Votre compte, votre watchlist et vos demandes seront effacés définitivement. Pour revenir, votre accès devra de nouveau être validé."
           }
         }
       }
@@ -649,18 +649,6 @@
         }
       }
     },
-    "error.invitationInvalid" : {
-      "comment" : "Erreur AccountError.InvitationInvalid.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ce code n’est pas valable : il a peut-être expiré ou déjà servi. Demandez-en un nouveau."
-          }
-        }
-      }
-    },
     "error.network" : {
       "comment" : "Erreur AccountError.Network.",
       "extractionState" : "manual",
@@ -793,74 +781,38 @@
         }
       }
     },
-    "invitation.body" : {
-      "comment" : "Explication du code d’invitation.",
+    "push_access_granted" : {
+      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "C’est votre première connexion. Saisissez le code que vous a donné la personne qui vous invite."
+            "value" : "Votre accès est validé. Bienvenue !"
           }
         }
       }
     },
-    "invitation.cancel" : {
-      "comment" : "Bouton qui abandonne l’invitation.",
+    "push_access_request" : {
+      "comment" : "Corps d’une notification pour l’administrateur, clé envoyée par le serveur (loc-key) : ne pas renommer.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Annuler"
+            "value" : "Nouvelle demande d’accès à valider."
           }
         }
       }
     },
-    "invitation.label" : {
-      "comment" : "Libellé d’accessibilité du champ du code.",
+    "push_access_request_named" : {
+      "comment" : "Corps d’une notification pour l’administrateur, avec le prénom ; clé envoyée par le serveur (loc-key) : ne pas renommer.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Code d’invitation"
-          }
-        }
-      }
-    },
-    "invitation.placeholder" : {
-      "comment" : "Exemple dans le champ du code.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "XXXX-XXXX-XXXX"
-          }
-        }
-      }
-    },
-    "invitation.submit" : {
-      "comment" : "Bouton qui valide le code.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Valider"
-          }
-        }
-      }
-    },
-    "invitation.title" : {
-      "comment" : "Titre de l’étape du code d’invitation.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Code d’invitation"
+            "value" : "%@ demande l’accès à HeyWatchlist."
           }
         }
       }
@@ -1273,6 +1225,102 @@
         }
       }
     },
+    "waiting.body" : {
+      "comment" : "Écran d’attente : explication.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre proche doit valider votre accès. Vous serez prévenu par une notification dès que c’est fait. Vous pouvez fermer l’app en attendant."
+          }
+        }
+      }
+    },
+    "waiting.check" : {
+      "comment" : "Écran d’attente : relire l’accès.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifier maintenant"
+          }
+        }
+      }
+    },
+    "waiting.checking" : {
+      "comment" : "Écran d’attente : relecture en cours.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérification…"
+          }
+        }
+      }
+    },
+    "waiting.refusedBody" : {
+      "comment" : "Accès refusé ou retiré : explication.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La personne qui gère ce serveur n’a pas validé votre accès. Si c’est une erreur, contactez-la directement."
+          }
+        }
+      }
+    },
+    "waiting.refusedTitle" : {
+      "comment" : "Accès refusé ou retiré : titre.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès non accordé"
+          }
+        }
+      }
+    },
+    "waiting.title" : {
+      "comment" : "Écran d’attente : titre, sans prénom connu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demande d’accès envoyée"
+          }
+        }
+      }
+    },
+    "waiting.titleNamed %@" : {
+      "comment" : "Écran d’attente : titre avec le prénom.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merci %@, votre demande est envoyée"
+          }
+        }
+      }
+    },
+    "waiting.withdraw" : {
+      "comment" : "Écran d’attente : supprimer le compte en attente.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer ma demande"
+          }
+        }
+      }
+    },
     "watchlist.add" : {
       "comment" : "Bouton de la fiche : ajoute le titre, ce qui crée une demande.",
       "extractionState" : "manual",
@@ -1568,7 +1616,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. Découvrez des films et séries, demandez-les-lui et soyez prévenu quand ils sont disponibles."
+            "value" : "HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. Découvrez des films et séries, demandez-les-lui et soyez prévenu quand ils sont disponibles. À votre première connexion, votre proche valide votre accès."
           }
         }
       }

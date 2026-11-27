@@ -2,7 +2,8 @@ import AuthenticationServices
 import SwiftUI
 
 /// Accueil : ce qu'est l'app (elle se connecte au serveur personnel d'un
-/// proche), connexion Apple ou Google, puis code d'invitation si besoin.
+/// proche) et connexion Apple ou Google. Un nouveau compte attend ensuite
+/// d'être accepté (`WaitingView`).
 struct WelcomeView: View {
     let model: AccountModel
     let state: AccountModel.SignedOut
@@ -18,11 +19,7 @@ struct WelcomeView: View {
                             .font(.largeTitle.bold())
                             .accessibilityAddTraits(.isHeader)
                         VStack(alignment: .leading, spacing: 16) {
-                            if state.askInvitation {
-                                InvitationForm(model: model, busy: state.busy)
-                            } else {
-                                signInButtons
-                            }
+                            signInButtons
                             if let failure = state.failure {
                                 Text(failure.message)
                                     .foregroundStyle(.red)
@@ -94,48 +91,5 @@ struct WelcomeView: View {
                 throw AccountFailure.providerUnavailable
             }
         }
-    }
-}
-
-/// Saisie du code d'invitation, à la première connexion.
-private struct InvitationForm: View {
-    let model: AccountModel
-    let busy: Bool
-    @State private var code = ""
-
-    var body: some View {
-        Text("invitation.title")
-            .font(.title2.bold())
-        Text("invitation.body")
-            .foregroundStyle(.secondary)
-        TextField("invitation.placeholder", text: $code)
-            .font(.title3.monospaced())
-            .textInputAutocapitalization(.characters)
-            .autocorrectionDisabled()
-            .submitLabel(.done)
-            .onSubmit(submit)
-            .padding(14)
-            .glassEffect(.regular, in: .rect(cornerRadius: 16))
-            .accessibilityLabel(Text("invitation.label"))
-        Button(action: submit) {
-            Text(busy ? LocalizedStringKey("welcome.signingIn") : "invitation.submit")
-                .frame(maxWidth: .infinity, minHeight: 34)
-        }
-        .buttonStyle(.glassProminent)
-        .disabled(busy || code.trimmingCharacters(in: .whitespaces).isEmpty)
-        Button {
-            Task { await model.cancelInvitation() }
-        } label: {
-            Text("invitation.cancel")
-                .frame(maxWidth: .infinity, minHeight: 34)
-        }
-        .buttonStyle(.glass)
-        .disabled(busy)
-    }
-
-    private func submit() {
-        guard !busy, !code.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let value = code
-        Task { await model.submitInvitation(value) }
     }
 }

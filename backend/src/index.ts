@@ -4,17 +4,26 @@
  * Rien n'est journalisé qui identifie une personne ou contient un jeton.
  */
 import { ADMIN_PREFIX, adminHandler } from "./admin";
-import { consumeNonce, deleteAccount, findUser, hasAppleIdentity, publicUser, resolveAccount } from "./accounts";
+import {
+  adminIds,
+  claimAdmin,
+  consumeNonce,
+  deleteAccount,
+  findUser,
+  hasAppleIdentity,
+  publicUser,
+  resolveAccount,
+  type User,
+} from "./accounts";
 import { revokeAppleAuthorization, type FetchLike } from "./apple";
-import { invitationCode, normalizeCode, sha256Hex } from "./crypto";
 import type { Env } from "./env";
 import { ApiError, errorResponse, json, noContent, optionalString, readJson, requiredString } from "./http";
 import { ACCOUNT_DELETION_PATH, PRIVACY_PATH, accountDeletion, privacyPolicy } from "./legal";
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
-import { devicesOfUser, pushTo } from "./availability";
+import { devicesOfUser, devicesOfUsers, pushTo } from "./availability";
 import { DEVICES_PATH, registerDevice, unregisterDevice } from "./devices";
 import { LivePushSender, type PushSender } from "./push";
-import { authenticate, openSession, refreshSession, revokeSession } from "./sessions";
+import { authenticate, authenticateSession, openSession, refreshSession, revokeSession } from "./sessions";
 import { TMDB_PREFIX, relayTmdb } from "./tmdb";
 import { HOOKS_PREFIX, WEBHOOK_SETTINGS_PATH, receiveHook, regenerateWebhook, webhookStatus } from "./webhooks";
 import { WATCHLIST_PATH, deleteOrphanRequests, watchlistHandler } from "./watchlist";
@@ -29,8 +38,6 @@ export interface Deps {
   push: (env: Env) => PushSender;
 }
 
-const INVITATION_TTL_DAYS = 14;
-
 function provider(body: Record<string, unknown>): Provider {
   const value = body.provider;
   if (value !== "apple" && value !== "google") throw new ApiError("invalid_request");
@@ -43,18 +50,42 @@ async function signIn(request: Request, env: Env, deps: Deps): Promise<Response>
   const idToken = requiredString(body, "id_token", 8192);
   const nonce = requiredString(body, "nonce", 128);
   if (nonce.length < 16) throw new ApiError("invalid_request");
-  const invitation = optionalString(body, "invitation_code", 64);
   const givenName = optionalString(body, "given_name", 60);
   const now = deps.now();
 
   const identity = await verifyIdToken(deps.keySets, env, which, idToken, nonce, now);
-  // Le compte est résolu avant de consommer le nonce : si une invitation
-  // manque, l'app peut renvoyer le même jeton avec le code saisi.
-  const user = await resolveAccount(env, identity, invitation, givenName, now);
   if (!(await consumeNonce(env, nonce, identity.expiresAt, now))) throw new ApiError("invalid_token");
+  const { user, created } = await resolveAccount(env, identity, givenName, now);
+  if (created && user.status === "pending") await announceAccessRequest(env, deps, user, now);
 
   const tokens = await openSession(env, user.id, user.role, now);
   return json({ ...tokens, user: await publicUser(env, user) });
+}
+
+/** Prévient l'administrateur qu'un nouveau compte attend sa validation. Jamais bloquant. */
+async function announceAccessRequest(env: Env, deps: Deps, user: User, now: number): Promise<void> {
+  try {
+    const devices = await devicesOfUsers(env, await adminIds(env), now);
+    await pushTo(env, deps.push(env), devices, {
+      title: "HeyWatchlist",
+      bodyKey: user.display_name ? "push_access_request_named" : "push_access_request",
+      bodyArgs: user.display_name ? [user.display_name] : [],
+      collapseKey: "access-requests",
+      mediaType: "movie",
+      tmdbId: 0,
+    });
+  } catch (error) {
+    console.warn("access request push failed", error instanceof Error ? error.name : typeof error);
+  }
+}
+
+/** `POST /v1/auth/bootstrap` `{code}` : premier administrateur, avec le code d'amorçage. */
+async function bootstrap(request: Request, env: Env, deps: Deps): Promise<Response> {
+  const now = deps.now();
+  const claims = await authenticateSession(request, env, now);
+  const code = requiredString(await readJson(request), "code", 64);
+  const user = await claimAdmin(env, claims.userId, code, now);
+  return json({ user: await publicUser(env, user) });
 }
 
 async function refresh(request: Request, env: Env, deps: Deps): Promise<Response> {
@@ -68,8 +99,9 @@ async function signOut(request: Request, env: Env, deps: Deps): Promise<Response
   return noContent();
 }
 
+/** Profil, avec l'état de l'accès : permis à un compte en attente ou refusé. */
 async function me(request: Request, env: Env, deps: Deps): Promise<Response> {
-  const claims = await authenticate(request, env, deps.now());
+  const claims = await authenticateSession(request, env, deps.now());
   const user = await findUser(env, claims.userId);
   if (!user) throw new ApiError("unauthorized");
   return json({ user: await publicUser(env, user) });
@@ -77,7 +109,8 @@ async function me(request: Request, env: Env, deps: Deps): Promise<Response> {
 
 async function deleteMe(request: Request, env: Env, deps: Deps): Promise<Response> {
   const now = deps.now();
-  const claims = await authenticate(request, env, now);
+  // Permis quel que soit l'état : on peut toujours retirer sa demande d'accès.
+  const claims = await authenticateSession(request, env, now);
   const body = await readJson(request);
   const appleCode = optionalString(body, "apple_authorization_code", 1024);
   if (appleCode && (await hasAppleIdentity(env, claims.userId))) {
@@ -90,23 +123,6 @@ async function deleteMe(request: Request, env: Env, deps: Deps): Promise<Respons
   // plus personne n'attend aussi.
   await deleteOrphanRequests(env);
   return noContent();
-}
-
-/** Crée un code d'invitation (administrateur seulement), valable 14 jours. */
-async function createInvitation(request: Request, env: Env, deps: Deps): Promise<Response> {
-  const now = deps.now();
-  const claims = await authenticate(request, env, now);
-  const user = await findUser(env, claims.userId);
-  if (!user) throw new ApiError("unauthorized");
-  if (user.role !== "admin") throw new ApiError("forbidden");
-  const code = invitationCode();
-  const expiresAt = now + INVITATION_TTL_DAYS * 24 * 3600;
-  await env.DB.prepare(
-    "INSERT INTO invitations (id, code_hash, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-  )
-    .bind(crypto.randomUUID(), await sha256Hex(normalizeCode(code)), user.id, now, expiresAt)
-    .run();
-  return json({ code, expires_at: expiresAt }, 201);
 }
 
 /** Push d'essai vers les appareils de la personne connectée ; renvoie le nombre envoyé. */
@@ -143,8 +159,8 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
   "/v1/auth/sign-in": { POST: signIn },
   "/v1/auth/refresh": { POST: refresh },
   "/v1/auth/sign-out": { POST: signOut },
+  "/v1/auth/bootstrap": { POST: bootstrap },
   "/v1/me": { GET: me, DELETE: deleteMe },
-  "/v1/invitations": { POST: createInvitation },
   [DEVICES_PATH]: {
     PUT: (request, env, deps) => registerDevice(request, env, deps.now()),
     DELETE: (request, env, deps) => unregisterDevice(request, env, deps.now()),
@@ -172,7 +188,7 @@ function findHandler(method: string, pathname: string): Handler | undefined {
   }
   if (pathname.startsWith(ADMIN_PREFIX)) {
     const handler = adminHandler(method, pathname);
-    return handler ? (request, env, deps) => handler(request, env, deps.now()) : undefined;
+    return handler ? (request, env, deps) => handler(request, env, deps.now(), deps.push(env)) : undefined;
   }
   if (pathname === WATCHLIST_PATH || pathname.startsWith(`${WATCHLIST_PATH}/`)) {
     const handler = watchlistHandler(method, pathname);

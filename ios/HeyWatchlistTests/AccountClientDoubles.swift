@@ -4,6 +4,7 @@ import Foundation
 
 extension Profile {
     static let camille = Profile(firstName: "Camille", isAdmin: false, hasApple: true)
+    static let camillePending = Profile(firstName: "Camille", isAdmin: false, hasApple: true, access: .pending)
 }
 
 extension IdentityCredential {
@@ -15,12 +16,9 @@ extension IdentityCredential {
 actor FakeAccountClient: AccountClient {
     private let stored: Profile?
     private var refreshResult: Result<Profile, AccountFailure> = .failure(.network)
-    private var signInResult: @Sendable (String?) -> Result<SignInOutcome, AccountFailure> = { _ in
-        .success(.invitationRequired)
-    }
+    private var signInResult: Result<Profile, AccountFailure> = .success(.camillePending)
     private var deleteResult: Result<Void, AccountFailure> = .success(())
     private var googleIosClient = true
-    private(set) var codes: [String?] = []
     private(set) var deletedWithCode: String??
     private(set) var signedOut = false
 
@@ -29,7 +27,7 @@ actor FakeAccountClient: AccountClient {
     }
 
     func set(refresh: Result<Profile, AccountFailure>) { refreshResult = refresh }
-    func set(signIn: @escaping @Sendable (String?) -> Result<SignInOutcome, AccountFailure>) { signInResult = signIn }
+    func set(signIn: Result<Profile, AccountFailure>) { signInResult = signIn }
     func set(delete: Result<Void, AccountFailure>) { deleteResult = delete }
     func set(googleIosClient: Bool) { self.googleIosClient = googleIosClient }
 
@@ -53,9 +51,8 @@ actor FakeAccountClient: AccountClient {
 
     func completeGoogle(_ attempt: GoogleAttempt, callback: URL) async throws -> IdentityCredential { .google }
 
-    func signIn(_ credential: IdentityCredential, invitationCode: String?) async throws -> SignInOutcome {
-        codes.append(invitationCode)
-        return try signInResult(invitationCode).get()
+    func signIn(_ credential: IdentityCredential) async throws -> Profile {
+        try signInResult.get()
     }
 
     func signOut() async { signedOut = true }

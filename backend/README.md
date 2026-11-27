@@ -7,21 +7,27 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 
 ## Ce qu'il fait (jalon 2)
 
-- **Connexion Apple ou Google, sur invitation.** L'app envoie le jeton
+- **Connexion Apple ou Google, accès validé.** L'app envoie le jeton
   d'identité obtenu du système ; le Worker vérifie sa signature (clés publiques
   d'Apple et de Google), l'émetteur, l'audience, l'expiration et le nonce (un
-  nonce ne sert qu'une fois). Une personne inconnue doit donner un code
-  d'invitation ; la même adresse e-mail **vérifiée** retrouve le même compte,
-  qu'elle vienne d'Apple ou de Google.
-- **Premier compte = administrateur**, créé avec le code du secret
-  `BOOTSTRAP_CODE` tant qu'aucun administrateur n'existe. Ensuite, ce code ne
-  sert plus à rien.
+  nonce ne sert qu'une fois). Une personne inconnue obtient un compte **en
+  attente** (`status: "pending"`) et l'administrateur reçoit une notification ;
+  la même adresse e-mail **vérifiée** retrouve le même compte, qu'elle vienne
+  d'Apple ou de Google.
+- **Accès** : un compte `pending` ou `refused` n'a droit qu'à son profil
+  (`GET /v1/me`), à la suppression de son compte et à l'enregistrement de son
+  appareil (pour être prévenu de l'acceptation). Tout le reste répond `403
+  access_pending` ou `access_refused`, l'état étant relu dans D1 à chaque
+  appel. Une adresse acceptée d'avance (`allowed_emails`) donne un compte
+  actif dès sa création.
+- **Premier administrateur** : un compte connecté envoie le code du secret
+  `BOOTSTRAP_CODE` à `POST /v1/auth/bootstrap` tant qu'aucun administrateur
+  n'existe (écran d'attente de l'APK admin). Ensuite, ce code ne sert plus à
+  rien.
 - **Sessions** : jeton d'accès de 15 minutes (JWT HS256) et jeton de
   rafraîchissement renouvelé à chaque usage. Réutiliser un ancien jeton de
   rafraîchissement (vol probable) ferme la session. Une session dure 90 jours
   sans usage.
-- **Invitations** : l'administrateur crée un code `XXXX-XXXX-XXXX`, valable
-  14 jours et une seule fois (carte « Inviter quelqu'un » de l'APK admin).
 - **Suppression du compte** : tout est effacé (sessions et identités par
   `ON DELETE CASCADE`). Si le compte a un lien Apple, le Worker le révoque chez
   Apple avec un code d'autorisation tout juste obtenu par l'app (Apple l'exige).
@@ -60,17 +66,17 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | `GET /confidentialite` | libre | Politique de confidentialité (HTML), liée depuis les Réglages et les fiches des stores |
 | `GET /suppression-du-compte` | libre | Comment supprimer son compte (HTML), demandé par Google Play |
 | `GET /v1/config` | libre | Identifiants publics des clients Google (`google_web_client_id`, `google_ios_client_id`, ou `null`) |
-| `POST /v1/auth/sign-in` | libre | `{provider, id_token, nonce, invitation_code?, given_name?}` → jetons et profil |
+| `POST /v1/auth/sign-in` | libre | `{provider, id_token, nonce, given_name?}` → jetons et profil (nouveau compte : `status: "pending"`) |
+| `POST /v1/auth/bootstrap` | jeton d'accès, tout état | `{code}` : premier administrateur, tant qu'il n'y en a aucun → `{user}` ; sinon `403 forbidden` |
 | `POST /v1/auth/refresh` | jeton de rafraîchissement | Nouveaux jetons |
 | `POST /v1/auth/sign-out` | jeton de rafraîchissement | Ferme la session (204) |
-| `GET /v1/me` | jeton d'accès | Profil : `id`, `role`, `display_name`, `providers` |
-| `DELETE /v1/me` | jeton d'accès | Supprime le compte ; `{apple_authorization_code?}` |
-| `POST /v1/invitations` | administrateur | Crée une invitation (201, `{code, expires_at}`) |
+| `GET /v1/me` | jeton d'accès, tout état | Profil : `id`, `role`, `display_name`, `status` (`active`, `pending`, `refused`), `providers` |
+| `DELETE /v1/me` | jeton d'accès, tout état | Supprime le compte ; `{apple_authorization_code?}` |
 | `GET /v1/watchlist` | jeton d'accès | `{items}` : ma watchlist, la plus récente d'abord, avec l'état de chaque demande |
 | `PUT /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Ajoute ou met à jour un titre ; `{seasons?}` → `{item}` |
 | `DELETE /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Retire un titre (204) |
-| `PUT /v1/devices` | jeton d'accès | `{platform: "ios"\|"android", token}` : jeton push de cet appareil, rattaché à la session (204) |
-| `DELETE /v1/devices` | jeton d'accès | Oublie l'appareil de cette session (204) |
+| `PUT /v1/devices` | jeton d'accès, tout état | `{platform: "ios"\|"android", token}` : jeton push de cet appareil, rattaché à la session (204) |
+| `DELETE /v1/devices` | jeton d'accès, tout état | Oublie l'appareil de cette session (204) |
 | `POST /v1/notifications/test` | jeton d'accès | Push d'essai vers mes appareils → `{devices, sent}` |
 | `GET /v1/notifications/webhook` | administrateur | `{configured, created_at, last_used_at}`, jamais l'URL |
 | `POST /v1/notifications/webhook` | administrateur | Nouvelle URL, l'ancienne est révoquée (201, `{plex_url, tautulli_url, tautulli_body}`, montrées une seule fois) |
@@ -81,13 +87,17 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | `POST /v1/admin/requests/<id>/refuse` | administrateur | `{reason?}` (200 caractères au plus) : refuse la demande |
 | `POST /v1/admin/requests/<id>/reopen` | administrateur | Remet une demande en cours ou refusée « demandée » |
 | `GET`, `PUT`, `DELETE /v1/admin/settings` | administrateur | Réglages des serveurs de l'administrateur, `{settings}` (texte opaque produit par le cœur), chiffrés avec `CREDENTIALS_KEY` |
-| `GET /v1/admin/invitations` | administrateur | 50 dernières invitations, sans leur code |
-| `DELETE /v1/admin/invitations/<id>` | administrateur | Révoque une invitation inutilisée |
+| `GET /v1/admin/members` | administrateur | `{members}` : comptes avec `display_name`, `email` vérifiée, `status`, `role`, dates ; ceux en attente d'abord |
+| `POST /v1/admin/members/<id>/approve` | administrateur | Accepte le compte (ou rend l'accès) et lui envoie une notification (204) ; un administrateur : `409 conflict` |
+| `POST /v1/admin/members/<id>/refuse` | administrateur | Refuse le compte ou retire son accès (204) |
+| `GET /v1/admin/allowed-emails` | administrateur | `{emails}` : adresses acceptées d'avance |
+| `POST /v1/admin/allowed-emails` | administrateur | `{email}` : accepte d'avance cette adresse, et tout de suite les comptes en attente qui l'ont (201, `{email, approved}`) |
+| `DELETE /v1/admin/allowed-emails` | administrateur | `{email}` : oublie l'adresse ; les comptes déjà créés gardent leur accès (204) |
 
 Les erreurs sont `{"error": "<code>"}`, avec un code stable que le cœur traduit
 en type d'erreur : `invalid_request` (400), `invalid_token`,
-`unauthorized`, `session_expired` (401), `invitation_required`,
-`invitation_invalid`, `forbidden` (403), `not_found` (404), `conflict` (409,
+`unauthorized`, `session_expired` (401), `access_pending`,
+`access_refused`, `forbidden` (403), `not_found` (404), `conflict` (409,
 la demande a changé entre-temps),
 `provider_unavailable` (503), `internal` (500). Aucun texte affiché.
 
@@ -180,7 +190,9 @@ jalon 4 ajoute `requests` (une demande par titre, son état) et
 release envoyée et crée `credentials`, les réglages chiffrés de
 l'administrateur. Le jalon 6 (`0004_notifications.sql`) ajoute `devices`
 (rattachés à `users` et à `sessions`), `library`, `notified` et
-`webhook_tokens`. Les tables des jalons suivants arriveront avec leur jalon,
+`webhook_tokens`. La validation des comptes (`0006_acces.sql`) ajoute à
+`users` leur état d'accès (`status`, les comptes existants restent actifs),
+crée `allowed_emails` et supprime `invitations`. Les tables des jalons suivants arriveront avec leur jalon,
 dans de nouvelles migrations, rattachées à `users` par `ON DELETE CASCADE`.
 
 ## Secrets du Worker

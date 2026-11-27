@@ -32,6 +32,8 @@ class HeyMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         val notification = message.notification ?: return
+        // L'accès vient d'être accepté : l'écran d'attente relit le profil.
+        if (notification.bodyLocalizationKey == "push_access_granted") appServices.notifyAccessChanged()
         val body = bodyText(notification.bodyLocalizationKey, notification.bodyLocalizationArgs.orEmpty())
             ?: return
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
@@ -60,6 +62,9 @@ class HeyMessagingService : FirebaseMessagingService() {
             "push_available_season" -> R.string.push_available_season
             "push_available_episode" -> R.string.push_available_episode
             "push_test" -> R.string.push_test
+            "push_access_granted" -> R.string.push_access_granted
+            "push_access_request" -> R.string.push_access_request
+            "push_access_request_named" -> R.string.push_access_request_named
             else -> return null
         }
         return getString(res, *args)
