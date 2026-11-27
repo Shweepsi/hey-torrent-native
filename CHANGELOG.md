@@ -37,6 +37,8 @@ Passe de design sur Android, dans le style verre dépoli (pas de Material 3).
 - Verre : filet qui s'éclaircit vers le haut (reflet). Bouton principal en
   léger dégradé (texte au moins 4,5:1 partout).
 - Watchlist : lignes en cartes translucides et nombre de titres sous le titre.
+- Build : Robolectric se télécharge par le miroir Google de Maven Central
+  (Maven Central refusait souvent son runtime natif à la CI, erreur 429).
 
 ## [0.8.0] - 2026-11-27
 
