@@ -65,6 +65,16 @@ pub async fn ping_async() -> Result<String, CoreError> {
     Ok(ping())
 }
 
+/// Adresse de la politique de confidentialité, servie par le Worker sous
+/// `/confidentialite`. `None` si l'adresse du serveur est absente ou invalide :
+/// l'interface masque alors le lien.
+#[uniffi::export]
+pub fn privacy_policy_url(base_url: String) -> Option<String> {
+    api::BaseUrl::parse(&base_url)
+        .ok()
+        .map(|base| base.join("/confidentialite"))
+}
+
 /// Indique si cette bibliothèque contient le code d'administration.
 #[uniffi::export]
 pub fn has_admin() -> bool {
@@ -73,6 +83,19 @@ pub fn has_admin() -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn privacy_policy_url_follows_the_server_address() {
+        assert_eq!(
+            super::privacy_policy_url("https://api.example.com/".to_owned()).as_deref(),
+            Some("https://api.example.com/confidentialite")
+        );
+        assert_eq!(super::privacy_policy_url(String::new()), None);
+        assert_eq!(
+            super::privacy_policy_url("http://api.example.com".to_owned()),
+            None
+        );
+    }
+
     use std::future::Future;
     use std::pin::pin;
     use std::sync::Arc;

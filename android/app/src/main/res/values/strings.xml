@@ -123,6 +123,9 @@
     <string name="settings_sign_out">Se déconnecter</string>
     <string name="settings_delete">Supprimer mon compte</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="settings_privacy">Politique de confidentialité</string>
+    <string name="settings_privacy_unavailable">Aucun navigateur pour ouvrir la page.</string>
+    <string name="settings_tmdb_notice">Données des films et séries : TMDB. Cette app utilise l’API de TMDB sans être approuvée ni certifiée par TMDB.</string>
 
     <string name="delete_title">Supprimer votre compte ?</string>
     <string name="delete_body">Votre compte, votre watchlist et vos demandes seront effacés définitivement. Vous aurez besoin d’une nouvelle invitation pour revenir.</string>

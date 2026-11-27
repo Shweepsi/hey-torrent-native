@@ -5,6 +5,26 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.7.0] - 2026-11-27
+
+Préparation des stores : App Store en distribution non répertoriée sur
+iPhone, test fermé Google Play sur Android (`docs/PUBLICATION.md`).
+
+### Ajouté
+
+- Worker : politique de confidentialité (`GET /confidentialite`) et page de
+  suppression du compte (`GET /suppression-du-compte`), en HTML, avec le
+  contact `PRIVACY_CONTACT` (facultatif). Tests Vitest.
+- Cœur : `privacy_policy_url`, l'adresse de la politique construite depuis
+  celle du serveur.
+- Réglages, iPhone et Android : bouton « Politique de confidentialité » et
+  mention de TMDB.
+- CI Android : sur un tag `v*`, ou à la demande, l'AAB public part sur la piste
+  « Test fermé » de Google Play (secret `PLAY_SERVICE_ACCOUNT_JSON`), notes de
+  version tirées de ce journal. Script Node sans dépendance
+  (`.github/scripts/play-upload.mjs`) et ses tests.
+- `docs/PUBLICATION.md` : étapes de publication, textes des fiches, réponses
+  « Confidentialité de l'app » et « Sécurité des données », notes de revue.
 ## [0.6.1] - 2026-11-27
 
 ### Corrigé
