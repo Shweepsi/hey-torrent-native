@@ -113,6 +113,7 @@ android {
                 "proguard-rules.pro",
             )
             testProguardFiles("proguard-test-rules.pro")
+            if (providers.gradleProperty("heywatchlist.smoke").isPresent) proguardFile("proguard-smoke-rules.pro")
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             // Table R8 envoyée à Crashlytics : piles lisibles dans la console.
             // Seulement avec les réglages Firebase (CI), sinon rien à qui l'envoyer.
