@@ -199,7 +199,7 @@ le dépôt.
 | `APPLE_TEAM_ID`, `APPLE_SIGNIN_KEY_ID`, `APPLE_SIGNIN_PRIVATE_KEY` | avant la publication | Clé « Sign in with Apple » : révocation à la suppression d'un compte |
 | `FCM_SERVICE_ACCOUNT` | pour les push Android | Compte de service Google (JSON) limité à FCM ; déjà posé |
 | `APNS_KEY_ID`, `APNS_PRIVATE_KEY` (et `APPLE_TEAM_ID`) | pour les push iPhone | Clé « Apple Push Notifications service » (`.p8`) |
-| `PRIVACY_CONTACT` | avant la publication | Contact du responsable des données (e-mail ou texte), affiché par `/confidentialite` et `/suppression-du-compte` ; posé par hey-kit. Sans lui, les pages renvoient vers « l'administrateur qui vous a invité ». |
+| `PRIVACY_CONTACT` | avant la publication | Contact du responsable des données (e-mail ou texte), affiché par `/confidentialite` et `/suppression-du-compte` ; posé par hey-kit. Sans lui, les pages renvoient vers « l’administrateur du serveur ». |
 
 `APPLE_CLIENT_ID` (l'identifiant de l'app iPhone) est une variable publique de
 `wrangler.toml`.

@@ -7,7 +7,7 @@
  * Elles décrivent ce que fait réellement le code : à relire à chaque nouvelle
  * donnée collectée (`docs/PUBLICATION.md`). Le contact du responsable vient de
  * la variable `PRIVACY_CONTACT` du Worker ; sans elle, la page renvoie vers
- * l'administrateur qui a invité la personne.
+ * l'administrateur du serveur.
  */
 import type { Env } from "./env";
 
@@ -28,7 +28,7 @@ function escape(text: string): string {
 
 function contact(env: Env): string {
   const value = env.PRIVACY_CONTACT?.trim();
-  if (!value) return "l’administrateur qui vous a invité dans l’app";
+  if (!value) return "l’administrateur du serveur, qui valide les accès à l’app";
   const safe = escape(value);
   return value.includes("@") && !value.includes(" ") ? `<a href="mailto:${safe}">${safe}</a>` : safe;
 }
@@ -69,18 +69,20 @@ export function privacyPolicy(env: Env): Response {
   return page(
     "Politique de confidentialité",
     `<p>HeyWatchlist permet aux proches d’un administrateur de découvrir des films et des séries, de les
-demander à son serveur Plex et d’être prévenus quand ils sont disponibles. L’app n’est ouverte que sur
-invitation. Le responsable des données est l’administrateur du serveur ; pour toute question : ${who}.</p>
+demander à son serveur Plex et d’être prévenus quand ils sont disponibles. Seules les personnes que
+l’administrateur accepte y ont accès. Le responsable des données est l’administrateur du serveur ; pour toute question : ${who}.</p>
 
 <h2>Données collectées</h2>
 <ul>
 <li><strong>Compte</strong> : l’identifiant que Apple ou Google transmet à la connexion, votre adresse
 e-mail si le fournisseur l’a vérifiée (elle sert seulement à relier un compte Apple et un compte Google
-de la même personne) et votre prénom.</li>
+de la même personne) et votre prénom, ainsi que l’état de votre accès (en attente, accepté, refusé).
+L’administrateur peut aussi enregistrer d’avance l’adresse e-mail d’une personne pour l’accepter
+directement.</li>
 <li><strong>Watchlist et demandes</strong> : les titres que vous ajoutez, les saisons choisies, leur
 état, et les dates d’ajout.</li>
 <li><strong>Notifications</strong> : le jeton de notification de votre appareil (Apple ou Google), pour
-vous prévenir qu’un titre demandé est arrivé.</li>
+vous prévenir qu’un titre demandé est arrivé ou que votre accès est validé.</li>
 <li><strong>Diagnostics de plantage</strong> (Android) : en cas de plantage, Firebase Crashlytics (Google)
 reçoit la trace technique de l’erreur, le modèle de l’appareil, la version d’Android et de l’app. Aucune
 donnée de compte n’y est jointe.</li>
@@ -94,7 +96,8 @@ des films viennent de TMDB : votre appareil les télécharge directement depuis 
 adresse IP. Les notifications passent par Apple (APNs) ou Google (Firebase Cloud Messaging).</p>
 
 <h2>Qui y a accès</h2>
-<p>L’administrateur voit les demandes et le prénom de qui les a faites. Personne d’autre, sauf les
+<p>L’administrateur voit les demandes d’accès, les comptes (prénom, adresse e-mail), et les demandes de
+titres avec le prénom de qui les a faites. Personne d’autre, sauf les
 prestataires techniques cités ci-dessus, pour le seul fonctionnement du service.</p>
 
 <h2>Durée et suppression</h2>

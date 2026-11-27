@@ -250,10 +250,10 @@ facile.
   Worker (`/confidentialite`, `/suppression-du-compte`) : pas d'hébergement à
   part. Lien dans les Réglages et mention TMDB sur les deux plateformes.
 - **Proposé, à confirmer** : pour la revue, pas de serveur de démonstration
-  (§9.4) ; le relecteur se connecte avec son propre compte Apple ou Google et
-  un code d'invitation fourni dans les notes. L'app publique n'a aucun écran
-  qui touche aux serveurs de l'administrateur : un serveur de démo ne
-  montrerait rien de plus.
+  (§9.4) ; le relecteur reçoit un compte Google de démonstration accepté
+  d'avance (accès validé par l'administrateur, PR #16). L'app publique n'a
+  aucun écran qui touche aux serveurs de l'administrateur : un serveur de démo
+  ne montrerait rien de plus.
 
 ## Par défaut, à confirmer par le propriétaire
 

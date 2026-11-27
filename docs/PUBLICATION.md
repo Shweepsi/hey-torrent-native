@@ -7,7 +7,7 @@ réservée au cercle de l'administrateur.
   passe la revue d'Apple comme une autre, puis n'apparaît ni dans la recherche
   ni dans les classements : seul le lien direct l'ouvre. TestFlight interne ne
   sert qu'à vérifier un build avant de l'envoyer en revue.
-- **Android** : Google Play, **test fermé**, sur invitation par adresse e-mail.
+- **Android** : Google Play, **test fermé**, testeurs inscrits par adresse e-mail.
   L'app y reste : la règle « 12 testeurs pendant 14 jours » des nouveaux
   comptes personnels ne conditionne que l'accès à la **production**, dont on
   n'a pas besoin.
@@ -58,7 +58,8 @@ le chat ni par un fichier du dépôt.
 2. App Store Connect > HeyWatchlist > **TestFlight** > Test interne > **+** :
    groupe « Moi », y ajouter son compte et le dernier build. Installer l'app
    **TestFlight** sur l'iPhone, puis HeyWatchlist.
-3. Essayer : connexion Apple avec un code d'invitation, connexion Google,
+3. Essayer : connexion Apple et connexion Google (un nouveau compte attend
+   ta validation dans l'onglet Accès de l'APK admin),
    Découvrir, ajout à la watchlist, notification d'essai (Réglages),
    suppression d'un compte de test.
 
@@ -105,8 +106,8 @@ App Store Connect > HeyWatchlist > **Distribution** :
 3. **Contenu de l'application** (menu « Règles et programmes ») :
    - Règles de confidentialité : `…/confidentialite`.
    - Accès à l'application : « Certaines fonctionnalités sont soumises à
-     restrictions », avec les instructions et deux codes d'invitation (voir
-     « Notes de revue »).
+     restrictions », avec le compte Google de démonstration et les
+     instructions (voir « Notes de revue »).
    - Annonces : aucune. Public cible : 18 ans et plus.
    - Classification du contenu : questionnaire, catégorie « Divertissement »
      ou « Référence » ; pas d'échange entre utilisateurs, pas d'achat.
@@ -155,32 +156,47 @@ App Store Connect > HeyWatchlist > **Distribution** :
 
 ## Notes de revue
 
-Codes d'invitation : APK admin > Invitations, deux codes à usage unique,
-valables 14 jours. En créer de nouveaux avant chaque envoi en revue si les
-précédents ont expiré ou servi (un relecteur déjà inscrit garde son compte).
+Depuis la v0.8.0 (PR #16), il n'y a plus de code d'invitation : tout nouveau
+compte attend la validation de l'administrateur (onglet **Accès** de l'APK
+admin), sauf une adresse **acceptée d'avance**. La revue passe par un compte de
+démonstration accepté d'avance :
+
+1. Créer un compte Google dédié (par exemple « HeyWatchlist Démo »), avec un
+   mot de passe fort rangé dans hey-kit (Coffre, dossier HeyWatchlist), sans
+   double authentification ni téléphone de secours : sinon le relecteur reste
+   bloqué sur une vérification qu'il ne peut pas faire.
+2. APK admin > Accès > adresses acceptées d'avance : ajouter cette adresse.
+3. Se connecter une fois avec ce compte sur l'iPhone (TestFlight) pour vérifier
+   l'accès direct, puis ajouter un ou deux titres à sa watchlist pour que le
+   relecteur voie des demandes.
+4. Renseigner l'identifiant et le mot de passe dans le formulaire du store :
+   Apple, Informations pour la revue > **Connexion requise** ; Google, Accès à
+   l'application. Ces deux champs sont privés, réservés aux relecteurs ; le
+   mot de passe ne va nulle part ailleurs (ni chat ni dépôt).
+
+Pendant une revue, garder l'œil sur l'onglet Accès : un relecteur qui se
+connecte avec son propre compte apparaît en attente, à accepter.
 
 Texte pour Apple (Informations pour la revue > Notes) et Google (Accès à
 l'application > Instructions) :
 
 > HeyWatchlist est une app privée pour les proches d'un particulier qui partage
 > son serveur Plex personnel. Elle est destinée à la distribution non
-> répertoriée : seules les personnes invitées l'utilisent.
+> répertoriée : seules les personnes que l'administrateur accepte l'utilisent.
 >
-> Pour tester : touchez « Se connecter avec Apple » (ou Google) avec votre
-> propre compte, puis saisissez l'un de ces codes d'invitation : XXXX-XXXX-XXXX,
-> YYYY-YYYY-YYYY. Vous pouvez ensuite parcourir les films et séries (données
-> TMDB), ajouter un titre à votre watchlist, ce qui envoie une demande à
-> l'administrateur, suivre l'état de vos demandes et supprimer votre compte
-> (Réglages > Supprimer mon compte).
+> Pour tester : touchez « Se connecter avec Google » et utilisez le compte de
+> démonstration fourni, déjà accepté par l'administrateur. Un autre compte
+> Apple ou Google est créé en attente de validation, ce qui est le
+> fonctionnement normal de l'app. Vous pouvez parcourir les films et séries
+> (données TMDB), ajouter un titre à votre watchlist, ce qui envoie une demande
+> à l'administrateur, suivre l'état de vos demandes et supprimer le compte
+> (Réglages > Supprimer mon compte ; pour le compte de démonstration, merci
+> de ne pas le supprimer).
 >
 > L'app ne fournit, n'héberge et ne recommande aucun contenu à télécharger. Les
 > demandes sont traitées par l'administrateur, hors de l'app. Les
 > notifications ne signalent qu'un titre demandé devenu disponible sur son
-> serveur.
-
-Apple : ne pas renseigner d'identifiant ni de mot de passe de démo (la
-connexion se fait avec le compte Apple du relecteur) ; cocher « Connexion
-requise » et coller le texte.
+> serveur, ou la validation de votre accès.
 
 ## Textes des fiches
 
@@ -199,7 +215,7 @@ Description (les deux stores) :
 
 > HeyWatchlist relie les proches d'un passionné de cinéma à son serveur
 > multimédia personnel, compatible avec Plex. L'app est réservée aux personnes
-> invitées par l'administrateur du serveur.
+> que l'administrateur du serveur accepte.
 >
 > • Découvrir : tendances, nouveautés, à venir, genres, recherche instantanée,
 > fiches complètes avec casting, saisons, bandes-annonces et plateformes en

@@ -155,6 +155,8 @@ Choix du 2026-11-27 : App Store non répertorié et test fermé Google Play.
 - [ ] Compte Google Play, fiche, déclarations, premier AAB à la main,
       empreinte de la clé de signature Google déclarée (OAuth et Firebase).
 - [ ] Compte de service Google Play (`PLAY_SERVICE_ACCOUNT_JSON`, hey-kit).
+- [ ] Compte Google de démonstration accepté d'avance (`docs/PUBLICATION.md`,
+      « Notes de revue »).
 - [ ] Confirmer la revue sans serveur de démonstration (`docs/DECISIONS.md`).
 
 ## Points à trancher (par défaut, à confirmer)

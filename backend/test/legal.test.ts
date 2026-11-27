@@ -28,7 +28,7 @@ describe("pages publiques des stores", () => {
   it("renvoie vers l'administrateur sans contact réglé", async () => {
     const { PRIVACY_CONTACT: _ignored, ...withoutContact } = env;
     const html = await privacyPolicy(withoutContact).text();
-    expect(html).toContain("l’administrateur qui vous a invité");
+    expect(html).toContain("l’administrateur du serveur");
   });
 
   it("met une adresse en lien et échappe le contact", async () => {
