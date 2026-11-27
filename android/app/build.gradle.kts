@@ -1,10 +1,13 @@
 import com.android.build.api.variant.BuildConfigField
+import com.android.build.api.variant.ResValue
+import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 // Le dépôt est un niveau au-dessus du projet Gradle (android/).
@@ -96,6 +99,11 @@ android {
                 "proguard-rules.pro",
             )
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // Table R8 envoyée à Crashlytics : piles lisibles dans la console.
+            // Seulement avec les réglages Firebase (CI), sinon rien à qui l'envoyer.
+            configure<CrashlyticsExtension> {
+                mappingFileUploadEnabled = googleServicesJson != null
+            }
         }
     }
 
@@ -125,6 +133,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.coil.network.okhttp)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
@@ -191,6 +200,18 @@ androidComponents {
         firebaseField("FIREBASE_API_KEY", firebase?.apiKey)
         firebaseField("FIREBASE_PROJECT_ID", firebase?.projectId)
         firebaseField("FIREBASE_SENDER_ID", firebase?.senderId)
+        // Mêmes réglages en ressources, aux noms du plugin Google Services : le
+        // plugin Crashlytics y lit l'app à qui envoyer la table R8, et Firebase
+        // s'initialise seul au démarrage, assez tôt pour voir tout plantage.
+        // Complets ou absents, jamais partiels (Firebase n'aurait pas sa clé).
+        if (firebase != null) {
+            fun firebaseRes(name: String, value: String) =
+                variant.resValues.put(variant.makeResValueKey("string", name), ResValue(value, "Firebase"))
+            firebaseRes("google_app_id", firebase.applicationId)
+            firebaseRes("google_api_key", firebase.apiKey)
+            firebaseRes("project_id", firebase.projectId)
+            firebaseRes("gcm_defaultSenderId", firebase.senderId)
+        }
 
         // Le Kotlin généré se compile avec le reste ; les `.so` rejoignent l'APK.
         variant.sources.java?.addGeneratedSourceDirectory(bindingsTask, RustCoreTask::outputDir)

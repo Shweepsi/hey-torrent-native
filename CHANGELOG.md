@@ -23,6 +23,9 @@ récentes sont en tête.
   (pile de l'exception, ou raison d'arrêt donnée par Android pour un plantage
   natif ou une app figée), à copier. L'app reste en pause tant qu'il est
   affiché. Rien n'est envoyé.
+- Android : Firebase Crashlytics (BoM 35.2.0 : `firebase-crashlytics` 21.1.0,
+  plugin 3.0.8) dans les deux APK. Les plantages remontent dans la console
+  Firebase ; la CI envoie la table R8 pour des piles lisibles.
 
 ### Modifié
 
