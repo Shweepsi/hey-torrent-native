@@ -13,6 +13,9 @@ récentes sont en tête.
   compte. Le refus des services Google (code 16, app non déclarée chez Google)
   affiche « La connexion avec Google n’est pas disponible pour le moment », et
   une fenêtre fermée affiche « Connexion annulée ».
+- Android : l'app ne plante plus juste après la connexion. La lecture de la
+  version du cœur, pour les Réglages, s'appelait elle-même sans fin
+  (`StackOverflowError`).
 
 ### Ajouté
 
