@@ -27,6 +27,10 @@ récentes sont en tête.
   plugin 3.0.8) dans les deux APK. Les plantages remontent dans la console
   Firebase ; la CI envoie la table R8 pour des piles lisibles. Le plugin
   Google Services (4.6.0) est appliqué quand les réglages Firebase existent.
+- CI Android : test de démarrage sur émulateur (`android-smoke.yml`). La
+  release (R8 comprise) de chaque édition démarre en état « connecté » (session
+  factice, API sur un domaine `.invalid`) ; le job échoue si l'app plante, se
+  fige ou n'affiche pas « Découvrir », et écrit le journal du plantage.
 
 ### Modifié
 

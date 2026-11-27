@@ -66,11 +66,17 @@ android {
 
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
 
+        // Test de démarrage sur émulateur (.github/workflows/android-smoke.yml).
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         // Seules architectures compilées pour le cœur ; limite aussi celles de JNA.
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
+
+    // Le test de démarrage vise la release (R8 compris) : `-Pheywatchlist.smoke`.
+    if (providers.gradleProperty("heywatchlist.smoke").isPresent) testBuildType = "release"
 
     flavorDimensions += "edition"
     productFlavors {
@@ -106,6 +112,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            testProguardFiles("proguard-test-rules.pro")
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             // Table R8 envoyée à Crashlytics : piles lisibles dans la console.
             // Seulement avec les réglages Firebase (CI), sinon rien à qui l'envoyer.
@@ -151,6 +158,8 @@ dependencies {
     implementation(variantOf(libs.jna) { artifactType("aar") })
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     testImplementation(libs.kotlinx.coroutines.test)
 }
 
