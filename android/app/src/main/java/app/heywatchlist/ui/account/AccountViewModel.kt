@@ -143,9 +143,9 @@ class AccountViewModel(
                 throw error
             } catch (error: Exception) {
                 val failure = (error as? AccountFailureException)?.failure ?: AccountFailure.Unknown
-                // Fenêtre fermée par la personne : pas de message.
-                val message = failure.takeIf { it != AccountFailure.Cancelled }?.messageRes
-                _uiState.value = start.copy(busy = false, errorRes = message)
+                // Toujours un message, même « Connexion annulée » : sans lui, une
+                // annulation qu'on n'a pas faite ressemble à un bouton sans effet.
+                _uiState.value = start.copy(busy = false, errorRes = failure.messageRes)
             }
         }
     }

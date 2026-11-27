@@ -174,4 +174,10 @@
     <string name="settings_push_test_sent">Notification envoyée. Elle arrive dans quelques secondes.</string>
     <string name="settings_push_test_no_device">Ce téléphone n’est pas encore enregistré. Réessayez dans un instant.</string>
     <string name="settings_push_test_failed">L’envoi a échoué côté serveur. Réessayez plus tard.</string>
+
+    <string name="crash_title">L’app s’est arrêtée la dernière fois</string>
+    <string name="crash_body">Copiez ce rapport et envoyez-le à l’administrateur : il aide à corriger le problème. Rien n’est envoyé sans vous.</string>
+    <string name="crash_copy">Copier le rapport</string>
+    <string name="crash_copied">Rapport copié</string>
+    <string name="crash_close">Fermer</string>
 </resources>

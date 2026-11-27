@@ -26,7 +26,11 @@ suspend fun requestGoogleCredential(context: Context, serverClientId: String, no
     val response = try {
         CredentialManager.create(context).getCredential(context, request)
     } catch (error: GetCredentialCancellationException) {
-        throw AccountFailureException(AccountFailure.Cancelled, error)
+        // Les services Google signalent aussi par une « annulation » une app mal
+        // déclarée chez Google (empreinte SHA-1 ou client OAuth Android absents),
+        // juste après le choix du compte : code 16, « Account reauth failed ».
+        val failure = if (error.isGoogleRefusal()) AccountFailure.ProviderUnavailable else AccountFailure.Cancelled
+        throw AccountFailureException(failure, error)
     } catch (error: GetCredentialException) {
         // Pas de compte Google, services Google absents, application mal déclarée…
         throw AccountFailureException(AccountFailure.ProviderUnavailable, error)
@@ -41,4 +45,10 @@ suspend fun requestGoogleCredential(context: Context, serverClientId: String, no
         throw AccountFailureException(AccountFailure.InvalidIdentity, error)
     }
     return IdentityCredential(idToken = google.idToken, nonce = nonce, givenName = google.givenName)
+}
+
+/** Refus des services Google (code 16) présenté comme une annulation. */
+private fun GetCredentialCancellationException.isGoogleRefusal(): Boolean {
+    val text = message.orEmpty()
+    return text.contains("[16]") || text.contains("reauth", ignoreCase = true)
 }

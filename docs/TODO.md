@@ -147,7 +147,7 @@ Choix du 2026-11-27 : App Store non répertorié et test fermé Google Play.
       lien dans les Réglages, mention TMDB (v0.7.0).
 - [x] Envoi automatique de l'AAB sur le test fermé Google Play (tag `v*`).
 - [x] Textes des fiches, réponses « App Privacy » et « Data safety », notes de
-      revue : `docs/PUBLICATION.md`.
+      revue : `docs/PUBLICATION.md`, Firebase Crashlytics (Android) déclaré.
 - [ ] `PRIVACY_CONTACT` sur le Worker (hey-kit), puis relire les deux pages.
 - [ ] Clés Sign in with Apple et APNs, essai complet sur TestFlight interne.
 - [ ] Captures iPhone 6,9 ou 6,5 pouces, fiche App Store, envoi en revue,

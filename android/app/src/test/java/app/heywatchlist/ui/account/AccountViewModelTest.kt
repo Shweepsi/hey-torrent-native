@@ -160,12 +160,12 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun closingTheGoogleWindowShowsNoError() = runTest(dispatcher) {
+    fun closingTheGoogleWindowSaysSo() = runTest(dispatcher) {
         val viewModel = AccountViewModel(FakeGateway())
         advanceUntilIdle()
         viewModel.signInWithGoogle { _, _ -> throw AccountFailureException(AccountFailure.Cancelled) }
         advanceUntilIdle()
-        assertEquals(AccountUiState.SignedOut(), viewModel.uiState.value)
+        assertEquals(AccountUiState.SignedOut(errorRes = R.string.error_cancelled), viewModel.uiState.value)
     }
 
     @Test
