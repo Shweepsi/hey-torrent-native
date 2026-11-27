@@ -96,6 +96,7 @@ iPhone, test fermé Google Play sur Android (`docs/PUBLICATION.md`).
   (`.github/scripts/play-upload.mjs`) et ses tests.
 - `docs/PUBLICATION.md` : étapes de publication, textes des fiches, réponses
   « Confidentialité de l'app » et « Sécurité des données », notes de revue.
+
 ## [0.6.1] - 2026-11-27
 
 ### Corrigé
