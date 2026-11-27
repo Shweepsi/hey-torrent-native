@@ -29,6 +29,7 @@ firebase-messaging = "26.0.2"
 # Même nomenclature Firebase (BoM 35.2.0) que firebase-messaging.
 firebase-crashlytics = "21.1.0"
 firebase-crashlytics-plugin = "3.0.8"
+google-services = "4.6.0"
 junit = "4.13.2"
 
 [libraries]
@@ -58,3 +59,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }

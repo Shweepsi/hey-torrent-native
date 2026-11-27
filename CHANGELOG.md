@@ -25,7 +25,8 @@ récentes sont en tête.
   affiché. Rien n'est envoyé.
 - Android : Firebase Crashlytics (BoM 35.2.0 : `firebase-crashlytics` 21.1.0,
   plugin 3.0.8) dans les deux APK. Les plantages remontent dans la console
-  Firebase ; la CI envoie la table R8 pour des piles lisibles.
+  Firebase ; la CI envoie la table R8 pour des piles lisibles. Le plugin
+  Google Services (4.6.0) est appliqué quand les réglages Firebase existent.
 
 ### Modifié
 

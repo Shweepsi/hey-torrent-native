@@ -1,5 +1,4 @@
 import com.android.build.api.variant.BuildConfigField
-import com.android.build.api.variant.ResValue
 import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -40,6 +39,15 @@ val apiBaseUrl = envOrNull("HEYWATCHLIST_API_URL")?.trim().orEmpty().also { url 
 // compile et fonctionne, sans notifications.
 val googleServicesJson: String? = envOrNull("GOOGLE_SERVICES_JSON")?.let(FirebaseConfig::decode)
     ?: layout.projectDirectory.file("google-services.json").asFile.takeIf { it.isFile }?.readText()
+
+// Avec ces réglages, le plugin Google Services en tire les ressources Firebase
+// (`google_app_id`…) : le plugin Crashlytics en a besoin pour envoyer la table
+// R8. Le secret de la CI devient le fichier attendu (ignoré par git).
+if (googleServicesJson != null) {
+    val file = layout.projectDirectory.file("google-services.json").asFile
+    if (!file.isFile || file.readText() != googleServicesJson) file.writeText(googleServicesJson)
+    apply(plugin = "com.google.gms.google-services")
+}
 
 android {
     // Paquet du code Kotlin et de la classe R : distinct de l'identifiant publié.
@@ -200,18 +208,6 @@ androidComponents {
         firebaseField("FIREBASE_API_KEY", firebase?.apiKey)
         firebaseField("FIREBASE_PROJECT_ID", firebase?.projectId)
         firebaseField("FIREBASE_SENDER_ID", firebase?.senderId)
-        // Mêmes réglages en ressources, aux noms du plugin Google Services : le
-        // plugin Crashlytics y lit l'app à qui envoyer la table R8, et Firebase
-        // s'initialise seul au démarrage, assez tôt pour voir tout plantage.
-        // Complets ou absents, jamais partiels (Firebase n'aurait pas sa clé).
-        if (firebase != null) {
-            fun firebaseRes(name: String, value: String) =
-                variant.resValues.put(variant.makeResValueKey("string", name), ResValue(value, "Firebase"))
-            firebaseRes("google_app_id", firebase.applicationId)
-            firebaseRes("google_api_key", firebase.apiKey)
-            firebaseRes("project_id", firebase.projectId)
-            firebaseRes("gcm_defaultSenderId", firebase.senderId)
-        }
 
         // Le Kotlin généré se compile avec le reste ; les `.so` rejoignent l'APK.
         variant.sources.java?.addGeneratedSourceDirectory(bindingsTask, RustCoreTask::outputDir)
