@@ -25,15 +25,17 @@ report() {
   adb logcat -d -b crash || true
   echo "::endgroup::"
   echo "::group::Journal de l'app"
-  adb logcat -d | grep -E "AndroidRuntime|FATAL|Fatal signal|ANR in|DEBUG   :|libc    :|heywatchlist|HeyWatchlist|Firebase|Crashlytics|JNA|uniffi|System.err" | tail -n 400 || true
+  adb logcat -d | grep -E "TestRunner|Instrumentation|ActivityManager.*heywatchlist|AndroidRuntime|FATAL|Fatal signal|ANR in|DEBUG   :|libc    :|heywatchlist|HeyWatchlist|Firebase|Crashlytics|JNA|uniffi|System.err" | tail -n 400 || true
   echo "::endgroup::"
 }
 
 # Session factice au format de l'app (SeedSessionTest), écrite dans son processus.
-seed="$(adb shell am instrument -w -e class app.heywatchlist.smoke.SeedSessionTest "$package.test/androidx.test.runner.AndroidJUnitRunner")"
+# Délai borné : une instrumentation bloquée ne doit pas tenir le job une heure.
+seed="$(timeout 180 adb shell am instrument -w -r -e class app.heywatchlist.smoke.SeedSessionTest "$package.test/androidx.test.runner.AndroidJUnitRunner" || true)"
 echo "$seed"
-if ! grep -q "^OK (1 test)" <<<"$seed"; then
+if ! grep -q "INSTRUMENTATION_CODE: -1" <<<"$seed"; then
   echo "::error::Échec de la préparation de la session factice."
+  adb shell pm list instrumentation || true
   report
   exit 1
 fi
