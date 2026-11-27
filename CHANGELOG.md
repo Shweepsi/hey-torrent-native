@@ -5,7 +5,7 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
-## [0.7.0] - 2026-11-27
+## [0.8.0] - 2026-11-27
 
 Plus de code d'invitation : le lien de l'app sert d'invitation, et chaque
 nouveau compte attend que l'administrateur valide son accès.
