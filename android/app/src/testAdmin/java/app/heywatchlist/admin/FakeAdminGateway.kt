@@ -67,8 +67,15 @@ class FakeAdminGateway : AdminGateway {
         return searchResult.getOrThrow()
     }
 
-    override suspend fun sendRelease(requestId: String, mediaType: MediaType, releaseId: String): AdminRequest {
-        calls += "send:$requestId:$releaseId"
+    var categoriesResult: Result<List<String>> = Result.success(listOf("Animation", "films", "series"))
+
+    override suspend fun qbitCategories(): List<String> {
+        calls += "categories"
+        return categoriesResult.getOrThrow()
+    }
+
+    override suspend fun sendRelease(requestId: String, releaseId: String, category: String): AdminRequest {
+        calls += "send:$requestId:$releaseId:$category"
         return checkNotNull(sendResult).getOrThrow()
     }
 

@@ -23,11 +23,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.heywatchlist.R
+import app.heywatchlist.WebhookCard
 import app.heywatchlist.appServices
 import app.heywatchlist.core.KeystoreSessionStore
 import app.heywatchlist.ui.components.AppBackdrop
@@ -97,6 +99,7 @@ private fun AdminRoot(gateway: AdminGateway, onClose: () -> Unit) {
                         )
                         AdminTab.Servers -> ServersScreen(
                             viewModel = viewModel(factory = remember(gateway) { ServersViewModel.factory(gateway) }),
+                            plexCard = { WebhookCard(LocalContext.current.appServices.account) },
                         )
                         AdminTab.Access -> AccessScreen(
                             viewModel = viewModel(factory = remember(gateway) { AccessViewModel.factory(gateway) }),

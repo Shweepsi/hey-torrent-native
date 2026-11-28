@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::AdminError;
-use super::qbittorrent::{Download, NewTorrent, Qbit};
+use super::qbittorrent::{Download, NewTorrent, Qbit, valid_category};
 use super::search::{
     self, ReleaseLink, SearchObserver, SearchOutcome, SearchQuery, SourceFailure, year_of_unix,
 };
@@ -16,7 +16,6 @@ use super::torznab;
 use super::worker::{self, AdminRequest, AllowedEmail, Member, RequestFilter};
 use crate::account::{Account, SessionStore};
 use crate::cache::unix_now;
-use crate::catalog::MediaType;
 
 /// Espace d'administration. Un par processus suffit ; ses méthodes peuvent
 /// être appelées en parallèle.
@@ -179,8 +178,14 @@ impl AdminSpace {
         Ok(found.outcome)
     }
 
-    /// Envoie la release choisie à qBittorrent, dans la catégorie du type de
-    /// média, puis passe la demande « en cours ».
+    /// Catégories qui existent déjà dans qBittorrent, pour choisir celle de
+    /// l'envoi. Vide si qBittorrent n'en a aucune.
+    pub async fn qbit_categories(&self) -> Result<Vec<String>, AdminError> {
+        self.qbit().await?.categories().await
+    }
+
+    /// Envoie la release choisie à qBittorrent, dans `category` (créée au
+    /// besoin), puis passe la demande « en cours ».
     ///
     /// [`AdminError::StatusNotSaved`] : le torrent est parti mais le Worker n'a
     /// pas enregistré l'état ; [`AdminSpace::confirm_release`] réessaie sans
@@ -188,9 +193,13 @@ impl AdminSpace {
     pub async fn send_release(
         &self,
         request_id: String,
-        media_type: MediaType,
         release_id: String,
+        category: String,
     ) -> Result<AdminRequest, AdminError> {
+        if !valid_category(&category) {
+            return Err(AdminError::InvalidSettings);
+        }
+        let category = category.trim();
         let link = self
             .links
             .lock()
@@ -198,15 +207,10 @@ impl AdminSpace {
             .get(&release_id)
             .cloned()
             .ok_or(AdminError::ReleaseExpired)?;
-        let (movies, series) = self.categories().await;
-        let category = match media_type {
-            MediaType::Movie => movies,
-            MediaType::Tv => series,
-        };
         let qbit = self.qbit().await?;
         qbit.add(&NewTorrent {
             link: &link.link,
-            category: &category,
+            category,
             request_id: Some(&request_id),
         })
         .await?;
@@ -257,7 +261,8 @@ impl AdminSpace {
         worker::mark_available(&self.account, &request_id).await
     }
 
-    /// Téléchargements des catégories films et séries, les plus récents d'abord.
+    /// Téléchargements envoyés par l'app ou rangés dans les catégories films
+    /// et séries par défaut, les plus récents d'abord.
     pub async fn downloads(&self) -> Result<Vec<Download>, AdminError> {
         let (movies, series) = self.categories().await;
         self.qbit()

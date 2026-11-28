@@ -5,6 +5,27 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.12.0] - 2026-11-28
+
+Retours de Loïc sur l'APK admin.
+
+### Ajouté
+
+- Envoi d'une release : la catégorie se choisit parmi celles qui existent déjà
+  dans qBittorrent (`GET /api/v2/torrents/categories`). Celle de Serveurs pour
+  le type (film ou série) est présélectionnée ; si qBittorrent n'en a aucune,
+  elle est créée à l'envoi.
+- Serveurs : section Plex, avec l'état du lien (dernier appel reçu) et
+  l'adresse des webhooks, déplacée depuis Réglages.
+
+### Modifié
+
+- « Déjà sur Plex » demande une confirmation, et une demande passée
+  « disponible » peut être remise en attente (route `reopen` acceptée depuis
+  `available`).
+- Suivi : les téléchargements portant l'étiquette `heywatchlist` sont listés
+  quelle que soit leur catégorie.
+
 ## [0.10.0] - 2026-11-28
 
 Corrections de la relecture du code du 2026-11-27.

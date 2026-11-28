@@ -122,7 +122,7 @@ iPhone ne se compilent que sur la CI. Rien n'a encore été reçu sur un télép
 - [x] Enregistrement des appareils (`PUT /v1/devices`), rattachés à leur
       session ; jetons périmés oubliés.
 - [x] Webhooks Plex (`library.new`) et Tautulli, URL secrète régénérable
-      (carte « Notifications Plex » de l'APK admin), dédoublonnage.
+      (section Plex de l'onglet Serveurs de l'APK admin), dédoublonnage.
 - [x] Mise à jour de `library`, passage des demandes en `disponible`, push vers
       les personnes qui attendent (filtrées par saisons voulues).
 - [ ] Secret GitHub `GOOGLE_SERVICES_JSON` (base64 de `google-services.json`) :

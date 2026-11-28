@@ -384,7 +384,31 @@ impl Qbit {
         }
     }
 
-    /// Téléchargements des catégories données, les plus récents d'abord.
+    /// Catégories existantes de qBittorrent, triées sans tenir compte de la casse.
+    pub(crate) async fn categories(&self) -> Result<Vec<String>, AdminError> {
+        let (response, _) = self
+            .send(|q, _, cookie| {
+                q.request(reqwest::Method::GET, "/api/v2/torrents/categories", cookie)
+            })
+            .await?;
+        if !response.status().is_success() {
+            return Err(AdminError::QbitUnreachable);
+        }
+        let bytes = response.bytes().await.map_err(transport)?;
+        // Un objet `{ "nom": { "name": …, "savePath": … } }` : seuls les noms comptent.
+        let map: serde_json::Map<String, serde_json::Value> =
+            serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
+        let mut names: Vec<String> = map
+            .into_iter()
+            .map(|(name, _)| name)
+            .filter(|name| valid_category(name))
+            .collect();
+        names.sort_by_key(|name| name.to_lowercase());
+        Ok(names)
+    }
+
+    /// Téléchargements de l'app (étiquette `heywatchlist`) ou des catégories
+    /// données, les plus récents d'abord.
     pub(crate) async fn downloads(&self, categories: &[&str]) -> Result<Vec<Download>, AdminError> {
         let (response, _) = self
             .send(|q, _, cookie| q.request(reqwest::Method::GET, "/api/v2/torrents/info", cookie))
@@ -399,7 +423,10 @@ impl Qbit {
         let mut downloads: Vec<Download> = values
             .into_iter()
             .filter_map(|v| serde_json::from_value::<WireTorrent>(v).ok())
-            .filter(|t| categories.contains(&t.category.as_str()))
+            .filter(|t| {
+                categories.contains(&t.category.as_str())
+                    || t.tags.split(',').any(|tag| tag.trim() == APP_TAG)
+            })
             .filter_map(WireTorrent::into_download)
             .collect();
         downloads.sort_by_key(|d| std::cmp::Reverse(d.added_at));
@@ -442,6 +469,18 @@ impl Qbit {
         )
         .await
     }
+}
+
+/// Longueur maximale d'un nom de catégorie accepté.
+const MAX_CATEGORY: usize = 100;
+
+/// Un nom de catégorie utilisable : non vide, court, sans retour à la ligne
+/// ni barre oblique inverse (refusée par qBittorrent).
+pub(crate) fn valid_category(name: &str) -> bool {
+    let trimmed = name.trim();
+    !trimmed.is_empty()
+        && trimmed.len() <= MAX_CATEGORY
+        && !trimmed.chars().any(|c| c.is_control() || c == '\\')
 }
 
 /// Une empreinte reçue de l'app : 40 caractères hexadécimaux, rien d'autre
@@ -493,6 +532,16 @@ mod tests {
         assert_eq!(state("stalledDL"), DownloadState::Stalled);
         assert_eq!(state("metaDL"), DownloadState::Downloading);
         assert_eq!(state("nouveau"), DownloadState::Unknown);
+    }
+
+    #[test]
+    fn categories_are_checked() {
+        assert!(valid_category("films"));
+        assert!(valid_category("Films/4K"));
+        assert!(!valid_category("  "));
+        assert!(!valid_category("a\nb"));
+        assert!(!valid_category("a\\b"));
+        assert!(!valid_category(&"x".repeat(101)));
     }
 
     #[test]

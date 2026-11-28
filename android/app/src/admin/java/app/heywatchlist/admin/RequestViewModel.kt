@@ -56,11 +56,24 @@ sealed interface RequestAction {
     data object MarkedAvailable : RequestAction
 }
 
+/** Catégories qBittorrent proposées à l'envoi. */
+sealed interface CategoryChoice {
+    data object Loading : CategoryChoice
+
+    /** [options] : catégories existantes de qBittorrent ; [selected] : celle de l'envoi. */
+    data class Ready(val options: List<String>, val selected: String) : CategoryChoice
+
+    data class Failed(val failure: AdminFailure) : CategoryChoice
+}
+
 data class RequestUiState(
     val request: AdminRequest,
     val search: ReleaseSearch = ReleaseSearch.Idle,
     /** Release choisie, en attente de confirmation de l'envoi. */
     val confirming: Release? = null,
+    val categories: CategoryChoice = CategoryChoice.Loading,
+    /** Fenêtre de confirmation de « Déjà sur Plex » ouverte. */
+    val confirmingAvailable: Boolean = false,
     /** Fenêtre de refus ouverte. */
     val refusing: Boolean = false,
     val action: RequestAction = RequestAction.Idle,
@@ -122,6 +135,37 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
     fun choose(release: Release) {
         if (_uiState.value.action == RequestAction.Working) return
         _uiState.update { it.copy(confirming = release) }
+        if (_uiState.value.categories !is CategoryChoice.Ready) loadCategories()
+    }
+
+    /**
+     * Lit les catégories de qBittorrent. Présélection : la catégorie par défaut
+     * du type (Serveurs) si elle existe, sinon la première ; si qBittorrent
+     * n'en a aucune, la catégorie par défaut, créée à l'envoi.
+     */
+    fun loadCategories() {
+        val request = _uiState.value.request
+        _uiState.update { it.copy(categories = CategoryChoice.Loading) }
+        viewModelScope.launch {
+            val choice = attemptAdmin {
+                val settings = gateway.settings()
+                val preferred = if (request.mediaType == MediaType.TV) settings.seriesCategory else settings.movieCategory
+                val existing = gateway.qbitCategories()
+                val options = existing.ifEmpty { listOf(preferred) }
+                val selected = options.firstOrNull { it == preferred }
+                    ?: options.firstOrNull { it.equals(preferred, ignoreCase = true) }
+                    ?: options.first()
+                CategoryChoice.Ready(options, selected)
+            }.getOrElse { CategoryChoice.Failed(it.adminFailure) }
+            _uiState.update { it.copy(categories = choice) }
+        }
+    }
+
+    fun selectCategory(category: String) {
+        _uiState.update { state ->
+            val ready = state.categories as? CategoryChoice.Ready ?: return@update state
+            if (category in ready.options) state.copy(categories = ready.copy(selected = category)) else state
+        }
     }
 
     fun cancelChoice() {
@@ -132,9 +176,10 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
     fun send() {
         val state = _uiState.value
         val release = state.confirming ?: return
+        val category = (state.categories as? CategoryChoice.Ready)?.selected ?: return
         val request = state.request
         run(close = { it.copy(confirming = null) }) {
-            attemptAdmin { gateway.sendRelease(request.id, request.mediaType, release.id) }
+            attemptAdmin { gateway.sendRelease(request.id, release.id, category) }
                 .fold(
                     onSuccess = { updated -> RequestAction.Sent to updated },
                     onFailure = { error ->
@@ -188,9 +233,20 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
         run { attemptAdmin { gateway.reopen(request.id) }.toAction(RequestAction.Reopened) }
     }
 
+    fun askMarkAvailable() {
+        _uiState.update { it.copy(confirmingAvailable = true) }
+    }
+
+    fun cancelMarkAvailable() {
+        _uiState.update { it.copy(confirmingAvailable = false) }
+    }
+
+    /** Après confirmation : marque la demande « disponible » (réversible par [reopen]). */
     fun markAvailable() {
         val request = _uiState.value.request
-        run { attemptAdmin { gateway.markAvailable(request.id) }.toAction(RequestAction.MarkedAvailable) }
+        run(close = { it.copy(confirmingAvailable = false) }) {
+            attemptAdmin { gateway.markAvailable(request.id) }.toAction(RequestAction.MarkedAvailable)
+        }
     }
 
     /** Lance une action ; [block] rend l'état suivant et, si elle a réussi, la demande à jour. */

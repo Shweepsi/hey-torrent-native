@@ -27,11 +27,12 @@ import app.heywatchlist.ui.theme.HeyTheme
 
 /**
  * Réglages des serveurs : sources Torznab (Prowlarr ou autre), qBittorrent,
- * catégories et termes exclus. Rien n'est préconfiguré : chaque source est
- * saisie par l'administrateur.
+ * catégories et termes exclus, puis le lien avec Plex ([plexCard], l'adresse
+ * des webhooks). Rien n'est préconfiguré : chaque source est saisie par
+ * l'administrateur.
  */
 @Composable
-fun ServersScreen(viewModel: ServersViewModel) {
+fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val form = viewModel.form
 
@@ -117,6 +118,10 @@ fun ServersScreen(viewModel: ServersViewModel) {
                     )
                 }
             }
+
+            // Hors du formulaire : l'adresse des webhooks s'enregistre seule.
+            item { SectionTitle(stringResource(R.string.admin_plex_title), stringResource(R.string.admin_plex_body)) }
+            item { plexCard() }
         }
     }
 }

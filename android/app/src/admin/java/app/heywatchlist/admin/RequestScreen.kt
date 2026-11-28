@@ -1,7 +1,10 @@
 package app.heywatchlist.admin
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -10,16 +13,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -68,7 +77,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
                     action = state.action,
                     onRefuse = viewModel::openRefusal,
                     onReopen = viewModel::reopen,
-                    onMarkAvailable = viewModel::markAvailable,
+                    onMarkAvailable = viewModel::askMarkAvailable,
                     onRetryStatus = viewModel::retryStatus,
                 )
             }
@@ -94,14 +103,40 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
             body = release.title,
             onDismiss = viewModel::cancelChoice,
         ) {
+            CategoryPicker(
+                choice = state.categories,
+                onSelect = viewModel::selectCategory,
+                onRetry = viewModel::loadCategories,
+            )
             HeyButton(
                 text = stringResource(R.string.admin_send_confirm),
                 onClick = viewModel::send,
+                enabled = state.categories is CategoryChoice.Ready,
                 modifier = Modifier.fillMaxWidth(),
             )
             HeyButton(
                 text = stringResource(R.string.admin_cancel),
                 onClick = viewModel::cancelChoice,
+                kind = HeyButtonKind.Secondary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    if (state.confirmingAvailable) {
+        AdminDialog(
+            title = stringResource(R.string.admin_available_title),
+            body = stringResource(R.string.admin_available_body, request.title),
+            onDismiss = viewModel::cancelMarkAvailable,
+        ) {
+            HeyButton(
+                text = stringResource(R.string.admin_available_confirm),
+                onClick = viewModel::markAvailable,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            HeyButton(
+                text = stringResource(R.string.admin_cancel),
+                onClick = viewModel::cancelMarkAvailable,
                 kind = HeyButtonKind.Secondary,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -171,7 +206,8 @@ private fun ActionCard(
     onRetryStatus: () -> Unit,
 ) {
     val canRefuse = request.status == RequestStatus.REQUESTED || request.status == RequestStatus.IN_PROGRESS
-    val canReopen = request.status == RequestStatus.IN_PROGRESS || request.status == RequestStatus.REFUSED
+    // « Disponible » posé par erreur : on peut revenir à « Demandé ».
+    val canReopen = request.status != RequestStatus.REQUESTED
     val canMarkAvailable = request.status != RequestStatus.AVAILABLE
     val working = action == RequestAction.Working
     if (!canRefuse && !canReopen && !canMarkAvailable && action == RequestAction.Idle) return
@@ -267,6 +303,35 @@ private fun SearchCard(
     }
 }
 
+/** Catégorie qBittorrent de l'envoi, parmi celles qui existent déjà. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CategoryPicker(choice: CategoryChoice, onSelect: (String) -> Unit, onRetry: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HeyText(text = stringResource(R.string.admin_send_category), style = HeyTheme.typography.label)
+        when (choice) {
+            CategoryChoice.Loading -> LoadingRow(stringResource(R.string.admin_categories_loading))
+            is CategoryChoice.Failed -> {
+                FailureText(choice.failure)
+                HeyButton(
+                    text = stringResource(R.string.action_retry),
+                    onClick = onRetry,
+                    kind = HeyButtonKind.Secondary,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            is CategoryChoice.Ready -> FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                choice.options.forEach { option ->
+                    CategoryChip(text = option, selected = option == choice.selected, onClick = { onSelect(option) })
+                }
+            }
+        }
+    }
+}
+
 private fun LazyListScope.searchResults(
     search: ReleaseSearch,
     enabled: Boolean,
@@ -351,4 +416,26 @@ private fun releaseDetails(release: Release): String {
     parts += release.indexer?.takeIf { it.isNotBlank() } ?: release.sourceName
     release.publishedAt?.let { parts += formatDate(it) }
     return parts.joinToString(" · ")
+}
+
+/** Pastille de choix exclusif (radio), cible d'au moins 48 dp. */
+@Composable
+private fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = HeyTheme.colors
+    Box(
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .clip(CircleShape)
+            .background(if (selected) colors.primary else colors.glassFill)
+            .border(1.dp, if (selected) colors.primary else colors.glassBorder, CircleShape)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        HeyText(
+            text = text,
+            style = HeyTheme.typography.label,
+            color = if (selected) colors.onPrimary else colors.onBackground,
+        )
+    }
 }

@@ -496,7 +496,7 @@ async fn a_request_is_processed_end_to_end() {
         .and(path("/api/v2/torrents/add"))
         .and(header("cookie", "SID=session-qbit"))
         .and(body_string_contains(format!("magnet:?xt=urn:btih:{HASH}")))
-        .and(body_string_contains("films"))
+        .and(body_string_contains("Films 4K"))
         .and(body_string_contains(format!(
             "heywatchlist,hw-{REQUEST_ID}"
         )))
@@ -547,16 +547,24 @@ async fn a_request_is_processed_end_to_end() {
     let outcome = space.search(dune(), None).await.unwrap();
     let best = outcome.releases[0].clone();
     let updated = space
-        .send_release(request.id.clone(), request.media_type, best.id)
+        .send_release(request.id.clone(), best.id, "Films 4K".into())
         .await
         .unwrap();
     assert_eq!(updated.status, RequestStatus::InProgress);
     assert_eq!(updated.release_title.as_deref(), Some(best.title.as_str()));
 
+    // Une catégorie vide ou piégée est refusée avant tout envoi.
+    assert!(matches!(
+        space
+            .send_release(request.id.clone(), "inconnue".into(), " ".into())
+            .await,
+        Err(AdminError::InvalidSettings)
+    ));
+
     // Une release d'une recherche oubliée ne part pas.
     assert!(matches!(
         space
-            .send_release(request.id.clone(), MediaType::Movie, "inconnue".into())
+            .send_release(request.id.clone(), "inconnue".into(), "films".into())
             .await,
         Err(AdminError::ReleaseExpired)
     ));
@@ -604,7 +612,7 @@ async fn a_torrent_sent_but_not_recorded_can_be_confirmed_later() {
         .clone();
     assert!(matches!(
         space
-            .send_release(REQUEST_ID.into(), MediaType::Movie, release.clone())
+            .send_release(REQUEST_ID.into(), release.clone(), "films".into())
             .await,
         Err(AdminError::StatusNotSaved)
     ));
@@ -649,7 +657,7 @@ async fn a_rejected_torrent_leaves_the_request_untouched() {
         .clone();
     assert!(matches!(
         space
-            .send_release(REQUEST_ID.into(), MediaType::Movie, release)
+            .send_release(REQUEST_ID.into(), release, "films".into())
             .await,
         Err(AdminError::QbitRejected)
     ));
@@ -676,6 +684,7 @@ async fn downloads_are_listed_and_controlled_with_the_routes_of_each_version() {
                 { "hash": "2".repeat(40), "name": "Série", "category": "series", "state": "stoppedUP", "progress": 1.0,
                   "size": 10, "dlspeed": 0, "eta": 8640000, "tags": "", "added_on": 30 },
                 { "hash": "3".repeat(40), "name": "Linux", "category": "iso", "state": "uploading", "progress": 1.0, "added_on": 40 },
+                { "hash": "4".repeat(40), "name": "Concert", "category": "musique", "state": "downloading", "tags": "heywatchlist", "added_on": 10 },
                 { "hash": "pas-une-empreinte", "name": "Abîmé", "category": "films" },
                 { "name": "Sans empreinte" }
             ])))
@@ -710,9 +719,10 @@ async fn downloads_are_listed_and_controlled_with_the_routes_of_each_version() {
         let downloads = space.downloads().await.unwrap();
         assert_eq!(
             downloads.len(),
-            2,
-            "{version} : autres catégories et entrées illisibles écartées"
+            3,
+            "{version} : autres catégories sans l'étiquette de l'app et entrées illisibles écartées"
         );
+        assert_eq!(downloads[2].name, "Concert");
         assert_eq!(downloads[0].name, "Série");
         assert_eq!(downloads[0].state, DownloadState::Completed);
         assert_eq!(downloads[0].eta_seconds, None);
@@ -728,6 +738,42 @@ async fn downloads_are_listed_and_controlled_with_the_routes_of_each_version() {
             Err(AdminError::TorrentNotFound)
         ));
     }
+}
+
+#[tokio::test]
+async fn existing_categories_are_listed_sorted() {
+    let worker = MockServer::start().await;
+    let qbit = MockServer::start().await;
+    mount_qbit(&qbit, "v5.0.2").await;
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/categories"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "series": { "name": "series", "savePath": "/data/series" },
+            "Animation": { "name": "Animation", "savePath": "" },
+            "films": { "name": "films", "savePath": "/data/films" },
+            "": { "name": "", "savePath": "" }
+        })))
+        .mount(&qbit)
+        .await;
+    let settings = ServerSettings {
+        qbittorrent: Some(qbit_settings(&qbit, password())),
+        ..ServerSettings::default()
+    };
+    let (space, _) = space(admin_account(&worker).await, &settings);
+    assert_eq!(
+        space.qbit_categories().await.unwrap(),
+        vec!["Animation", "films", "series"]
+    );
+}
+
+#[tokio::test]
+async fn categories_need_qbittorrent_settings() {
+    let worker = MockServer::start().await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+    assert!(matches!(
+        space.qbit_categories().await,
+        Err(AdminError::NotConfigured)
+    ));
 }
 
 #[tokio::test]

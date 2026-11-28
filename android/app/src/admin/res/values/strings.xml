@@ -77,6 +77,11 @@
     </plurals>
     <string name="admin_send_title">Envoyer cette release à qBittorrent ?</string>
     <string name="admin_send_confirm">Envoyer</string>
+    <string name="admin_send_category">Catégorie qBittorrent</string>
+    <string name="admin_categories_loading">Lecture des catégories…</string>
+    <string name="admin_available_title">Marquer comme disponible ?</string>
+    <string name="admin_available_body">« %1$s » passera en « Disponible » sans prévenir personne. Vous pourrez le remettre en attente depuis cette fiche.</string>
+    <string name="admin_available_confirm">Marquer disponible</string>
     <string name="admin_refuse_title">Refuser la demande ?</string>
     <string name="admin_refuse_body">Les personnes qui la suivent verront qu’elle est refusée, avec ton motif s’il y en a un.</string>
     <string name="admin_refuse_label">Motif du refus</string>
@@ -138,7 +143,7 @@
     <string name="admin_test_passed_version">Connexion réussie (qBittorrent %1$s).</string>
     <string name="admin_remove">Retirer</string>
     <string name="admin_qbit_title">qBittorrent</string>
-    <string name="admin_qbit_body">Interface web, en HTTPS. Les releases choisies y sont ajoutées dans la catégorie films ou séries.</string>
+    <string name="admin_qbit_body">Interface web, en HTTPS. À chaque envoi, vous choisissez la catégorie parmi celles de qBittorrent.</string>
     <string name="admin_qbit_url">Adresse de l’interface web</string>
     <string name="admin_qbit_url_placeholder">https://qbittorrent.example.com</string>
     <string name="admin_qbit_auth_password">Identifiant</string>
@@ -150,8 +155,8 @@
     <string name="admin_qbit_token">Jeton d’accès</string>
     <string name="admin_qbit_token_placeholder">Jeton envoyé dans l’en-tête Authorization</string>
     <string name="admin_sorting_title">Catégories et filtres</string>
-    <string name="admin_movie_category">Catégorie des films</string>
-    <string name="admin_series_category">Catégorie des séries</string>
+    <string name="admin_movie_category">Catégorie proposée pour les films</string>
+    <string name="admin_series_category">Catégorie proposée pour les séries</string>
     <string name="admin_excluded_terms">Termes exclus</string>
     <string name="admin_excluded_terms_placeholder">Séparés par des virgules</string>
     <string name="admin_servers_save">Enregistrer</string>
@@ -242,6 +247,8 @@
     <string name="admin_tag_xvid" translatable="false">XviD</string>
     <string name="admin_tag_hdr" translatable="false">HDR</string>
 
+    <string name="admin_plex_title">Plex</string>
+    <string name="admin_plex_body">Plex prévient HeyWatchlist de chaque arrivée par webhook (Tautulli en secours). Pas besoin d’adresse ni de jeton Plex ici.</string>
     <string name="admin_webhook_title">Notifications Plex</string>
     <string name="admin_webhook_body">Collez l’adresse Plex dans Plex (Réglages, Webhooks) et l’adresse Tautulli dans un agent « Webhook » de Tautulli (déclencheur « Recently Added », méthode POST, avec le corps JSON). Chaque arrivée prévient les personnes qui l’attendent.</string>
     <string name="admin_webhook_none">Pas encore d’adresse : créez-la pour activer les notifications.</string>

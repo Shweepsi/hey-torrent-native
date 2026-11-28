@@ -241,13 +241,16 @@ async function available(request: Request, env: Env, now: number, id: string): P
   return json({ request: await oneRequest(env, id) });
 }
 
-/** `POST …/reopen` : retour à « demandée » (annuler un refus ou un envoi). */
+/**
+ * `POST …/reopen` : retour à « demandée » (annuler un refus, un envoi ou un
+ * « disponible » posé par erreur). Personne n'est prévenu.
+ */
 async function reopen(request: Request, env: Env, now: number, id: string): Promise<Response> {
   await requireAdmin(request, env, now);
   return transition(
     env,
     id,
-    ["in_progress", "refused"],
+    ["in_progress", "refused", "available"],
     { status: "requested", refusal_reason: null, release_title: null, torrent_hash: null },
     now,
   );

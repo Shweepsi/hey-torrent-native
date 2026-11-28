@@ -5,7 +5,6 @@ import app.heywatchlist.R
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.Download
-import uniffi.heywatchlist_core.MediaType
 import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.Release
@@ -68,7 +67,11 @@ interface AdminGateway {
     /** Recherche dans toutes les sources ; [onUpdate] reçoit les résultats au fil de l'eau. */
     suspend fun search(query: SearchQuery, onUpdate: (SearchProgress) -> Unit): SearchOutcome
 
-    suspend fun sendRelease(requestId: String, mediaType: MediaType, releaseId: String): AdminRequest
+    /** Catégories qui existent déjà dans qBittorrent (vide s'il n'en a aucune). */
+    suspend fun qbitCategories(): List<String>
+
+    /** Envoie la release dans [category] de qBittorrent, puis marque la demande « en cours ». */
+    suspend fun sendRelease(requestId: String, releaseId: String, category: String): AdminRequest
 
     /** Après [AdminFailure.StatusNotSaved] : marque la demande « en cours » sans renvoyer le torrent. */
     suspend fun confirmRelease(requestId: String, releaseId: String): AdminRequest

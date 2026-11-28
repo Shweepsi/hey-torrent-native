@@ -15,7 +15,6 @@ import uniffi.heywatchlist_core.AdminSpace
 import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.InternalException
-import uniffi.heywatchlist_core.MediaType
 import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.Release
@@ -72,8 +71,10 @@ class UniffiAdminGateway(
         return space().let { call { it.search(query, observer) } }
     }
 
-    override suspend fun sendRelease(requestId: String, mediaType: MediaType, releaseId: String): AdminRequest =
-        space().let { call { it.sendRelease(requestId, mediaType, releaseId) } }
+    override suspend fun qbitCategories(): List<String> = space().let { call { it.qbitCategories() } }
+
+    override suspend fun sendRelease(requestId: String, releaseId: String, category: String): AdminRequest =
+        space().let { call { it.sendRelease(requestId, releaseId, category) } }
 
     override suspend fun confirmRelease(requestId: String, releaseId: String): AdminRequest =
         space().let { call { it.confirmRelease(requestId, releaseId) } }

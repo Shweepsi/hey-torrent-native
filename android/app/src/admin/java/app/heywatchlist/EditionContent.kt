@@ -7,15 +7,16 @@ import app.heywatchlist.core.AccountGateway
 import app.heywatchlist.core.Profile
 
 /**
- * Édition admin : ajoute dans Réglages l'entrée de l'espace admin et l'adresse
- * des webhooks Plex, et sur l'écran d'attente le code d'amorçage.
+ * Édition admin : ajoute dans Réglages l'entrée de l'espace admin (l'adresse
+ * des webhooks Plex est dans Serveurs), et sur l'écran d'attente le code
+ * d'amorçage.
  */
 object EditionContent {
     @Composable
+    @Suppress("UNUSED_PARAMETER")
     fun SettingsExtras(gateway: AccountGateway, isAdmin: Boolean) {
         if (isAdmin) {
             AdminEntryCard()
-            WebhookCard(gateway)
         }
     }
 

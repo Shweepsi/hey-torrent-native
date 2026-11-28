@@ -48,10 +48,11 @@ class RequestViewModelTest {
         val gateway = FakeAdminGateway().apply { sendResult = Result.success(request(status = RequestStatus.IN_PROGRESS)) }
         val model = RequestViewModel(gateway, request(status = RequestStatus.REFUSED))
         model.choose(release())
+        advanceUntilIdle()
         model.send()
         advanceUntilIdle()
 
-        assertEquals(listOf("send:r1:x1"), gateway.calls)
+        assertEquals(listOf("categories", "send:r1:x1:films"), gateway.calls)
         val state = model.uiState.value
         assertEquals(RequestAction.Sent, state.action)
         assertEquals(RequestStatus.IN_PROGRESS, state.request.status)
@@ -66,6 +67,7 @@ class RequestViewModelTest {
         }
         val model = RequestViewModel(gateway, request(status = RequestStatus.REFUSED))
         model.choose(release())
+        advanceUntilIdle()
         model.send()
         advanceUntilIdle()
         assertEquals(RequestAction.NotSaved("x1"), model.uiState.value.action)
@@ -78,7 +80,7 @@ class RequestViewModelTest {
         model.retryStatus()
         advanceUntilIdle()
         assertEquals(RequestAction.Sent, model.uiState.value.action)
-        assertEquals(listOf("send:r1:x1", "confirm:r1:x1", "confirm:r1:x1"), gateway.calls)
+        assertEquals(listOf("categories", "send:r1:x1:films", "confirm:r1:x1", "confirm:r1:x1"), gateway.calls)
     }
 
     @Test
@@ -99,15 +101,66 @@ class RequestViewModelTest {
     }
 
     @Test
-    fun `déjà sur Plex marque la demande disponible`() = runTest(main.dispatcher) {
-        val gateway = FakeAdminGateway()
-        val model = RequestViewModel(gateway, request(status = RequestStatus.IN_PROGRESS))
-        model.markAvailable()
+    fun `la catégorie se choisit parmi celles de qBittorrent`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway().apply { sendResult = Result.success(request(status = RequestStatus.IN_PROGRESS)) }
+        val model = RequestViewModel(gateway, request(status = RequestStatus.REFUSED, mediaType = MediaType.TV))
+        model.choose(release())
+        advanceUntilIdle()
+        assertEquals(
+            CategoryChoice.Ready(listOf("Animation", "films", "series"), "series"),
+            model.uiState.value.categories,
+        )
+
+        model.selectCategory("inventée")
+        model.selectCategory("Animation")
+        model.send()
+        advanceUntilIdle()
+        assertEquals(listOf("categories", "send:r1:x1:Animation"), gateway.calls)
+    }
+
+    @Test
+    fun `sans catégorie dans qBittorrent, la catégorie par défaut est proposée`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway().apply { categoriesResult = Result.success(emptyList()) }
+        val model = RequestViewModel(gateway, request(status = RequestStatus.REFUSED))
+        model.choose(release())
+        advanceUntilIdle()
+        assertEquals(CategoryChoice.Ready(listOf("films"), "films"), model.uiState.value.categories)
+    }
+
+    @Test
+    fun `catégories illisibles : pas d'envoi`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway().apply { categoriesResult = failure(AdminFailure.QbitUnreachable) }
+        val model = RequestViewModel(gateway, request(status = RequestStatus.REFUSED))
+        model.choose(release())
+        advanceUntilIdle()
+        model.send()
         advanceUntilIdle()
 
-        assertTrue("available:r1" in gateway.calls)
+        assertEquals(CategoryChoice.Failed(AdminFailure.QbitUnreachable), model.uiState.value.categories)
+        assertEquals(listOf("categories"), gateway.calls)
+    }
+
+    @Test
+    fun `déjà sur Plex demande confirmation, puis se rouvre`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway()
+        val model = RequestViewModel(gateway, request(status = RequestStatus.IN_PROGRESS))
+        model.askMarkAvailable()
+        assertTrue(model.uiState.value.confirmingAvailable)
+        model.cancelMarkAvailable()
+        assertTrue(!model.uiState.value.confirmingAvailable)
+        assertTrue(gateway.calls.isEmpty())
+
+        model.askMarkAvailable()
+        model.markAvailable()
+        advanceUntilIdle()
         assertEquals(RequestAction.MarkedAvailable, model.uiState.value.action)
         assertEquals(RequestStatus.AVAILABLE, model.uiState.value.request.status)
+        assertTrue(!model.uiState.value.confirmingAvailable)
+
+        model.reopen()
+        advanceUntilIdle()
+        assertEquals(listOf("available:r1", "reopen:r1"), gateway.calls)
+        assertEquals(RequestStatus.REQUESTED, model.uiState.value.request.status)
     }
 
     @Test
