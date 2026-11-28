@@ -21,6 +21,10 @@ Retours de Loïc sur la 0.13.2.
   dégradé sous la barre au lieu de s'arrêter sur un trait.
 - Android : un seul « Rechercher » en haut de Découvrir. Le bouton loupe de la
   barre n'apparaît qu'une fois le champ de recherche passé sous la barre.
+- Android : les affiches ne font plus « sauter » la rangée quand un titre tient
+  sur deux lignes : la légende sous l'affiche a toujours la même hauteur (deux
+  lignes de titre, une de légende), squelettes compris. Même correction sur
+  iPhone (`lineLimit(2, reservesSpace: true)`).
 - iPhone : l'onglet Rechercher n'affiche plus « Rechercher » deux fois (titre
   de l'écran et message d'attente).
 
