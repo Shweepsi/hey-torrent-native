@@ -129,10 +129,6 @@ généré est compilé avec l'app, les `.so` sont empaquetés. AGP les place sou
   viennent de l'appareil et peuvent ne pas être à jour. » s'affiche sur
   Découvrir, la fiche, la grille d'un genre et les épisodes d'une saison. La
   recherche n'est jamais mise en cache, donc n'en a pas.
-- Où regarder : la mention « Disponibilités fournies par JustWatch. »
-  (`detail_providers_attribution`, même clé que `detail.providers.attribution`
-  sur iPhone) est toujours sous la liste, même vide : TMDB l'impose pour ces
-  données.
 - Les écrans ouverts depuis Découvrir (recherche, fiche, genre) forment une pile
   tenue par `DiscoverNavigator` : chaque étape porte ses ViewModels, libérés
   quand on la quitte. Ouvrir l'écran déjà au sommet (double toucher) ne fait

@@ -3,8 +3,6 @@ package app.heywatchlist.screenshots
 import app.heywatchlist.core.CastMember
 import app.heywatchlist.core.Genre
 import app.heywatchlist.core.MediaKind
-import app.heywatchlist.core.Provider
-import app.heywatchlist.core.Providers
 import app.heywatchlist.core.RequestState
 import app.heywatchlist.core.SeasonSummary
 import app.heywatchlist.core.Title
@@ -68,11 +66,6 @@ object SampleData {
                     .mapIndexed { i, (name, role) -> CastMember(name = name, character = role, profileUrl = "fake://profile/$i") },
                 directors = listOf("Sarah Lenoir"),
                 videos = listOf(Video(youtubeKey = "exemple", kind = VideoKind.Trailer)),
-                providers = Providers(
-                    flatrate = listOf(Provider("Service A", "fake://logo/a"), Provider("Service B", "fake://logo/b")),
-                    rent = emptyList(),
-                    buy = emptyList(),
-                ),
                 similar = titles(6, offset = 4),
                 stale = false,
             )

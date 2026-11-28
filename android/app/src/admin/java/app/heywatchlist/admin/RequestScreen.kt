@@ -491,8 +491,8 @@ private fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .heightIn(min = 48.dp)
             .clip(CircleShape)
-            .background(if (selected) colors.primary else colors.glassFill)
-            .border(1.dp, if (selected) colors.primary else colors.glassBorder, CircleShape)
+            .background(if (selected) colors.primaryFill else colors.glassFill)
+            .border(1.dp, if (selected) colors.primaryFill else colors.glassBorder, CircleShape)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,

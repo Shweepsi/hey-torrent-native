@@ -82,7 +82,6 @@ fun detailOf(summary: Title, seasons: List<SeasonSummary> = emptyList()) = Title
     cast = emptyList(),
     directors = emptyList(),
     videos = emptyList(),
-    providers = Providers(emptyList(), emptyList(), emptyList()),
     similar = emptyList(),
     stale = false,
 )

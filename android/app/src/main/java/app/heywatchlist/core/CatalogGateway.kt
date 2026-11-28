@@ -52,13 +52,6 @@ enum class VideoKind { Trailer, Teaser, Clip, Featurette, Other }
 /** Vidéo hébergée par YouTube. */
 data class Video(val youtubeKey: String, val kind: VideoKind)
 
-data class Provider(val name: String, val logoUrl: String?)
-
-/** Où regarder le titre en France. */
-data class Providers(val flatrate: List<Provider>, val rent: List<Provider>, val buy: List<Provider>) {
-    val isEmpty: Boolean get() = flatrate.isEmpty() && rent.isEmpty() && buy.isEmpty()
-}
-
 data class SeasonSummary(
     val number: Int,
     val name: String,
@@ -81,7 +74,6 @@ data class TitleDetail(
     val directors: List<String>,
     /** Bandes-annonces d'abord. */
     val videos: List<Video>,
-    val providers: Providers,
     val similar: List<Title>,
     val stale: Boolean,
 ) {

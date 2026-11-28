@@ -85,7 +85,7 @@ async fn refuses_an_empty_token_without_calling_the_server() {
 }
 
 #[tokio::test]
-async fn unregisters_and_sends_a_test_push() {
+async fn unregisters_the_device() {
     let server = MockServer::start().await;
     let account = signed_in(&server).await;
     Mock::given(method("DELETE"))
@@ -94,14 +94,7 @@ async fn unregisters_and_sends_a_test_push() {
         .expect(1)
         .mount(&server)
         .await;
-    Mock::given(method("POST"))
-        .and(path("/v1/notifications/test"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "devices": 2, "sent": 1 })))
-        .mount(&server)
-        .await;
     account.unregister_push_device().await.unwrap();
-    let result = account.send_test_push().await.unwrap();
-    assert_eq!((result.devices, result.sent), (2, 1));
 }
 
 #[cfg(feature = "admin")]

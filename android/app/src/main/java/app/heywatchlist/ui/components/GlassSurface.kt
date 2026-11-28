@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import app.heywatchlist.ui.theme.HeyColors
@@ -35,18 +36,20 @@ val LocalHazeState = compositionLocalOf<HazeState?> { null }
  * texte reste lisible et rien ne plante.
  *
  * Le flou coûte cher : à réserver aux surfaces fixes, jamais à chaque élément
- * d'une liste qui défile.
+ * d'une liste qui défile. [tint] : la teinte posée sur le flou ([HeyColors.chromeFill]
+ * pour une barre flottante au-dessus du contenu).
  */
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
     shape: Shape = HeyTheme.shapes.card,
     hazeState: HazeState? = LocalHazeState.current,
+    tint: Color = HeyTheme.colors.glassFill,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = HeyTheme.colors
     val glass = if (hazeState != null) {
-        val style = remember(colors) { colors.glassStyle() }
+        val style = remember(colors, tint) { colors.glassStyle(tint) }
         Modifier.hazeEffect(state = hazeState, style = style)
     } else {
         Modifier.background(colors.glassFillFallback)
@@ -67,9 +70,9 @@ fun glassEdge(colors: HeyColors): Brush = Brush.verticalGradient(
     1f to colors.glassBorder,
 )
 
-private fun HeyColors.glassStyle() = HazeStyle(
+internal fun HeyColors.glassStyle(tint: Color) = HazeStyle(
     backgroundColor = background,
-    tints = listOf(HazeTint(glassFill)),
+    tints = listOf(HazeTint(tint)),
     blurRadius = 24.dp,
     noiseFactor = 0.04f,
     fallbackTint = HazeTint(glassFillFallback),

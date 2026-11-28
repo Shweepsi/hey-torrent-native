@@ -45,14 +45,24 @@ object Screenshots {
         SingletonImageLoader.setUnsafe(loader)
     }
 
-    /** Pose [content] sur le décor de l'app, laisse finir les fondus, puis écrit `<name>.png`. */
-    fun capture(rule: ComposeContentTestRule, name: String, dark: Boolean = false, content: @Composable () -> Unit) {
+    /** Pose [content] sur le décor de l'app, laisse finir les fondus, joue [act], puis écrit `<name>.png`. */
+    fun capture(
+        rule: ComposeContentTestRule,
+        name: String,
+        dark: Boolean = false,
+        act: ComposeContentTestRule.() -> Unit = {},
+        content: @Composable () -> Unit,
+    ) {
         rule.setContent {
             HeyTheme(darkTheme = dark) {
                 AppBackdrop { content() }
             }
         }
         rule.waitForIdle()
+        rule.mainClock.advanceTimeBy(FADE_WAIT_MILLIS)
+        rule.waitForIdle()
+        // Un geste avant la capture (défilement, pour voir les barres flottantes sur le contenu).
+        rule.act()
         rule.mainClock.advanceTimeBy(FADE_WAIT_MILLIS)
         rule.waitForIdle()
         rule.onRoot().captureRoboImage(File(dir, "$name.png").absolutePath)

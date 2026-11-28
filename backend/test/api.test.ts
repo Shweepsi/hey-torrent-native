@@ -129,7 +129,6 @@ describe("accès sur validation", () => {
     expect(await error(await call("GET", "/v1/tmdb/trending/all/week", undefined, session.access_token))).toBe(
       "access_pending",
     );
-    expect(await error(await call("POST", "/v1/notifications/test", {}, session.access_token))).toBe("access_pending");
     const me = (await (await call("GET", "/v1/me", undefined, session.access_token)).json()) as SessionBody;
     expect(me.user.status).toBe("pending");
     // L'appareil s'enregistre quand même : il sera prévenu de l'acceptation.

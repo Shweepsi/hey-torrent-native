@@ -143,22 +143,6 @@ pub struct Video {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct Provider {
-    pub id: u32,
-    pub name: String,
-    pub logo_url: Option<String>,
-}
-
-/// Où regarder le titre en France.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct Providers {
-    /// Inclus dans un abonnement.
-    pub flatrate: Vec<Provider>,
-    pub rent: Vec<Provider>,
-    pub buy: Vec<Provider>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct SeasonSummary {
     pub number: u32,
     pub name: String,
@@ -185,7 +169,6 @@ pub struct TitleDetail {
     pub directors: Vec<String>,
     /// Bandes-annonces d'abord.
     pub videos: Vec<Video>,
-    pub providers: Providers,
     pub similar: Vec<TitleSummary>,
     pub stale: bool,
 }
@@ -346,7 +329,7 @@ impl Catalog {
         .await
     }
 
-    /// Fiche complète : casting, vidéos, plateformes en France, similaires.
+    /// Fiche complète : casting, vidéos, similaires.
     pub async fn detail(
         &self,
         media_type: MediaType,

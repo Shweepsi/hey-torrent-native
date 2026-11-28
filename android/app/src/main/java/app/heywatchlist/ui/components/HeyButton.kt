@@ -1,23 +1,23 @@
 package app.heywatchlist.ui.components
 
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -42,8 +42,11 @@ enum class HeyButtonKind {
 }
 
 /**
- * Bouton, cible tactile d'au moins 48 dp ; estompé et inactif si `enabled` est
- * faux. [icon] s'affiche avant le texte.
+ * Bouton, cible tactile d'au moins 48 dp. [icon] s'affiche avant le texte.
+ *
+ * États : enfoncé, il rétrécit un peu et s'assombrit ; inactif (`enabled`
+ * faux), il perd sa couleur (verre neutre, texte estompé) au lieu de devenir un
+ * bleu délavé qu'on prendrait pour un bouton actif.
  */
 @Composable
 fun HeyButton(
@@ -57,30 +60,42 @@ fun HeyButton(
     val colors = HeyTheme.colors
     val shape = HeyTheme.shapes.button
     val press = rememberPress()
-    // Principal : léger dégradé vertical vers un bleu un peu plus sombre (contraste du texte au moins 4,5:1 partout).
-    val (fill, content) = when (kind) {
-        HeyButtonKind.Primary -> Brush.verticalGradient(listOf(colors.primary, colors.primary.darken())) to colors.onPrimary
-        HeyButtonKind.Secondary -> SolidColor(colors.glassFill) to colors.onBackground
-        HeyButtonKind.Danger -> SolidColor(colors.glassFill) to colors.error
-        HeyButtonKind.Link -> SolidColor(Color.Transparent) to colors.primary
-        HeyButtonKind.DangerLink -> SolidColor(Color.Transparent) to colors.error
+    val pressed by press.interaction.collectIsPressedAsState()
+    val filled = kind == HeyButtonKind.Primary
+    val plain = kind == HeyButtonKind.Link || kind == HeyButtonKind.DangerLink
+    // Principal : aplat accentué en léger dégradé ; texte blanc à 4,5:1 au moins, en clair comme en sombre.
+    val fill = when {
+        plain -> SolidColor(Color.Transparent)
+        filled && enabled -> Brush.verticalGradient(listOf(colors.primaryFill, colors.primaryFillEnd))
+        else -> SolidColor(colors.glassFill)
     }
-    val edge = when (kind) {
-        HeyButtonKind.Primary -> SolidColor(Color.White.copy(alpha = 0.18f))
-        HeyButtonKind.Link, HeyButtonKind.DangerLink -> SolidColor(Color.Transparent)
+    val content = when {
+        !enabled -> colors.onBackgroundMuted
+        filled -> colors.onPrimary
+        kind == HeyButtonKind.Secondary -> colors.onBackground
+        kind == HeyButtonKind.Link -> colors.primary
+        else -> colors.error
+    }
+    val edge = when {
+        plain -> SolidColor(Color.Transparent)
+        filled && enabled -> PrimaryEdge
         else -> glassEdge(colors)
     }
+    val pressTint = if (filled && enabled) Color.Black.copy(alpha = 0.14f) else colors.onBackground.copy(alpha = 0.08f)
     Box(
         modifier = modifier
             .heightIn(min = 48.dp)
             .pressScale(press)
-            .alpha(if (enabled) 1f else 0.5f)
             .clip(shape)
             .background(fill)
             .border(1.dp, edge, shape)
+            .drawWithContent {
+                drawContent()
+                if (pressed && enabled) drawRect(pressTint)
+            }
             .clickable(
                 interactionSource = press.interaction,
-                indication = LocalIndication.current,
+                indication = null,
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,
@@ -95,5 +110,5 @@ fun HeyButton(
     }
 }
 
-/** Une teinte un peu plus sombre, pour le bas d'un dégradé. */
-private fun Color.darken(): Color = lerp(this, Color.Black, 0.12f)
+/** Reflet du bouton principal : un filet clair en haut, presque invisible en bas. */
+private val PrimaryEdge = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f)))

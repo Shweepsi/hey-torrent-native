@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,16 +24,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -52,6 +50,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -65,13 +64,12 @@ import app.heywatchlist.R
 import app.heywatchlist.core.CastMember
 import app.heywatchlist.core.Episode
 import app.heywatchlist.core.MediaKind
-import app.heywatchlist.core.Provider
-import app.heywatchlist.core.Providers
 import app.heywatchlist.core.SeasonSummary
 import app.heywatchlist.core.Title
 import app.heywatchlist.core.TitleDetail
 import app.heywatchlist.core.Video
 import app.heywatchlist.ui.components.ErrorPanel
+import app.heywatchlist.ui.components.FloatingTopBar
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyIcon
 import app.heywatchlist.ui.components.HeyIconButton
@@ -85,12 +83,15 @@ import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
 import app.heywatchlist.ui.components.Skeleton
 import app.heywatchlist.ui.components.StaleBanner
 import app.heywatchlist.ui.components.TitleCard
+import app.heywatchlist.ui.components.TopBarHeight
 import app.heywatchlist.ui.components.rememberSkeletonPulse
 import app.heywatchlist.ui.theme.HeyTheme
 import app.heywatchlist.ui.watchlist.WatchlistPanel
 import app.heywatchlist.ui.watchlist.WatchlistUiState
 import app.heywatchlist.ui.watchlist.WatchlistViewModel
 import app.heywatchlist.ui.watchlist.watchlistKey
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 private val BackdropHeight = 300.dp
 private val BackdropHeightWithoutImage = 190.dp
@@ -100,13 +101,27 @@ private val CardWidth = 124.dp
 private val AmbientBlur = 72.dp
 private const val PARALLAX = 0.45f
 
-/** Masque du fond du titre : opaque en haut, transparent en bas, où la fiche reprend. */
-private val BackdropMask = Brush.verticalGradient(0.5f to Color.Black, 1f to Color.Transparent)
+/**
+ * Masque du fond du titre : opaque en haut, puis un fondu en courbe douce
+ * jusqu'à transparent en bas, où la fiche reprend sur le fond d'ambiance. Un
+ * fondu linéaire à deux points laissait voir une marche.
+ */
+private val BackdropMask = Brush.verticalGradient(
+    0f to Color.Black,
+    0.42f to Color.Black,
+    0.58f to Color.Black.copy(alpha = 0.86f),
+    0.72f to Color.Black.copy(alpha = 0.58f),
+    0.85f to Color.Black.copy(alpha = 0.27f),
+    0.94f to Color.Black.copy(alpha = 0.08f),
+    1f to Color.Transparent,
+)
 private const val EXPANDED_CHEVRON_DEGREES = 180f
 
 /**
- * Fiche plein écran d'un film ou d'une série. Elle est toujours sombre, quel que
- * soit le thème : le fond du titre se fond dans un dégradé sombre, sous le texte.
+ * Fiche plein écran d'un film ou d'une série, dans le thème du téléphone : le
+ * fond du titre se fond dans le fond d'ambiance (l'affiche floutée), sous le
+ * texte. Une barre flottante (retour, puis nom du titre) apparaît en verre
+ * quand la fiche défile sous elle.
  */
 @Composable
 fun DetailScreen(
@@ -146,10 +161,21 @@ internal fun DetailContent(
     CompositionLocalProvider(LocalHazeState provides null) {
         val pulse = rememberSkeletonPulse(active = state is DetailUiState.Loading)
         CompositionLocalProvider(LocalSkeletonPulse provides pulse) {
+            val listState = rememberLazyListState()
+            // Flou propre à la fiche : la barre du haut floute le fond d'ambiance (plan 0) et la fiche (plan 1).
+            val barHaze = rememberHazeState()
+            val density = LocalDensity.current
+            val revealStart = with(density) { (BackdropHeight - TopBarHeight * 2).toPx() }
+            val revealLength = with(density) { TopBarHeight.toPx() }
             Box(modifier = Modifier.fillMaxSize().background(HeyTheme.colors.background)) {
-                AmbientArtwork(url = state.preview.posterUrl ?: state.preview.backdropUrl)
+                AmbientArtwork(
+                    url = state.preview.posterUrl ?: state.preview.backdropUrl,
+                    modifier = Modifier.hazeSource(barHaze, zIndex = 0f),
+                )
                 DetailList(
                     state = state,
+                    listState = listState,
+                    modifier = Modifier.hazeSource(barHaze, zIndex = 1f),
                     watchlist = watchlist,
                     onOpenTitle = onOpenTitle,
                     onRetry = onRetry,
@@ -158,11 +184,25 @@ internal fun DetailContent(
                     onAddToWatchlist = onAddToWatchlist,
                     onRemoveFromWatchlist = onRemoveFromWatchlist,
                 )
-                HeyIconButton(
-                    icon = HeyIcons.Back,
-                    contentDescription = stringResource(R.string.action_back),
-                    onClick = onBack,
-                    modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp),
+                // Le verre n'apparaît qu'une fois le fond du titre passé sous la barre.
+                val revealed = {
+                    if (listState.firstVisibleItemIndex > 0) {
+                        1f
+                    } else {
+                        ((listState.firstVisibleItemScrollOffset - revealStart) / revealLength).coerceIn(0f, 1f)
+                    }
+                }
+                FloatingTopBar(
+                    title = state.preview.title,
+                    revealed = revealed,
+                    hazeState = barHaze,
+                    navigation = {
+                        HeyIconButton(
+                            icon = HeyIcons.Back,
+                            contentDescription = stringResource(R.string.action_back),
+                            onClick = onBack,
+                        )
+                    },
                 )
             }
         }
@@ -175,9 +215,9 @@ internal fun DetailContent(
  * qu'une fois, pas à chaque image du défilement.
  */
 @Composable
-private fun AmbientArtwork(url: String?) {
+private fun AmbientArtwork(url: String?, modifier: Modifier = Modifier) {
     val background = HeyTheme.colors.background
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         if (url != null) {
             HeyPoster(
                 url = url,
@@ -200,6 +240,8 @@ private fun AmbientArtwork(url: String?) {
 @Composable
 private fun DetailList(
     state: DetailUiState,
+    listState: LazyListState,
+    modifier: Modifier,
     watchlist: WatchlistUiState,
     onOpenTitle: (Title) -> Unit,
     onRetry: () -> Unit,
@@ -209,10 +251,9 @@ private fun DetailList(
     onRemoveFromWatchlist: () -> Unit,
 ) {
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val listState = rememberLazyListState()
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = bottomInset + SectionGap),
     ) {
         item(key = "header") {
@@ -265,7 +306,6 @@ private fun LazyListScope.loadedSections(
         item(key = "trailer") { TrailerButton(trailer, Modifier.screenPadding().padding(top = SectionGap)) }
     }
     item(key = "overview") { OverviewSection(detail, Modifier.padding(top = SectionGap)) }
-    item(key = "providers") { ProvidersSection(detail.providers, Modifier.padding(top = SectionGap)) }
 
     val seasons = detail.seasons.distinctBy { it.number }
     if (detail.summary.kind == MediaKind.Tv && seasons.isNotEmpty()) {
@@ -372,13 +412,13 @@ private fun DetailHeader(title: Title, detail: TitleDetail?, scrollOffset: () ->
                         },
                     shape = RectangleShape,
                 )
+                // Voile du haut seulement, sous la barre d'état et la barre flottante. Rien en
+                // bas : un voile qui s'arrêtait au bord du fond y dessinait une ligne nette.
                 Box(
                     modifier = Modifier.fillMaxSize().background(
                         Brush.verticalGradient(
                             0f to colors.background.copy(alpha = 0.55f),
-                            0.22f to Color.Transparent,
-                            0.5f to colors.background.copy(alpha = 0.35f),
-                            1f to colors.background.copy(alpha = 0.6f),
+                            0.3f to Color.Transparent,
                         ),
                     ),
                 )
@@ -468,66 +508,6 @@ private fun OverviewSection(detail: TitleDetail, modifier: Modifier = Modifier) 
                 style = HeyTheme.typography.caption,
                 color = colors.onBackgroundMuted,
             )
-        }
-    }
-}
-
-@Composable
-private fun ProvidersSection(providers: Providers, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle(text = stringResource(R.string.detail_where_to_watch), modifier = Modifier.screenPadding())
-        if (providers.isEmpty) {
-            HeyText(
-                text = stringResource(R.string.detail_providers_none),
-                color = HeyTheme.colors.onBackgroundMuted,
-                modifier = Modifier.screenPadding(),
-            )
-        } else {
-            ProviderGroup(R.string.detail_providers_flatrate, providers.flatrate)
-            ProviderGroup(R.string.detail_providers_rent, providers.rent)
-            ProviderGroup(R.string.detail_providers_buy, providers.buy)
-        }
-        // TMDB impose cette mention pour les données de disponibilité : elle accompagne toujours la section.
-        HeyText(
-            text = stringResource(R.string.detail_providers_attribution),
-            style = HeyTheme.typography.caption,
-            color = HeyTheme.colors.onBackgroundMuted,
-            modifier = Modifier.screenPadding(),
-        )
-    }
-}
-
-@Composable
-private fun ProviderGroup(@StringRes label: Int, providers: List<Provider>) {
-    if (providers.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HeyText(
-            text = stringResource(label),
-            style = HeyTheme.typography.caption,
-            color = HeyTheme.colors.onBackgroundMuted,
-            modifier = Modifier.screenPadding(),
-        )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = ScreenPadding),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(providers) { provider ->
-                Column(modifier = Modifier.width(64.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    HeyPoster(
-                        url = provider.logoUrl,
-                        modifier = Modifier.size(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    HeyText(
-                        text = provider.name,
-                        style = HeyTheme.typography.caption,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-            }
         }
     }
 }

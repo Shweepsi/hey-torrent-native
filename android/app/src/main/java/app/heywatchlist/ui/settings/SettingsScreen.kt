@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -37,12 +38,17 @@ import app.heywatchlist.EditionContent
 import app.heywatchlist.R
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
+import app.heywatchlist.ui.components.FloatingTopBar
 import app.heywatchlist.ui.components.GlassSurface
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
 import app.heywatchlist.ui.components.HeyIcon
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LocalHazeState
+import app.heywatchlist.ui.components.barsPadding
+import app.heywatchlist.ui.components.scrolledFraction
+import app.heywatchlist.ui.components.underBars
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.privacyPolicyUrl
 
@@ -59,7 +65,7 @@ fun SettingsScreen(state: AccountUiState.SignedIn, viewModel: AccountViewModel) 
         onConfirmDelete = viewModel::confirmDeletion,
         onCancelDelete = viewModel::cancelDeletion,
         extras = {
-            NotificationsCard(viewModel.gateway)
+            NotificationsCard()
             EditionContent.SettingsExtras(gateway = viewModel.gateway, isAdmin = state.profile.isAdmin)
         },
     )
@@ -75,11 +81,32 @@ internal fun SettingsContent(
     onCancelDelete: () -> Unit,
     extras: @Composable () -> Unit = {},
 ) {
+    val scroll = rememberScrollState()
+    // Bord à bord : la page passe sous la barre du haut et sous la barre d'onglets, qui la floutent.
+    Box(modifier = Modifier.fillMaxSize()) {
+        SettingsPage(state, privacyUrl, scroll, onSignOut, onDelete, extras)
+        FloatingTopBar(title = stringResource(R.string.tab_settings), revealed = { scroll.scrolledFraction() })
+    }
+    if (state.confirmingDeletion) {
+        DeleteDialog(busy = state.busy, onConfirm = onConfirmDelete, onCancel = onCancelDelete)
+    }
+}
+
+@Composable
+private fun SettingsPage(
+    state: AccountUiState.SignedIn,
+    privacyUrl: String?,
+    scroll: ScrollState,
+    onSignOut: () -> Unit,
+    onDelete: () -> Unit,
+    extras: @Composable () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .underBars(LocalHazeState.current)
+            .verticalScroll(scroll)
+            .padding(barsPadding(horizontal = 24.dp, top = 8.dp, bottom = 24.dp)),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HeyText(
@@ -141,9 +168,6 @@ internal fun SettingsContent(
             style = HeyTheme.typography.caption,
             color = HeyTheme.colors.onBackgroundMuted,
         )
-    }
-    if (state.confirmingDeletion) {
-        DeleteDialog(busy = state.busy, onConfirm = onConfirmDelete, onCancel = onCancelDelete)
     }
 }
 

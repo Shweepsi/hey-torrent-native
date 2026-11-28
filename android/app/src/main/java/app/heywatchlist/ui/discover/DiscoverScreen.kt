@@ -21,8 +21,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -55,11 +57,15 @@ import app.heywatchlist.core.MediaKind
 import app.heywatchlist.core.Shelf
 import app.heywatchlist.core.Title
 import app.heywatchlist.ui.components.ErrorPanel
+import app.heywatchlist.ui.components.FloatingTopBar
 import app.heywatchlist.ui.components.HeyChip
+import app.heywatchlist.ui.components.HeyIconButton
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeySearchEntry
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.components.LocalSkeletonPulse
 import app.heywatchlist.ui.components.OnScrim
 import app.heywatchlist.ui.components.Scrim
@@ -67,8 +73,12 @@ import app.heywatchlist.ui.components.Skeleton
 import app.heywatchlist.ui.components.StaleBanner
 import app.heywatchlist.ui.components.TitleCard
 import app.heywatchlist.ui.components.TitleCardSkeleton
+import app.heywatchlist.ui.components.barsPadding
 import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.components.rememberSkeletonPulse
+import app.heywatchlist.ui.components.scrolledFraction
+import app.heywatchlist.ui.components.statusBarHeight
+import app.heywatchlist.ui.components.underBars
 import app.heywatchlist.ui.theme.HeyTheme
 import kotlin.math.abs
 
@@ -113,43 +123,73 @@ internal fun DiscoverContent(
 ) {
     val loading = state.genres is GenresState.Loading || state.shelves.values.any { it is ShelfState.Loading }
     val pulse = rememberSkeletonPulse(active = loading)
+    val listState = rememberLazyListState()
+    val haze = LocalHazeState.current
     CompositionLocalProvider(LocalSkeletonPulse provides pulse) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // En-tête fixe : le verre de la recherche ne se pose que sur le décor, pas sur une liste qui défile.
-            Column(
-                modifier = Modifier.screenPadding().padding(top = 16.dp, bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Pas de geste de tirer avec TalkBack : « Actualiser » est une action du titre de l'écran.
-                val refreshLabel = stringResource(R.string.action_refresh)
-                HeyText(
-                    text = stringResource(R.string.tab_discover),
-                    style = HeyTheme.typography.display,
-                    modifier = Modifier.semantics {
-                        heading()
-                        customActions = listOf(CustomAccessibilityAction(refreshLabel) { onRefresh(); true })
-                    },
-                )
-                HeySearchEntry(text = stringResource(R.string.search_placeholder), onClick = onOpenSearch)
-            }
+        // Bord à bord : la liste passe sous la barre du haut et sous la barre d'onglets, qui la floutent.
+        Box(modifier = Modifier.fillMaxSize()) {
             HeyPullToRefresh(
                 refreshing = state.refreshing,
                 onRefresh = onRefresh,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
+                indicatorTop = statusBarHeight() + 8.dp,
             ) {
-                DiscoverList(state, onRetryShelf, onRetryGenres, onOpenTitle, onOpenGenre)
+                DiscoverList(
+                    state = state,
+                    listState = listState,
+                    onRefresh = onRefresh,
+                    onRetryShelf = onRetryShelf,
+                    onRetryGenres = onRetryGenres,
+                    onOpenTitle = onOpenTitle,
+                    onOpenSearch = onOpenSearch,
+                    onOpenGenre = onOpenGenre,
+                    modifier = Modifier.underBars(haze),
+                )
             }
+            FloatingTopBar(
+                title = stringResource(R.string.tab_discover),
+                revealed = { listState.scrolledFraction() },
+                actions = {
+                    HeyIconButton(
+                        icon = HeyIcons.Search,
+                        contentDescription = stringResource(R.string.search_label),
+                        onClick = onOpenSearch,
+                    )
+                },
+            )
         }
+    }
+}
+
+/** Grand titre de l'onglet et champ de recherche, en tête de la liste. */
+@Composable
+private fun DiscoverHeader(onRefresh: () -> Unit, onOpenSearch: () -> Unit) {
+    Column(modifier = Modifier.screenPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Pas de geste de tirer avec TalkBack : « Actualiser » est une action du titre de l'écran.
+        val refreshLabel = stringResource(R.string.action_refresh)
+        HeyText(
+            text = stringResource(R.string.tab_discover),
+            style = HeyTheme.typography.display,
+            modifier = Modifier.semantics {
+                heading()
+                customActions = listOf(CustomAccessibilityAction(refreshLabel) { onRefresh(); true })
+            },
+        )
+        HeySearchEntry(text = stringResource(R.string.search_placeholder), onClick = onOpenSearch)
     }
 }
 
 @Composable
 private fun DiscoverList(
     state: DiscoverUiState,
+    listState: LazyListState,
+    onRefresh: () -> Unit,
     onRetryShelf: (Shelf) -> Unit,
     onRetryGenres: () -> Unit,
     onOpenTitle: (Title) -> Unit,
+    onOpenSearch: () -> Unit,
     onOpenGenre: (Genre) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val trending = state.shelf(Shelf.TrendingWeek)
     val heroes = remember(trending) {
@@ -158,10 +198,12 @@ private fun DiscoverList(
     // Une rangée lue mais vide (rien de lisible) disparaît au lieu d'afficher un titre sans rien dessous.
     val shelves = DiscoverShelves.filter { (state.shelf(it) as? ShelfState.Loaded)?.titles?.isEmpty() != true }
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = barsPadding(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        item(key = "header") { DiscoverHeader(onRefresh, onOpenSearch) }
         if (state.isStale) {
             item(key = "stale") { StaleBanner(modifier = Modifier.screenPadding()) }
         }

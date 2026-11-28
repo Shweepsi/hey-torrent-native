@@ -24,8 +24,7 @@ struct LiveCatalogClientTests {
         TitleDetail(
             summary: summary, tagline: nil, genres: [], runtimeMinutes: nil, status: nil,
             seasonsCount: nil, episodesCount: nil, seasons: [], cast: [], directors: [],
-            videos: videos,
-            providers: Providers(flatrate: [], rent: [], buy: []), similar: [], stale: false
+            videos: videos, similar: [], stale: false
         )
     }
 
@@ -66,11 +65,6 @@ struct LiveCatalogClientTests {
                 Video(youtubeKey: "teaser1", name: "Teaser", kind: .teaser),
                 Video(youtubeKey: "abc_DEF-1", name: "Bande-annonce", kind: .trailer),
             ],
-            providers: Providers(
-                flatrate: [Provider(id: 8, name: "Plateforme", logoUrl: "https://image.tmdb.org/t/p/w92/l.jpg")],
-                rent: [],
-                buy: []
-            ),
             similar: [summary],
             stale: false
         )
@@ -83,8 +77,6 @@ struct LiveCatalogClientTests {
         #expect(sheet.cast.first?.character == nil)
         #expect(sheet.directors == ["Sam Durand"])
         #expect(sheet.trailerURL?.absoluteString == "https://www.youtube.com/watch?v=abc_DEF-1")
-        #expect(sheet.providers.flatrate.map(\.name) == ["Plateforme"])
-        #expect(sheet.providers.isEmpty == false)
         #expect(sheet.similar.count == 1)
     }
 

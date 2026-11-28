@@ -60,7 +60,7 @@ le chat ni par un fichier du dépôt.
    **TestFlight** sur l'iPhone, puis HeyWatchlist.
 3. Essayer : connexion Apple et connexion Google (un nouveau compte attend
    ta validation dans l'onglet Accès de l'APK admin),
-   Découvrir, ajout à la watchlist, notification d'essai (Réglages),
+   Découvrir, ajout à la watchlist,
    suppression d'un compte de test.
 
 ### 3. iPhone : fiche App Store
@@ -218,8 +218,7 @@ Description (les deux stores) :
 > que l'administrateur du serveur accepte.
 >
 > • Découvrir : tendances, nouveautés, à venir, genres, recherche instantanée,
-> fiches complètes avec casting, saisons, bandes-annonces et plateformes en
-> France.
+> fiches complètes avec casting, saisons et bandes-annonces.
 > • Watchlist : ajoutez un film, une série entière ou certaines saisons. Chaque
 > ajout devient une demande adressée à l'administrateur.
 > • Suivi : demandée, en cours, disponible ou refusée, vous voyez où en est

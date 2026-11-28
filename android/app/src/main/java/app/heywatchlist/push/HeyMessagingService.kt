@@ -61,7 +61,6 @@ class HeyMessagingService : FirebaseMessagingService() {
             "push_available_show" -> R.string.push_available_show
             "push_available_season" -> R.string.push_available_season
             "push_available_episode" -> R.string.push_available_episode
-            "push_test" -> R.string.push_test
             "push_access_granted" -> R.string.push_access_granted
             "push_access_request" -> R.string.push_access_request
             "push_access_request_named" -> R.string.push_access_request_named

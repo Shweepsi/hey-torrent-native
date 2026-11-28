@@ -301,78 +301,6 @@
         }
       }
     },
-    "detail.providers.attribution" : {
-      "comment" : "Mention de la source des plateformes de visionnage (TMDB exige d’en citer l’origine), sous la liste des plateformes de la fiche.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponibilités fournies par JustWatch."
-          }
-        }
-      }
-    },
-    "detail.providers.buy" : {
-      "comment" : "Plateformes où acheter le titre.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À l’achat"
-          }
-        }
-      }
-    },
-    "detail.providers.flatrate" : {
-      "comment" : "Plateformes qui l’incluent dans leur abonnement.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inclus dans un abonnement"
-          }
-        }
-      }
-    },
-    "detail.providers.none" : {
-      "comment" : "Aucune plateforme pour ce titre en France.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune plateforme référencée en France pour le moment."
-          }
-        }
-      }
-    },
-    "detail.providers.rent" : {
-      "comment" : "Plateformes où louer le titre.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À la location"
-          }
-        }
-      }
-    },
-    "detail.providers.title" : {
-      "comment" : "Titre de la section des plateformes.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Où regarder en France"
-          }
-        }
-      }
-    },
     "detail.rating %@" : {
       "comment" : "Description d’accessibilité de la note (ex. 7,4).",
       "extractionState" : "manual",
@@ -877,18 +805,6 @@
         }
       }
     },
-    "push_test" : {
-      "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notification d’essai : tout fonctionne."
-          }
-        }
-      }
-    },
     "search.empty.description %@" : {
       "comment" : "Recherche sans résultat ; %@ est le texte saisi.",
       "extractionState" : "manual",
@@ -1029,66 +945,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvrir les réglages"
-          }
-        }
-      }
-    },
-    "settings.push.test" : {
-      "comment" : "Bouton de notification d’essai.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Envoyer une notification d’essai"
-          }
-        }
-      }
-    },
-    "settings.push.testFailed" : {
-      "comment" : "Apple a refusé ou le serveur n’a pas de clé APNs.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L’envoi a échoué côté serveur. Réessayez plus tard."
-          }
-        }
-      }
-    },
-    "settings.push.testNoDevice" : {
-      "comment" : "Aucun appareil connu du serveur.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cet iPhone n’est pas encore enregistré. Réessayez dans un instant."
-          }
-        }
-      }
-    },
-    "settings.push.testSent" : {
-      "comment" : "Notification d’essai partie.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notification envoyée. Elle arrive dans quelques secondes."
-          }
-        }
-      }
-    },
-    "settings.push.testing" : {
-      "comment" : "Notification d’essai en cours.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Envoi…"
           }
         }
       }

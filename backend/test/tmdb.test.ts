@@ -229,7 +229,7 @@ describe("paramètres", () => {
     "language=en-US&include_adult=true&region=US&watch_region=US&include_video_language=de" +
     "&append_to_response=account_states&api_key=evil&session_id=s&foo=bar";
   const DETAIL = {
-    append_to_response: "credits,videos,watch/providers,similar",
+    append_to_response: "credits,videos,similar",
     include_video_language: "fr,en,null",
     language: "fr-FR",
   };

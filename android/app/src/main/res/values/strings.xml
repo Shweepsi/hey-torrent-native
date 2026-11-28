@@ -72,12 +72,6 @@
     <string name="detail_overview_empty">Aucun synopsis en français pour ce titre.</string>
     <string name="detail_directed_by">Réalisé par %1$s</string>
     <string name="detail_created_by">Créé par %1$s</string>
-    <string name="detail_where_to_watch">Où regarder en France</string>
-    <string name="detail_providers_flatrate">Inclus dans un abonnement</string>
-    <string name="detail_providers_rent">À la location</string>
-    <string name="detail_providers_buy">À l’achat</string>
-    <string name="detail_providers_none">Aucune plateforme n’est indiquée en France pour le moment.</string>
-    <string name="detail_providers_attribution">Disponibilités fournies par JustWatch.</string>
     <string name="detail_cast">Casting</string>
     <string name="detail_seasons_title">Saisons</string>
     <string name="detail_season_default">Saison %1$d</string>
@@ -168,8 +162,7 @@
     <string name="catalog_error_core_unavailable">Le cœur de l’application n’a pas pu démarrer : le catalogue est indisponible.</string>
     <string name="catalog_error_unknown">Le catalogue n’a pas pu se charger (erreur inattendue).</string>
 
-    <!-- Notifications « Disponible sur Plex ». Les clés push_available_* et
-         push_test sont envoyées telles quelles par le serveur (body_loc_key) :
+    <!-- Notifications « Disponible sur Plex ». Les clés push_* sont envoyées telles quelles par le serveur (body_loc_key) :
          ne pas les renommer. Le titre de la notification est celui du média. -->
     <string name="push_channel_name">Disponible sur Plex</string>
     <string name="push_channel_description">Un film ou une série de votre watchlist vient d’arriver sur Plex.</string>
@@ -177,7 +170,6 @@
     <string name="push_available_show">La série est disponible sur Plex.</string>
     <string name="push_available_season">La saison %1$s est disponible sur Plex.</string>
     <string name="push_available_episode">Saison %1$s, épisode %2$s : disponible sur Plex.</string>
-    <string name="push_test">Notification d’essai : tout fonctionne.</string>
     <!-- Accès au compte : clés envoyées telles quelles par le serveur. -->
     <string name="push_access_granted">Votre accès est validé. Bienvenue !</string>
     <string name="push_access_request">Nouvelle demande d’accès à valider.</string>
@@ -189,11 +181,6 @@
     <string name="settings_push_unavailable">Les notifications ne sont pas disponibles dans cette version de l’app.</string>
     <string name="settings_push_denied">Les notifications sont coupées pour HeyWatchlist dans les réglages du téléphone.</string>
     <string name="settings_push_open_settings">Ouvrir les réglages</string>
-    <string name="settings_push_test">Envoyer une notification d’essai</string>
-    <string name="settings_push_testing">Envoi…</string>
-    <string name="settings_push_test_sent">Notification envoyée. Elle arrive dans quelques secondes.</string>
-    <string name="settings_push_test_no_device">Ce téléphone n’est pas encore enregistré. Réessayez dans un instant.</string>
-    <string name="settings_push_test_failed">L’envoi a échoué côté serveur. Réessayez plus tard.</string>
 
     <string name="crash_title">L’app s’est arrêtée la dernière fois</string>
     <string name="crash_body">Copiez ce rapport et envoyez-le à l’administrateur : il aide à corriger le problème. Rien n’est envoyé sans vous.</string>

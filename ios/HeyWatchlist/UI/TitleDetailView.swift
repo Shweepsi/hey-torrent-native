@@ -66,6 +66,8 @@ struct TitleDetailView: View {
     // MARK: En-tête
 
     /// Fond d'écran du titre, fondu vers le fond de l'app : aucun texte dessus.
+    /// Le fondu suit une courbe douce (plusieurs paliers) : un dégradé à deux
+    /// points laisse voir une marche là où l'image finit.
     private var backdrop: some View {
         Color.clear
             .frame(height: 280)
@@ -74,7 +76,10 @@ struct TitleDetailView: View {
                 LinearGradient(
                     stops: [
                         .init(color: Color.black.opacity(0.45), location: 0),
-                        .init(color: .clear, location: 0.35),
+                        .init(color: .clear, location: 0.3),
+                        .init(color: HeyTheme.background.opacity(0.18), location: 0.5),
+                        .init(color: HeyTheme.background.opacity(0.5), location: 0.68),
+                        .init(color: HeyTheme.background.opacity(0.82), location: 0.84),
                         .init(color: HeyTheme.background, location: 1),
                     ],
                     startPoint: .top,
@@ -171,7 +176,6 @@ struct TitleDetailView: View {
         if !sheet.directors.isEmpty {
             credits(of: sheet)
         }
-        ProvidersSection(providers: sheet.providers)
         if !sheet.cast.isEmpty {
             CastSection(cast: sheet.cast)
         }
@@ -219,52 +223,6 @@ private struct SectionHeader: View {
         Text(key)
             .font(.title3.bold())
             .accessibilityAddTraits(.isHeader)
-    }
-}
-
-/// Où regarder en France : abonnement, location, achat. Fonds unis (la fiche
-/// défile). Ces données viennent de JustWatch, via TMDB, qui en impose la
-/// mention : elle accompagne toujours la section.
-private struct ProvidersSection: View {
-    let providers: WatchProviders
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader("detail.providers.title")
-            if providers.isEmpty {
-                Text("detail.providers.none").foregroundStyle(.secondary)
-            } else {
-                group("detail.providers.flatrate", providers.flatrate)
-                group("detail.providers.rent", providers.rent)
-                group("detail.providers.buy", providers.buy)
-            }
-            Text("detail.providers.attribution")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private func group(_ title: LocalizedStringKey, _ list: [WatchProvider]) -> some View {
-        if !list.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title).font(.subheadline).foregroundStyle(.secondary)
-                ScrollView(.horizontal) {
-                    LazyHStack(spacing: 10) {
-                        ForEach(list) { provider in
-                            RemoteImage(url: provider.logoURL, fallbackSymbol: "play.rectangle")
-                                .frame(width: 48, height: 48)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .accessibilityElement(children: .ignore)
-                                .accessibilityLabel(Text(verbatim: provider.name))
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .scrollIndicators(.hidden)
-                .padding(.horizontal, -20)
-            }
-        }
     }
 }
 
