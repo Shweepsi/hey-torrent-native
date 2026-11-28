@@ -35,6 +35,12 @@ class HeyColors(
     val error: Color,
     /** Seconde couleur des halos décoratifs du fond. */
     val accent: Color,
+    /** Reflet du haut d'une surface en verre (le filet s'éclaircit vers le haut). */
+    val glassHighlight: Color,
+    /** État « disponible ». */
+    val success: Color,
+    /** État « en cours ». */
+    val warning: Color,
 )
 
 private val DarkColors = HeyColors(
@@ -48,6 +54,9 @@ private val DarkColors = HeyColors(
     glassBorder = Color.White.copy(alpha = 0.2f),
     error = Color(0xFFFF8A80),
     accent = Color(0xFF7C5CFF),
+    glassHighlight = Color.White.copy(alpha = 0.42f),
+    success = Color(0xFF5FD49A),
+    warning = Color(0xFFF2B65A),
 )
 
 private val LightColors = HeyColors(
@@ -61,6 +70,9 @@ private val LightColors = HeyColors(
     glassBorder = Color(0xFF121317).copy(alpha = 0.12f),
     error = Color(0xFFB3261E),
     accent = Color(0xFFB9A8FF),
+    glassHighlight = Color.White.copy(alpha = 0.95f),
+    success = Color(0xFF12703F),
+    warning = Color(0xFF8A5300),
 )
 
 /** Typographie : sans-serif système, titres larges et nets. */
@@ -122,6 +134,8 @@ private val DefaultTypography = HeyTypography(
 class HeyShapes(
     val card: RoundedCornerShape,
     val button: RoundedCornerShape,
+    /** Barre d'onglets flottante et pastilles : bords entièrement arrondis. */
+    val pill: RoundedCornerShape,
     /** Affiches et vignettes. */
     val poster: RoundedCornerShape,
 )
@@ -129,6 +143,7 @@ class HeyShapes(
 private val DefaultShapes = HeyShapes(
     card = RoundedCornerShape(28.dp),
     button = RoundedCornerShape(20.dp),
+    pill = RoundedCornerShape(percent = 50),
     poster = RoundedCornerShape(16.dp),
 )
 

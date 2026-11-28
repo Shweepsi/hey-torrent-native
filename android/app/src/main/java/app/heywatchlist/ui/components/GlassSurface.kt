@@ -9,6 +9,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import app.heywatchlist.ui.theme.HeyColors
@@ -26,7 +27,8 @@ val LocalHazeState = compositionLocalOf<HazeState?> { null }
 
 /**
  * Surface en verre dépoli : le décor derrière elle est flouté (Haze), recouvert
- * d'une teinte translucide et d'un filet clair de 1 dp.
+ * d'une teinte translucide et d'un filet de 1 dp qui s'éclaircit vers le haut,
+ * comme un reflet sur le bord du verre.
  *
  * Sans [hazeState], ou quand Haze coupe le flou (certains appareils sous
  * Android 12), la surface devient translucide et plus opaque, sans flou : le
@@ -53,10 +55,17 @@ fun GlassSurface(
         modifier = modifier
             .clip(shape)
             .then(glass)
-            .border(width = 1.dp, color = colors.glassBorder, shape = shape),
+            .border(width = 1.dp, brush = glassEdge(colors), shape = shape),
         content = content,
     )
 }
+
+/** Filet du verre : reflet clair en haut, filet ordinaire ensuite. */
+fun glassEdge(colors: HeyColors): Brush = Brush.verticalGradient(
+    0f to colors.glassHighlight,
+    0.35f to colors.glassBorder,
+    1f to colors.glassBorder,
+)
 
 private fun HeyColors.glassStyle() = HazeStyle(
     backgroundColor = background,

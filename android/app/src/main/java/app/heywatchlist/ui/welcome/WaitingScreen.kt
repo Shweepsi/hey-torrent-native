@@ -1,16 +1,24 @@
 package app.heywatchlist.ui.welcome
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -26,7 +34,10 @@ import app.heywatchlist.ui.account.AccountViewModel
 import app.heywatchlist.ui.components.GlassSurface
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
+import app.heywatchlist.ui.components.HeyIcon
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.settings.DeleteDialog
 import app.heywatchlist.ui.theme.HeyTheme
 
@@ -63,17 +74,12 @@ internal fun WaitingContent(
     extras: @Composable () -> Unit = {},
 ) {
     val refused = state.profile.access == Access.Refused
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-    ) {
+    WelcomeLayout {
+        StatusOrb(refused = refused)
         HeyText(
             text = stringResource(R.string.app_name),
-            style = HeyTheme.typography.display,
+            style = HeyTheme.typography.headline,
+            color = HeyTheme.colors.onBackgroundMuted,
             modifier = Modifier.semantics { heading() },
         )
         GlassSurface(modifier = Modifier.fillMaxWidth()) {
@@ -92,6 +98,11 @@ internal fun WaitingContent(
                     color = HeyTheme.colors.onBackgroundMuted,
                 )
                 if (!refused) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StepRow(stringResource(R.string.waiting_step_account), StepState.Done, stringResource(R.string.waiting_step_done))
+                        StepRow(stringResource(R.string.waiting_step_review), StepState.Current, stringResource(R.string.waiting_step_current))
+                        StepRow(stringResource(R.string.waiting_step_access), StepState.Next, stringResource(R.string.waiting_step_next))
+                    }
                     HeyButton(
                         text = stringResource(if (state.checking) R.string.waiting_checking else R.string.waiting_check),
                         onClick = onCheck,
@@ -126,5 +137,44 @@ internal fun WaitingContent(
     }
     if (state.confirmingDeletion) {
         DeleteDialog(busy = state.busy, onConfirm = onConfirmDelete, onCancel = onCancelDelete)
+    }
+}
+
+/**
+ * Pastille d'état en haut de l'attente : une horloge entourée d'un halo qui
+ * respire, ou une croix pour un accès refusé (sans mouvement).
+ */
+@Composable
+private fun StatusOrb(refused: Boolean) {
+    val colors = HeyTheme.colors
+    val tint = if (refused) colors.error else colors.primary
+    val breathing = !refused && rememberAnimationsEnabled()
+    val halo = if (breathing) {
+        rememberInfiniteTransition(label = "waiting-orb").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 1_800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "waiting-orb-halo",
+        )
+    } else {
+        remember { mutableFloatStateOf(0.5f) }
+    }
+    Box(
+        modifier = Modifier.size(88.dp).drawBehind {
+            // Le halo n'est lu qu'au dessin : son mouvement ne recompose rien.
+            val value = halo.value
+            drawCircle(color = tint.copy(alpha = 0.10f + 0.14f * value), radius = size.minDimension / 2f * (0.86f + 0.14f * value))
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        GlassSurface(modifier = Modifier.size(64.dp), shape = CircleShape) {
+            HeyIcon(
+                icon = if (refused) HeyIcons.Close else HeyIcons.Clock,
+                contentDescription = null,
+                tint = tint,
+                iconSize = 30.dp,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
     }
 }

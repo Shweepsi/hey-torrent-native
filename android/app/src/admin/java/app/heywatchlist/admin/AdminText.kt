@@ -2,11 +2,13 @@ package app.heywatchlist.admin
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import app.heywatchlist.R
-import java.text.DateFormat
-import java.util.Date
-import java.util.Locale
+import app.heywatchlist.ui.components.HeyIcons
+import app.heywatchlist.ui.components.StatusPill
+import app.heywatchlist.ui.components.StatusTone
 import uniffi.heywatchlist_core.AudioLanguage
 import uniffi.heywatchlist_core.DownloadState
 import uniffi.heywatchlist_core.ReleaseInfo
@@ -15,6 +17,9 @@ import uniffi.heywatchlist_core.RequestStatus
 import uniffi.heywatchlist_core.Resolution
 import uniffi.heywatchlist_core.SourceFailure
 import uniffi.heywatchlist_core.VideoCodec
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
 /** Libellés des types du cœur : le cœur ne produit aucun texte affiché. */
 @StringRes
@@ -23,6 +28,27 @@ fun RequestStatus.labelRes(): Int = when (this) {
     RequestStatus.IN_PROGRESS -> R.string.admin_status_in_progress
     RequestStatus.AVAILABLE -> R.string.admin_status_available
     RequestStatus.REFUSED -> R.string.admin_status_refused
+}
+
+/** Teinte de l'état d'une demande, en plus de son libellé et de son icône. */
+fun RequestStatus.tone(): StatusTone = when (this) {
+    RequestStatus.REQUESTED -> StatusTone.Info
+    RequestStatus.IN_PROGRESS -> StatusTone.Progress
+    RequestStatus.AVAILABLE -> StatusTone.Success
+    RequestStatus.REFUSED -> StatusTone.Danger
+}
+
+fun RequestStatus.icon(): ImageVector = when (this) {
+    RequestStatus.REQUESTED -> HeyIcons.Clock
+    RequestStatus.IN_PROGRESS -> HeyIcons.Download
+    RequestStatus.AVAILABLE -> HeyIcons.Check
+    RequestStatus.REFUSED -> HeyIcons.Close
+}
+
+/** Pastille de l'état d'une demande. */
+@Composable
+fun RequestStatusPill(status: RequestStatus, modifier: Modifier = Modifier) {
+    StatusPill(text = stringResource(status.labelRes()), tone = status.tone(), icon = status.icon(), modifier = modifier)
 }
 
 @StringRes

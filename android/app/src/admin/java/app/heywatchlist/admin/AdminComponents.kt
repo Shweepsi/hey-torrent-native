@@ -1,18 +1,30 @@
 package app.heywatchlist.admin
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import app.heywatchlist.R
 import app.heywatchlist.ui.components.GlassSurface
@@ -22,16 +34,65 @@ import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeySpinner
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.glassEdge
+import app.heywatchlist.ui.components.pressScale
+import app.heywatchlist.ui.components.rememberPress
 import app.heywatchlist.ui.theme.HeyTheme
 
 /**
- * Carte en verre d'une liste qui défile : sans flou (`docs/DESIGN.md`, le flou
- * est réservé aux surfaces fixes).
+ * Carte d'une liste qui défile : teinte translucide et filet du verre, sans
+ * flou (`docs/DESIGN.md`, le flou est réservé aux surfaces fixes).
  */
 @Composable
-fun AdminCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    GlassSurface(modifier = modifier.fillMaxWidth(), hazeState = null) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+fun AdminCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = HeyTheme.colors
+    val shape = HeyTheme.shapes.card
+    val press = rememberPress()
+    val touch = if (onClick != null) {
+        Modifier.clickable(
+            interactionSource = press.interaction,
+            indication = LocalIndication.current,
+            role = Role.Button,
+            onClick = onClick,
+        )
+    } else {
+        Modifier
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .pressScale(press)
+            .clip(shape)
+            .background(colors.glassFill)
+            .border(1.dp, glassEdge(colors), shape)
+            .then(touch)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        content = content,
+    )
+}
+
+/** Pastille ronde à l'initiale d'un prénom, teinte tirée du prénom. Décorative. */
+@Composable
+fun InitialAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    val hue = (name.hashCode().mod(360)).toFloat()
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color.hsv(hue, 0.55f, 0.5f))
+            .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        HeyText(
+            text = name.trim().take(1).uppercase(),
+            style = if (size >= 32.dp) HeyTheme.typography.label else HeyTheme.typography.caption.copy(fontSize = 11.sp),
+            color = Color.White,
+        )
     }
 }
 
@@ -48,7 +109,7 @@ fun AdminHeader(title: String, onBack: (() -> Unit)? = null) {
         }
         HeyText(
             text = title,
-            style = HeyTheme.typography.headline,
+            style = if (onBack == null) HeyTheme.typography.display else HeyTheme.typography.headline,
             modifier = Modifier.weight(1f).semantics { heading() },
             maxLines = 2,
         )

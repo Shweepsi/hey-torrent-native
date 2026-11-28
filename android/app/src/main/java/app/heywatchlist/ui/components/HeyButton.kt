@@ -1,5 +1,6 @@
 package app.heywatchlist.ui.components
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -46,19 +50,29 @@ fun HeyButton(
 ) {
     val colors = HeyTheme.colors
     val shape = HeyTheme.shapes.button
+    val press = rememberPress()
+    // Principal : léger dégradé vertical vers un bleu un peu plus sombre (contraste du texte au moins 4,5:1 partout).
     val (fill, content) = when (kind) {
-        HeyButtonKind.Primary -> colors.primary to colors.onPrimary
-        HeyButtonKind.Secondary -> colors.glassFill to colors.onBackground
-        HeyButtonKind.Danger -> colors.glassFill to colors.error
+        HeyButtonKind.Primary -> Brush.verticalGradient(listOf(colors.primary, colors.primary.darken())) to colors.onPrimary
+        HeyButtonKind.Secondary -> SolidColor(colors.glassFill) to colors.onBackground
+        HeyButtonKind.Danger -> SolidColor(colors.glassFill) to colors.error
     }
+    val edge = if (kind == HeyButtonKind.Primary) SolidColor(Color.White.copy(alpha = 0.18f)) else glassEdge(colors)
     Box(
         modifier = modifier
             .heightIn(min = 48.dp)
+            .pressScale(press)
             .alpha(if (enabled) 1f else 0.5f)
             .clip(shape)
             .background(fill)
-            .border(1.dp, if (kind == HeyButtonKind.Primary) Color.Transparent else colors.glassBorder, shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .border(1.dp, edge, shape)
+            .clickable(
+                interactionSource = press.interaction,
+                indication = LocalIndication.current,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            )
             .padding(horizontal = 24.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -68,3 +82,6 @@ fun HeyButton(
         }
     }
 }
+
+/** Une teinte un peu plus sombre, pour le bas d'un dégradé. */
+private fun Color.darken(): Color = lerp(this, Color.Black, 0.12f)

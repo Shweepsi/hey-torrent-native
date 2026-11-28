@@ -1,7 +1,12 @@
 package app.heywatchlist.ui.discover
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +33,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
@@ -38,6 +46,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
@@ -58,8 +67,10 @@ import app.heywatchlist.ui.components.Skeleton
 import app.heywatchlist.ui.components.StaleBanner
 import app.heywatchlist.ui.components.TitleCard
 import app.heywatchlist.ui.components.TitleCardSkeleton
+import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.components.rememberSkeletonPulse
 import app.heywatchlist.ui.theme.HeyTheme
+import kotlin.math.abs
 
 private val CardWidth = 124.dp
 private const val HERO_COUNT = 6
@@ -184,7 +195,18 @@ private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
             pageSpacing = 12.dp,
             key = { titles.getOrNull(it)?.key ?: it },
         ) { page ->
-            HeroCard(titles[page], onOpen)
+            HeroCard(
+                title = titles[page],
+                onOpen = onOpen,
+                // Les affiches voisines reculent un peu : lu au dessin, sans recomposer.
+                modifier = Modifier.graphicsLayer {
+                    val distance = abs(pagerState.getOffsetDistanceInPages(page)).coerceAtMost(1f)
+                    val scale = 1f - HERO_SIDE_SHRINK * distance
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = 1f - 0.35f * distance
+                },
+            )
         }
         if (titles.size > 1) {
             Row(
@@ -192,13 +214,20 @@ private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val animations = rememberAnimationsEnabled()
                 titles.indices.forEach { index ->
                     val current = index == pagerState.currentPage
+                    // La page affichée s'allonge en pastille.
+                    val width by animateDpAsState(
+                        targetValue = if (current) 20.dp else 6.dp,
+                        animationSpec = if (animations) spring<Dp>(stiffness = Spring.StiffnessMediumLow) else snap<Dp>(),
+                        label = "hero-dot",
+                    )
                     Box(
                         modifier = Modifier
-                            .size(if (current) 8.dp else 6.dp)
+                            .size(width = width, height = 6.dp)
                             .clip(CircleShape)
-                            .background(if (current) HeyTheme.colors.primary else HeyTheme.colors.onBackgroundMuted),
+                            .background(if (current) HeyTheme.colors.primary else HeyTheme.colors.onBackgroundMuted.copy(alpha = 0.5f)),
                     )
                 }
             }
@@ -208,13 +237,14 @@ private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
 
 /** Fond du titre, avec son nom et sa note sur un dégradé sombre (jamais directement sur l'image). */
 @Composable
-private fun HeroCard(title: Title, onOpen: (Title) -> Unit) {
+private fun HeroCard(title: Title, onOpen: (Title) -> Unit, modifier: Modifier = Modifier) {
     val meta = listOfNotNull(kindLabel(title.kind), title.year?.toString()).joinToString(META_SEPARATOR)
+    val shape = HeyTheme.shapes.card
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(HERO_ASPECT_RATIO)
-            .clip(HeyTheme.shapes.card)
+            .clip(shape)
             .clickable(role = Role.Button, onClick = { onOpen(title) }),
     ) {
         HeyPoster(url = title.backdropUrl, modifier = Modifier.fillMaxSize(), shape = RectangleShape)
@@ -235,10 +265,14 @@ private fun HeroCard(title: Title, onOpen: (Title) -> Unit) {
                 RatingBadge(rating = title.rating, voteCount = title.voteCount, color = OnScrim)
             }
         }
+        // Reflet du verre sur le bord de la carte, par-dessus l'image.
+        Box(modifier = Modifier.matchParentSize().border(1.dp, HeroEdge, shape))
     }
 }
 
 private const val HERO_SCRIM_HEIGHT = 0.7f
+private const val HERO_SIDE_SHRINK = 0.06f
+private val HeroEdge = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.06f)))
 
 @Composable
 private fun GenresSection(state: GenresState, onOpenGenre: (Genre) -> Unit, onRetry: () -> Unit) {

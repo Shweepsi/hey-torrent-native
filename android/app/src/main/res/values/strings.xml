@@ -2,8 +2,11 @@
 <!-- Textes de l'interface, en français uniquement. `app_name` est défini par
      édition (src/public et src/admin). -->
 <resources>
-    <string name="welcome_title">Bienvenue</string>
-    <string name="welcome_body">HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. Découvrez des films et séries, demandez-les-lui et soyez prévenu quand ils sont disponibles. À votre première connexion, votre proche valide votre accès.</string>
+    <string name="welcome_tagline">Vos films et séries, demandés en un geste.</string>
+    <string name="welcome_feature_discover">Parcourez les tendances, les nouveautés et les classiques.</string>
+    <string name="welcome_feature_request">Ajoutez un titre à votre watchlist : c’est une demande envoyée à votre proche.</string>
+    <string name="welcome_feature_notify">Recevez une notification dès qu’il est disponible.</string>
+    <string name="welcome_access_note">HeyWatchlist se connecte au serveur personnel d’un proche, qui vous a invité. À votre première connexion, il valide votre accès.</string>
     <string name="welcome_google">Continuer avec Google</string>
     <string name="welcome_signing_in">Connexion…</string>
 
@@ -14,6 +17,12 @@
     <string name="waiting_check">Vérifier maintenant</string>
     <string name="waiting_checking">Vérification…</string>
     <string name="waiting_withdraw">Retirer ma demande</string>
+    <string name="waiting_step_account">Compte créé</string>
+    <string name="waiting_step_review">Validation par votre proche</string>
+    <string name="waiting_step_access">Accès à toute l’app</string>
+    <string name="waiting_step_done">Terminé</string>
+    <string name="waiting_step_current">En attente</string>
+    <string name="waiting_step_next">À venir</string>
     <string name="waiting_refused_title">Accès non accordé</string>
     <string name="waiting_refused_body">La personne qui gère ce serveur n’a pas validé votre accès. Si c’est une erreur, contactez-la directement.</string>
 
@@ -110,6 +119,10 @@
     <string name="watchlist_error_rejected">Ce titre ne peut pas être demandé.</string>
     <string name="watchlist_error_unknown">La watchlist n’a pas pu être mise à jour (erreur inattendue).</string>
 
+    <plurals name="watchlist_count">
+        <item quantity="one">%1$d titre</item>
+        <item quantity="other">%1$d titres</item>
+    </plurals>
     <plurals name="watchlist_seasons">
         <item quantity="one">Saison %1$s</item>
         <item quantity="other">Saisons %1$s</item>

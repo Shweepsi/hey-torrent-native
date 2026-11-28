@@ -118,7 +118,10 @@ sous-titre ; aucun tracker nommé, nulle part.
 |---|---|---|
 | Jetons de couleur | `HeyTheme.swift` : `primary`, `background` | `HeyTheme.kt` : tous les jetons ci-dessus, clair et sombre |
 | Verre | Liquid Glass du système | `GlassSurface` (Haze) avec repli opaque |
-| Fond | `HeyBackground` : dégradé sombre | `AuroraBackground` : halos sur fond sombre |
+| Fond | `HeyBackground` : dégradé sombre | `AppBackdrop` (`AuroraBackground` : halos) ; accueil et attente : `CinemaBackdrop` (mur d'affiches stylisées qui défile) ; fiche : affiche très floutée |
+| Onglets | Barre système | `GlassTabBar` : icône et libellé, pastille qui glisse |
+| États | | `StatusPill` : icône, texte et teinte (`success`, `warning`, `primary`, `error`) |
+| Mouvement | | `EnterMotion` (écran ouvert ou retrouvé), `rememberPress` (enfoncement), fondus entre écrans et onglets |
 | Découvrir | `DiscoverView` (carrousel, rangées, genres), `GenreView` | `DiscoverScreen`, `GenreScreen` |
 | Recherche | `SearchView`, onglet `Tab(role: .search)` | `SearchScreen`, champ en tête de Découvrir |
 | Fiche détail | `TitleDetailView` (transition zoom) | `DetailScreen` |

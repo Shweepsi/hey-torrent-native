@@ -167,6 +167,9 @@
     <string name="admin_access_refused_on">Refusé le %1$s</string>
     <string name="admin_access_is_admin">Administrateur</string>
     <string name="admin_access_unnamed">Sans prénom</string>
+    <string name="admin_access_state_active">Accès accordé</string>
+    <string name="admin_access_state_refused">Accès refusé</string>
+    <string name="admin_access_state_pending">En attente</string>
     <string name="admin_access_remove">Retirer</string>
     <string name="admin_access_restore">Redonner l’accès</string>
     <string name="admin_access_remove_title">Retirer l’accès de %1$s ?</string>

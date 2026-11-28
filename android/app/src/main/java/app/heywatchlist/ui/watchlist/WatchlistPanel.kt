@@ -118,7 +118,7 @@ private fun InWatchlist(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 HeyText(text = stringResource(R.string.watchlist_in_list), style = HeyTheme.typography.label)
-                HeyText(text = stateLabel(entry), style = HeyTheme.typography.caption, color = stateColor(entry))
+                StatePill(entry)
                 seasonsLabel(entry)?.let {
                     HeyText(text = it, style = HeyTheme.typography.caption, color = colors.onBackgroundMuted)
                 }

@@ -1,16 +1,18 @@
 package app.heywatchlist.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,14 +25,11 @@ import app.heywatchlist.diagnostics.CrashReportPanel
 import app.heywatchlist.push.PushRegistrationEffect
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
-import app.heywatchlist.ui.components.AuroraBackground
-import app.heywatchlist.ui.components.LocalHazeState
+import app.heywatchlist.ui.components.AppBackdrop
+import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.main.MainScreen
-import app.heywatchlist.ui.theme.HeyTheme
 import app.heywatchlist.ui.welcome.WaitingScreen
 import app.heywatchlist.ui.welcome.WelcomeScreen
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -45,43 +44,71 @@ fun AppRoot(
     watchlist: WatchlistGateway = LocalContext.current.appServices.watchlist,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val hazeState = rememberHazeState()
+    val animations = rememberAnimationsEnabled()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // Lu tout de suite (petit fichier) : l'app reste en pause tant que le rapport
     // est affiché, sinon un plantage immédiat empêcherait de le copier.
     var crashReport by remember { mutableStateOf(runCatching { CrashReport.pending(context) }.getOrNull()) }
-    Box(modifier = Modifier.fillMaxSize().background(HeyTheme.colors.background)) {
-        // Le décor est la source du flou ; les surfaces en verre sont ses voisines.
-        AuroraBackground(Modifier.fillMaxSize().hazeSource(hazeState))
-        CompositionLocalProvider(LocalHazeState provides hazeState) {
-            val report = crashReport
-            if (report != null) {
-                // Après un plantage : le rapport passe devant tout, pour être copié.
-                CrashReportPanel(report = report, onDismiss = {
-                    crashReport = null
-                    scope.launch(Dispatchers.IO) { runCatching { CrashReport.dismiss(context) } }
-                })
-            } else when (val current = state) {
-                // Lecture locale très courte : on garde le décor seul.
-                AccountUiState.Starting -> Unit
-                is AccountUiState.SignedOut -> WelcomeScreen(state = current, viewModel = viewModel)
-                // L'appareil s'enregistre aussi pendant l'attente : la personne
-                // est prévenue quand son accès est accepté.
-                is AccountUiState.SignedIn -> {
-                    PushRegistrationEffect()
-                    if (current.profile.access != Access.Active) {
-                        WaitingScreen(state = current, viewModel = viewModel)
+    // L'appareil s'enregistre aussi pendant l'attente : la personne est
+    // prévenue quand son accès est accepté. Hors du fondu : une seule fois.
+    if (state is AccountUiState.SignedIn) PushRegistrationEffect()
+    AppBackdrop {
+        val report = crashReport
+        if (report != null) {
+            // Après un plantage : le rapport passe devant tout, pour être copié.
+            CrashReportPanel(report = report, onDismiss = {
+                crashReport = null
+                scope.launch(Dispatchers.IO) { runCatching { CrashReport.dismiss(context) } }
+            })
+        } else {
+            // Fondu entre l'accueil, l'attente et les onglets ; pas entre deux états d'un même écran.
+            AnimatedContent(
+                targetState = state,
+                contentKey = { it.screen },
+                transitionSpec = {
+                    if (animations) {
+                        fadeIn(tween(durationMillis = 320)) togetherWith fadeOut(tween(durationMillis = 200))
                     } else {
-                        MainScreen(
-                            state = current,
-                            accountViewModel = viewModel,
-                            catalog = catalog,
-                            watchlistGateway = watchlist,
-                        )
+                        EnterTransition.None togetherWith ExitTransition.None
                     }
-                }
+                },
+                label = "root",
+            ) { current ->
+                RootScreen(current, viewModel, catalog, watchlist)
             }
+        }
+    }
+}
+
+/** Les grands écrans de l'app, pour ne déclencher le fondu qu'en passant de l'un à l'autre. */
+private val AccountUiState.screen: Int
+    get() = when (this) {
+        AccountUiState.Starting -> 0
+        is AccountUiState.SignedOut -> 1
+        is AccountUiState.SignedIn -> if (profile.access != Access.Active) 2 else 3
+    }
+
+@Composable
+private fun RootScreen(
+    state: AccountUiState,
+    viewModel: AccountViewModel,
+    catalog: CatalogGateway,
+    watchlist: WatchlistGateway,
+) {
+    when (val current = state) {
+        // Lecture locale très courte : on garde le décor seul.
+        AccountUiState.Starting -> Unit
+        is AccountUiState.SignedOut -> WelcomeScreen(state = current, viewModel = viewModel)
+        is AccountUiState.SignedIn -> if (current.profile.access != Access.Active) {
+            WaitingScreen(state = current, viewModel = viewModel)
+        } else {
+            MainScreen(
+                state = current,
+                accountViewModel = viewModel,
+                catalog = catalog,
+                watchlistGateway = watchlist,
+            )
         }
     }
 }

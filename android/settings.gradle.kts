@@ -10,6 +10,9 @@ pluginManagement {
                 includeGroupByRegex("androidx(\\..*)?")
             }
         }
+        // Miroir de Maven Central chez Google, essayé d'abord : Maven Central refuse
+        // souvent (429) les machines partagées de la CI. Il reste en secours.
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
         gradlePluginPortal()
     }
@@ -25,6 +28,8 @@ dependencyResolutionManagement {
                 includeGroupByRegex("androidx(\\..*)?")
             }
         }
+        // Même miroir que pour les greffons (voir plus haut).
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
     }
 }

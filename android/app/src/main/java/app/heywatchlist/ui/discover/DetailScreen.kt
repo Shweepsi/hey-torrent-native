@@ -8,9 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,21 +35,24 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -89,7 +91,6 @@ import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
 import app.heywatchlist.ui.components.Skeleton
 import app.heywatchlist.ui.components.StaleBanner
 import app.heywatchlist.ui.components.TitleCard
-import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.components.rememberSkeletonPulse
 import app.heywatchlist.ui.theme.HeyTheme
 import app.heywatchlist.ui.watchlist.WatchlistPanel
@@ -102,7 +103,11 @@ private val BackdropHeightWithoutImage = 190.dp
 private val PosterWidth = 112.dp
 private val SectionGap = 24.dp
 private val CardWidth = 124.dp
-private const val ENTER_MILLIS = 200
+private val AmbientBlur = 72.dp
+private const val PARALLAX = 0.45f
+
+/** Masque du fond du titre : opaque en haut, transparent en bas, où la fiche reprend. */
+private val BackdropMask = Brush.verticalGradient(0.5f to Color.Black, 1f to Color.Transparent)
 private const val EXPANDED_CHEVRON_DEGREES = 180f
 
 /**
@@ -149,20 +154,8 @@ internal fun DetailContent(
         CompositionLocalProvider(LocalHazeState provides null) {
             val pulse = rememberSkeletonPulse(active = state is DetailUiState.Loading)
             CompositionLocalProvider(LocalSkeletonPulse provides pulse) {
-                var entered by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) { entered = true }
-                val enterMillis = if (rememberAnimationsEnabled()) ENTER_MILLIS else 0
-                val enter by animateFloatAsState(
-                    targetValue = if (entered) 1f else 0f,
-                    animationSpec = tween(durationMillis = enterMillis),
-                    label = "detail-enter",
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = enter }
-                        .background(HeyTheme.colors.background),
-                ) {
+                Box(modifier = Modifier.fillMaxSize().background(HeyTheme.colors.background)) {
+                    AmbientArtwork(url = state.preview.posterUrl ?: state.preview.backdropUrl)
                     DetailList(
                         state = state,
                         watchlist = watchlist,
@@ -182,6 +175,34 @@ internal fun DetailContent(
                 }
             }
         }
+    }
+}
+
+/**
+ * Fond de toute la fiche : l'affiche du titre, très floutée et assombrie, qui
+ * teinte la page à ses couleurs. Elle ne défile pas : le flou n'est calculé
+ * qu'une fois, pas à chaque image du défilement.
+ */
+@Composable
+private fun AmbientArtwork(url: String?) {
+    val background = HeyTheme.colors.background
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (url != null) {
+            HeyPoster(
+                url = url,
+                modifier = Modifier.fillMaxSize().blur(AmbientBlur, BlurredEdgeTreatment.Rectangle),
+                shape = RectangleShape,
+            )
+        }
+        Box(
+            modifier = Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to background.copy(alpha = 0.5f),
+                    0.5f to background.copy(alpha = 0.7f),
+                    1f to background.copy(alpha = 0.86f),
+                ),
+            ),
+        )
     }
 }
 
@@ -222,12 +243,19 @@ private fun DetailList(
     onRemoveFromWatchlist: () -> Unit,
 ) {
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val listState = rememberLazyListState()
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = bottomInset + SectionGap),
     ) {
         item(key = "header") {
-            DetailHeader(title = state.preview, detail = (state as? DetailUiState.Loaded)?.detail)
+            DetailHeader(
+                title = state.preview,
+                detail = (state as? DetailUiState.Loaded)?.detail,
+                // Lu au dessin seulement : le défilement ne recompose pas l'en-tête.
+                scrollOffset = { if (listState.firstVisibleItemIndex == 0) listState.firstVisibleItemScrollOffset else 0 },
+            )
         }
         item(key = "watchlist") {
             val title = state.preview
@@ -341,12 +369,13 @@ private fun LazyListScope.seasonItems(
 }
 
 /**
- * Fond du titre sous un dégradé sombre, avec l'affiche, le nom, l'année, la
- * durée et la note posés sur la partie la plus sombre ; les genres en dessous.
+ * Fond du titre, qui défile moins vite que la page (parallaxe) et s'efface vers
+ * le bas dans le fond de la fiche, avec l'affiche, le nom, l'année, la durée et
+ * la note posés sur un dégradé sombre ; les genres en dessous.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DetailHeader(title: Title, detail: TitleDetail?) {
+private fun DetailHeader(title: Title, detail: TitleDetail?, scrollOffset: () -> Int) {
     val colors = HeyTheme.colors
     val meta = buildList {
         add(kindLabel(title.kind))
@@ -362,15 +391,28 @@ private fun DetailHeader(title: Title, detail: TitleDetail?) {
                     .fillMaxWidth()
                     .height(if (title.backdropUrl != null) BackdropHeight else BackdropHeightWithoutImage),
             ) {
-                HeyPoster(url = title.backdropUrl, modifier = Modifier.fillMaxSize(), shape = RectangleShape)
+                HeyPoster(
+                    url = title.backdropUrl,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            translationY = scrollOffset() * PARALLAX
+                            // Rendu à part pour que le masque ne touche que l'image.
+                            compositingStrategy = CompositingStrategy.Offscreen
+                        }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(brush = BackdropMask, blendMode = BlendMode.DstIn)
+                        },
+                    shape = RectangleShape,
+                )
                 Box(
                     modifier = Modifier.fillMaxSize().background(
                         Brush.verticalGradient(
                             0f to colors.background.copy(alpha = 0.55f),
-                            0.2f to Color.Transparent,
-                            0.4f to colors.background.copy(alpha = 0.65f),
-                            0.7f to colors.background.copy(alpha = 0.95f),
-                            1f to colors.background,
+                            0.22f to Color.Transparent,
+                            0.5f to colors.background.copy(alpha = 0.35f),
+                            1f to colors.background.copy(alpha = 0.6f),
                         ),
                     ),
                 )
@@ -382,7 +424,11 @@ private fun DetailHeader(title: Title, detail: TitleDetail?) {
             ) {
                 HeyPoster(
                     url = title.posterUrl,
-                    modifier = Modifier.width(PosterWidth).aspectRatio(POSTER_ASPECT_RATIO),
+                    modifier = Modifier
+                        .width(PosterWidth)
+                        .aspectRatio(POSTER_ASPECT_RATIO)
+                        .shadow(elevation = 18.dp, shape = HeyTheme.shapes.poster)
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), HeyTheme.shapes.poster),
                 )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     HeyText(

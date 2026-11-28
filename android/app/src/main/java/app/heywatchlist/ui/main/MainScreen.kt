@@ -3,30 +3,34 @@ package app.heywatchlist.ui.main
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,8 +41,11 @@ import app.heywatchlist.core.WatchlistFailure
 import app.heywatchlist.core.WatchlistGateway
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.account.AccountViewModel
-import app.heywatchlist.ui.components.GlassSurface
-import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.EnterMotion
+import app.heywatchlist.ui.components.GlassTab
+import app.heywatchlist.ui.components.GlassTabBar
+import app.heywatchlist.ui.components.HeyIcons
+import app.heywatchlist.ui.components.rememberAnimationsEnabled
 import app.heywatchlist.ui.discover.DetailScreen
 import app.heywatchlist.ui.discover.DetailViewModel
 import app.heywatchlist.ui.discover.DiscoverDestination
@@ -51,15 +58,14 @@ import app.heywatchlist.ui.discover.GenreViewModel
 import app.heywatchlist.ui.discover.SearchScreen
 import app.heywatchlist.ui.discover.SearchViewModel
 import app.heywatchlist.ui.settings.SettingsScreen
-import app.heywatchlist.ui.theme.HeyTheme
 import app.heywatchlist.ui.watchlist.WatchlistScreen
 import app.heywatchlist.ui.watchlist.WatchlistViewModel
 
 /** Les trois onglets de l'app. */
-enum class Tab(@param:StringRes val labelRes: Int) {
-    Discover(R.string.tab_discover),
-    Watchlist(R.string.tab_watchlist),
-    Settings(R.string.tab_settings),
+enum class Tab(@param:StringRes val labelRes: Int, val icon: ImageVector) {
+    Discover(R.string.tab_discover, HeyIcons.Compass),
+    Watchlist(R.string.tab_watchlist, HeyIcons.Bookmark),
+    Settings(R.string.tab_settings, HeyIcons.Sliders),
 }
 
 /**
@@ -99,32 +105,57 @@ fun MainScreen(
     }
 
     val top = stack.lastOrNull()
+    // Sens du dernier mouvement de la pile : un écran ouvert glisse depuis la
+    // droite, un retour fait réapparaître l'écran du dessous.
+    var lastDepth by remember { mutableIntStateOf(stack.size) }
+    val forward = stack.size > lastDepth
+    SideEffect { lastDepth = stack.size }
+    val animations = rememberAnimationsEnabled()
     if (top != null) {
         BackHandler { navigator.back() }
-        savedStates.SaveableStateProvider(entryStateKey(top.id)) {
-            DiscoverEntryScreen(entry = top, catalog = catalog, watchlist = watchlist, navigator = navigator)
-        }
-    } else {
-        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                savedStates.SaveableStateProvider(tab.name) {
-                    when (tab) {
-                        Tab.Discover -> DiscoverScreen(
-                            viewModel = discover,
-                            onOpenTitle = { navigator.open(DiscoverDestination.Detail(it)) },
-                            onOpenSearch = { navigator.open(DiscoverDestination.Search) },
-                            onOpenGenre = { navigator.open(DiscoverDestination.GenreTitles(it)) },
-                        )
-
-                        Tab.Watchlist -> WatchlistScreen(
-                            viewModel = watchlist,
-                            onOpenTitle = { navigator.open(DiscoverDestination.Detail(it)) },
-                        )
-                        Tab.Settings -> SettingsScreen(state = state, viewModel = accountViewModel)
-                    }
+        key(top.id) {
+            EnterMotion(forward = forward) {
+                savedStates.SaveableStateProvider(entryStateKey(top.id)) {
+                    DiscoverEntryScreen(entry = top, catalog = catalog, watchlist = watchlist, navigator = navigator)
                 }
             }
-            TabBar(selected = tab, onSelect = { tab = it })
+        }
+    } else {
+        EnterMotion(forward = false) {
+            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+                AnimatedContent(
+                    targetState = tab,
+                    transitionSpec = {
+                        if (animations) {
+                            fadeIn(tween(durationMillis = 220, delayMillis = 60)) togetherWith fadeOut(tween(durationMillis = 120))
+                        } else {
+                            EnterTransition.None togetherWith ExitTransition.None
+                        }
+                    },
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    label = "tab",
+                ) { shown ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        savedStates.SaveableStateProvider(shown.name) {
+                            when (shown) {
+                                Tab.Discover -> DiscoverScreen(
+                                    viewModel = discover,
+                                    onOpenTitle = { navigator.open(DiscoverDestination.Detail(it)) },
+                                    onOpenSearch = { navigator.open(DiscoverDestination.Search) },
+                                    onOpenGenre = { navigator.open(DiscoverDestination.GenreTitles(it)) },
+                                )
+
+                                Tab.Watchlist -> WatchlistScreen(
+                                    viewModel = watchlist,
+                                    onOpenTitle = { navigator.open(DiscoverDestination.Detail(it)) },
+                                )
+                                Tab.Settings -> SettingsScreen(state = state, viewModel = accountViewModel)
+                            }
+                        }
+                    }
+                }
+                TabBar(selected = tab, onSelect = { tab = it })
+            }
         }
     }
 }
@@ -186,26 +217,11 @@ private fun WatchlistMessages(watchlist: WatchlistViewModel) {
 }
 
 @Composable
-private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
-    GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(6.dp)) {
-            Tab.entries.forEach { tab ->
-                val isSelected = tab == selected
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .clickable(role = Role.Tab) { onSelect(tab) }
-                        .semantics { this.selected = isSelected },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    HeyText(
-                        text = stringResource(tab.labelRes),
-                        style = HeyTheme.typography.label,
-                        color = if (isSelected) HeyTheme.colors.primary else HeyTheme.colors.onBackgroundMuted,
-                    )
-                }
-            }
-        }
-    }
+internal fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    GlassTabBar(
+        tabs = Tab.entries.map { GlassTab(label = stringResource(it.labelRes), icon = it.icon) },
+        selectedIndex = selected.ordinal,
+        onSelect = { onSelect(Tab.entries[it]) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+    )
 }

@@ -52,6 +52,10 @@ on:
         description: Envoyer aussi l'AAB sur Google Play, test fermé (implique les versions signées ; version jamais envoyée)
         type: boolean
         default: false
+      captures_ref:
+        description: Rendre les captures d'un autre commit (SHA), pour comparer avant et après
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -121,6 +125,75 @@ jobs:
             android/app/build/test-results
             android/buildSrc/build/reports/tests
             android/buildSrc/build/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Captures des écrans (données et images inventées), rendues sur la JVM par
+  # Robolectric : de quoi juger l'interface sans installer l'app. Artefact
+  # `captures-android`, des PNG.
+  captures:
+    name: Captures d'écran
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # Robolectric télécharge lui-même ses images d'Android : par le miroir Google
+      # de Maven Central, qui refuse souvent (429) les machines partagées de la CI.
+      # Variable lue par toute JVM, donc aussi pour un ancien commit (captures_ref),
+      # avec l'écriture des captures que 5d37bdb n'activait pas encore.
+      JAVA_TOOL_OPTIONS: -Drobolectric.dependency.repo.url=https://maven-central.storage-download.googleapis.com/maven2/ -Droborazzi.test.record=true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.captures_ref }}
+
+      - uses: ./.github/actions/setup-android
+
+      - name: Rendre les captures
+        working-directory: android
+        run: ./gradlew testPublicDebugUnitTest testAdminDebugUnitTest -Pscreenshots --stacktrace
+
+      - name: Captures dans le journal (lancement à la main)
+        # Les artefacts passent par un stockage que certains outils ne joignent
+        # pas : à la main, chaque capture est aussi écrite dans le journal, en JPEG
+        # réduit et en base64, entre deux repères.
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # ImageMagick n'est plus dans l'image ubuntu-24.04 du runner.
+          command -v convert >/dev/null || {
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends imagemagick >/dev/null
+          }
+          for f in android/app/build/captures/*.png; do
+            name="$(basename "$f" .png)"
+            convert "$f" -resize 50% -quality 82 "$RUNNER_TEMP/$name.jpg"
+            echo "=== capture $name ==="
+            # Une ligne par capture : le journal reste court en nombre de lignes.
+            base64 -w 0 "$RUNNER_TEMP/$name.jpg"
+            echo
+            echo "=== fin ==="
+          done
+
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: captures-android
+          path: android/app/build/captures/*.png
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publier les rapports de tests (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: captures-rapports
+          path: |
+            android/app/build/reports/tests
+            android/app/build/test-results
           if-no-files-found: ignore
           retention-days: 7
 

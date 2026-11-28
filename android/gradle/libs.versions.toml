@@ -31,6 +31,10 @@ firebase-crashlytics = "21.1.0"
 firebase-crashlytics-plugin = "3.0.8"
 google-services = "4.6.0"
 junit = "4.13.2"
+# Captures d'écran rendues sur la JVM (Robolectric, graphismes natifs) par la
+# CI, pour juger l'interface sans installer l'app. Tests seulement.
+robolectric = "4.16.1"
+roborazzi = "1.79.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
@@ -53,6 +57,12 @@ jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose" }
+# Activité vide où la règle de test Compose pose l'écran (manifeste de debug seulement).
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

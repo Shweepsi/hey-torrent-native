@@ -140,6 +140,148 @@ object HeyIcons {
         }
     }
 
+    /** Onglet Découvrir : une boussole. */
+    val Compass: ImageVector by lazy {
+        stroked("Compass") {
+            circle(12f, 12f, 9f)
+            moveTo(15.5f, 8.5f)
+            lineTo(13.4f, 13.4f)
+            lineTo(8.5f, 15.5f)
+            lineTo(10.6f, 10.6f)
+            close()
+        }
+    }
+
+    /** Onglet Watchlist : un marque-page. */
+    val Bookmark: ImageVector by lazy {
+        stroked("Bookmark") {
+            moveTo(6.5f, 4f)
+            lineTo(17.5f, 4f)
+            lineTo(17.5f, 20f)
+            lineTo(12f, 16.2f)
+            lineTo(6.5f, 20f)
+            close()
+        }
+    }
+
+    /** Onglet Réglages : des curseurs. */
+    val Sliders: ImageVector by lazy {
+        stroked("Sliders") {
+            moveTo(4f, 7f)
+            lineTo(7f, 7f)
+            circle(9f, 7f, 2f)
+            moveTo(11f, 7f)
+            lineTo(20f, 7f)
+            moveTo(4f, 12f)
+            lineTo(13f, 12f)
+            circle(15f, 12f, 2f)
+            moveTo(17f, 12f)
+            lineTo(20f, 12f)
+            moveTo(4f, 17f)
+            lineTo(6f, 17f)
+            circle(8f, 17f, 2f)
+            moveTo(10f, 17f)
+            lineTo(20f, 17f)
+        }
+    }
+
+    val Bell: ImageVector by lazy {
+        stroked("Bell") {
+            moveTo(6f, 16f)
+            lineTo(6f, 11f)
+            arcTo(6f, 6f, 0f, false, true, 18f, 11f)
+            lineTo(18f, 16f)
+            lineTo(19.5f, 18f)
+            lineTo(4.5f, 18f)
+            close()
+            moveTo(10f, 20.5f)
+            arcTo(2f, 2f, 0f, false, false, 14f, 20.5f)
+        }
+    }
+
+    /** Demande en attente. */
+    val Clock: ImageVector by lazy {
+        stroked("Clock") {
+            circle(12f, 12f, 9f)
+            moveTo(12f, 7f)
+            lineTo(12f, 12f)
+            lineTo(15.5f, 14f)
+        }
+    }
+
+    /** Téléchargement, demande en cours. */
+    val Download: ImageVector by lazy {
+        stroked("Download") {
+            moveTo(12f, 4f)
+            lineTo(12f, 15f)
+            moveTo(7f, 10.5f)
+            lineTo(12f, 15.5f)
+            lineTo(17f, 10.5f)
+            moveTo(5f, 19.5f)
+            lineTo(19f, 19.5f)
+        }
+    }
+
+    /** Admin : les demandes reçues. */
+    val Inbox: ImageVector by lazy {
+        stroked("Inbox") {
+            moveTo(4f, 13f)
+            lineTo(6.5f, 5f)
+            lineTo(17.5f, 5f)
+            lineTo(20f, 13f)
+            lineTo(20f, 19f)
+            lineTo(4f, 19f)
+            close()
+            moveTo(4f, 13f)
+            lineTo(8.5f, 13f)
+            lineTo(10f, 15.5f)
+            lineTo(14f, 15.5f)
+            lineTo(15.5f, 13f)
+            lineTo(20f, 13f)
+        }
+    }
+
+    /** Admin : les serveurs. */
+    val Server: ImageVector by lazy {
+        stroked("Server") {
+            moveTo(4f, 5f)
+            lineTo(20f, 5f)
+            lineTo(20f, 11f)
+            lineTo(4f, 11f)
+            close()
+            moveTo(4f, 13f)
+            lineTo(20f, 13f)
+            lineTo(20f, 19f)
+            lineTo(4f, 19f)
+            close()
+            moveTo(7.5f, 8f)
+            lineTo(7.6f, 8f)
+            moveTo(7.5f, 16f)
+            lineTo(7.6f, 16f)
+        }
+    }
+
+    /** Admin : les comptes et leur accès. */
+    val People: ImageVector by lazy {
+        stroked("People") {
+            circle(9f, 8f, 3.5f)
+            moveTo(2.5f, 20f)
+            curveTo(2.5f, 16f, 5.5f, 14f, 9f, 14f)
+            curveTo(12.5f, 14f, 15.5f, 16f, 15.5f, 20f)
+            moveTo(15f, 4.9f)
+            arcTo(3.2f, 3.2f, 0f, false, true, 15f, 11.1f)
+            moveTo(17f, 14.3f)
+            curveTo(19.6f, 15f, 21.5f, 16.9f, 21.5f, 20f)
+        }
+    }
+
+    /** Cercle complet de centre ([cx], [cy]) et de rayon [r], en deux demi-arcs. */
+    private fun PathBuilder.circle(cx: Float, cy: Float, r: Float) {
+        moveTo(cx + r, cy)
+        arcTo(r, r, 0f, false, true, cx - r, cy)
+        arcTo(r, r, 0f, false, true, cx + r, cy)
+    }
+
     private fun stroked(name: String, pathBuilder: PathBuilder.() -> Unit): ImageVector =
         ImageVector.Builder(
             name = name,
