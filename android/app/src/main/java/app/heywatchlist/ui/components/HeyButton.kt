@@ -91,12 +91,8 @@ fun HeyButton(
         else -> glassEdge(colors)
     }
     val pressTint = if (prominent) Color.Black.copy(alpha = 0.14f) else colors.onBackground.copy(alpha = 0.08f)
-    // Halo coloré sous le bouton principal, ombre très douce sous le verre : il flotte, il ne colle pas au fond.
-    val glow = when {
-        plain -> null
-        prominent -> colors.primaryFill.copy(alpha = 0.45f)
-        else -> Color.Black.copy(alpha = 0.18f)
-    }
+    // Halo coloré sous le bouton principal, opaque : sous un verre translucide, l'ombre se verrait au travers.
+    val glow = if (prominent) colors.primaryFill.copy(alpha = 0.45f) else null
     Box(
         modifier = modifier
             .heightIn(min = ButtonHeight)
@@ -105,15 +101,15 @@ fun HeyButton(
                 if (glow == null) {
                     Modifier
                 } else {
-                    Modifier.shadow(if (prominent) 14.dp else 6.dp, shape, clip = false, ambientColor = glow, spotColor = glow)
+                    Modifier.shadow(14.dp, shape, clip = false, ambientColor = glow, spotColor = glow)
                 },
             )
             .clip(shape)
             .background(fill)
             .drawWithContent {
                 drawContent()
-                // Reflet du verre : la moitié haute s'éclaircit, comme une surface bombée.
-                if (prominent) drawRect(ProminentSheen, size = size.copy(height = size.height * 0.55f))
+                // Reflet du verre : le haut s'éclaircit en douceur, sans marche visible.
+                if (prominent) drawRect(ProminentSheen)
                 if (pressed && enabled) drawRect(pressTint)
             }
             .border(1.dp, edge, shape)
@@ -141,5 +137,8 @@ private const val TINT_EDGE = 0.30f
 /** Filet du bouton principal : clair en haut, presque invisible en bas. */
 private val ProminentEdge = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f)))
 
-/** Reflet de la moitié haute du bouton principal. */
-private val ProminentSheen = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0f)))
+/** Reflet du bouton principal : clair en haut, effacé avant le milieu. */
+private val ProminentSheen = Brush.verticalGradient(
+    0f to Color.White.copy(alpha = 0.20f),
+    0.6f to Color.White.copy(alpha = 0f),
+)
