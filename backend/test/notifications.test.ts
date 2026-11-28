@@ -142,13 +142,6 @@ describe("appareils", () => {
     expect(row?.n).toBe(0);
   });
 
-  it("envoie une push d'essai à ses propres appareils", async () => {
-    const user = await member();
-    await register(user, "android", `${ANDROID_TOKEN}-essai`);
-    const response = await call("POST", "/v1/notifications/test", {}, user.access_token);
-    expect(await response.json()).toEqual({ devices: 1, sent: 1 });
-    expect(pushes[0]?.message.bodyKey).toBe("push_test");
-  });
 });
 
 describe("réglage du webhook", () => {

@@ -1,14 +1,12 @@
 package app.heywatchlist.screenshots
 
 import android.app.Application
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import app.heywatchlist.core.Access
 import app.heywatchlist.core.Profile
 import app.heywatchlist.ui.account.AccountUiState
@@ -20,7 +18,7 @@ import app.heywatchlist.ui.discover.DiscoverUiState
 import app.heywatchlist.ui.discover.GenresState
 import app.heywatchlist.ui.discover.ShelfState
 import app.heywatchlist.ui.main.Tab
-import app.heywatchlist.ui.main.TabBar
+import app.heywatchlist.ui.main.TabsScaffold
 import app.heywatchlist.ui.settings.SettingsContent
 import app.heywatchlist.ui.watchlist.WatchlistContent
 import app.heywatchlist.ui.watchlist.WatchlistUiState
@@ -95,8 +93,28 @@ class PublicScreenshots {
     @Test
     fun decouvrirSombre() = Screenshots.capture(rule, "05-decouvrir-sombre", dark = true) { Tabs(Tab.Discover) { DiscoverScene() } }
 
+    // Contenu défilé : les barres flottantes floutent ce qui passe dessous.
     @Test
-    fun fiche() = Screenshots.capture(rule, "06-fiche") {
+    fun decouvrirDefile() = Screenshots.capture(rule, "05b-decouvrir-defile", act = { scrollDown() }) {
+        Tabs(Tab.Discover) { DiscoverScene() }
+    }
+
+    @Test
+    fun decouvrirDefileSombre() = Screenshots.capture(rule, "05c-decouvrir-defile-sombre", dark = true, act = { scrollDown() }) {
+        Tabs(Tab.Discover) { DiscoverScene() }
+    }
+
+    @Test
+    fun fiche() = Screenshots.capture(rule, "06-fiche") { DetailScene() }
+
+    @Test
+    fun ficheSombre() = Screenshots.capture(rule, "06b-fiche-sombre", dark = true) { DetailScene() }
+
+    @Test
+    fun ficheDefilee() = Screenshots.capture(rule, "06c-fiche-defilee", act = { scrollDown() }) { DetailScene() }
+
+    @Composable
+    private fun DetailScene() {
         DetailContent(
             state = DetailUiState.Loaded(SampleData.seriesDetail),
             watchlist = WatchlistUiState(entries = SampleData.watchlist, loaded = true),
@@ -148,12 +166,14 @@ class PublicScreenshots {
         onOpenTitle = {},
     )
 
-    /** Onglets comme dans `MainScreen` : l'écran, puis la barre en bas. */
+    /** Onglets comme dans `MainScreen` : l'écran bord à bord, la barre flottante par-dessus. */
     @Composable
     private fun Tabs(selected: Tab, content: @Composable () -> Unit) {
-        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
-            TabBar(selected = selected, onSelect = {})
-        }
+        TabsScaffold(selected = selected, onSelect = {}) { content() }
+    }
+
+    /** Un défilement d'environ un écran vers le bas. */
+    private fun ComposeContentTestRule.scrollDown() {
+        onRoot().performTouchInput { swipeUp(startY = bottom * 0.8f, endY = bottom * 0.2f) }
     }
 }

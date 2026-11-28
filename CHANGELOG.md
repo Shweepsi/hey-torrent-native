@@ -5,6 +5,39 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.13.2] - 2026-11-28
+
+Corrections d'interface demandées par Loïc.
+
+### Modifié
+
+- Android : barres du haut et d'onglets flottantes, en verre dépoli, au-dessus
+  du contenu qui défile dessous (bord à bord) et le floutent. Au repos, la barre
+  du haut est transparente ; elle prend son verre et le titre en petit dès que
+  le contenu passe dessous. Recherche, genres et fiche ont aussi leur en-tête
+  flottant.
+- Fiche d'un titre : le fond du titre se fond dans la fiche par un dégradé en
+  courbe douce, sans ligne au bas de l'image (Android et iPhone).
+- Boutons accentués : aplat bleu plus profond et texte blanc lisible en clair
+  comme en sombre, état enfoncé assombri, état inactif neutre (Android).
+
+### Corrigé
+
+- Clignotements : une affiche déjà chargée s'affiche sans refaire son fondu
+  (défilement, changement d'onglet, retour d'une fiche), sur Android et iPhone ;
+  ouvrir ou quitter une fiche ne passe plus par un écran vide ; le changement
+  d'onglet n'enchaîne plus deux fondus.
+- L'année sous chaque affiche n'est plus rognée par le coin arrondi.
+
+### Retiré
+
+- « Où regarder » : la fiche ne propose plus les plateformes de streaming (le
+  Worker ne les demande plus à TMDB).
+- Le bouton « Envoyer une notification d'essai » de Réglages, et sa route
+  `POST /v1/notifications/test`.
+- Les épisodes spéciaux (saison 0) ne sont plus proposés dans le choix des
+  saisons d'une série.
+
 ## [0.13.1] - 2026-11-28
 
 Corrections de l'audit du cœur du 2026-11-28 (points 1 à 9).

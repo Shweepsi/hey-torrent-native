@@ -29,10 +29,12 @@ Valeurs communes aux deux plateformes.
 | `background` | `#0c0c0f` | Fond de l'app (sombre) |
 | `glassFill` | `rgba(255,255,255,0.09)` + flou | Remplissage du verre (sombre) |
 | `glassBorder` | `rgba(255,255,255,0.2)`, 1 px | Filet du verre (sombre) |
+| `primaryFill` | `#2e74db` → `#2462c8` (sombre), `#1a66cc` → `#1757b0` (clair) | Aplat des boutons et pastilles accentués, texte blanc |
+| `chromeFill` | `#101015` à 68 % (sombre), `#f7f8fc` à 76 % (clair) + flou | Barres flottantes (haut et onglets) |
 
 Compléments aujourd'hui dans le code Android (`HeyTheme.kt`) : texte
-`#f5f5f8`, texte secondaire à 72 % d'opacité, texte sur `primary` en
-`#0c0c0f`, erreur `#ff8a80`, accent décoratif `#7c5cff`, formes à 28 dp
+`#f5f5f8`, texte secondaire à 72 % d'opacité, texte sur `primaryFill` en
+blanc, erreur `#ff8a80`, accent décoratif `#7c5cff`, formes à 28 dp
 (cartes) et 20 dp (boutons).
 
 **Thème clair** : décliné côté Android (fond `#f3f5fa`, `primary` `#1a66cc`,
@@ -87,6 +89,20 @@ réservé jusqu'au jalon 4.
   flou** (`glassFillFallback`).
 - Comportements d'Android conservés : bouton et geste retour, barres système,
   accessibilité, cibles tactiles d'au moins 48 dp.
+- **Barres flottantes** (0.13.2, `FloatingBars.kt`) : chaque écran occupe tout
+  l'écran (bord à bord) et défile sous une barre du haut et, dans les onglets,
+  sous la barre d'onglets en pilule. Les barres floutent ce qui passe dessous :
+  le décor est la source de flou du plan 0, la liste qui défile celle du plan 1
+  (`underBars`), et une barre posée hors de la liste floute les deux. Le verre
+  des cartes reste dans la liste et ne floute que le décor. Au repos, la barre
+  du haut est transparente (le grand titre est dans le contenu) ; dès que le
+  contenu passe dessous, le verre apparaît avec le titre en petit. Le contenu
+  réserve la place des barres par ses marges (`barsPadding`,
+  `underHeaderPadding`) : rien n'est caché au repos ni au bout de la liste.
+- **Sans clignotement** : une image déjà en mémoire s'affiche sans fondu ;
+  l'écran du dessus de la pile est opaque et celui du dessous reste affiché
+  pendant la transition (jamais de passage par le décor seul) ; un changement
+  d'onglet est immédiat, avec un court fondu d'arrivée.
 
 ## Règles de lisibilité
 
@@ -95,8 +111,12 @@ réservé jusqu'au jalon 4.
    sombres, le texte `#f5f5f8` donne environ 18:1 sur le fond et 14,6:1 sur une
    surface de verre unie ; `primary` donne 6,9:1 sur le fond (calcul WCAG des
    rapports de luminance, hors flou d'image).
-2. **Texte sur `primary`** : `#0c0c0f` (6,9:1). Le blanc ne donne que 2,8:1 :
-   à ne pas utiliser.
+2. **Boutons accentués** : aplat `primaryFill`, plus profond que `primary`,
+   texte blanc (4,5:1 au moins en haut du dégradé sombre, 5,5:1 en clair). Le
+   blanc sur `primary` (`#4f9cf7`) ne donne que 2,8:1 : `primary` reste pour
+   les textes, icônes et liens. Enfoncé : léger assombrissement et
+   rétrécissement ; inactif : verre neutre et texte estompé, jamais un bleu
+   délavé.
 3. **Texte sur affiche** : jamais directement sur une image. Poser un dégradé
    sombre ou une surface de verre assez opaque ; une affiche claire sous un
    verre à 9 % est illisible. Vérifier les affiches les plus claires.
@@ -116,8 +136,7 @@ ne gèle jamais.
 ## Mentions obligatoires
 
 L'écran « À propos » porte le logo TMDB et la phrase d'attribution fournie par
-TMDB (jalon 7). La section des plateformes de la fiche porte la mention
-« Disponibilités fournies par JustWatch ». Aucune marque tierce (Plex, Netflix…) dans le nom, l'icône ou le
+TMDB (jalon 7). Aucune marque tierce (Plex, Netflix…) dans le nom, l'icône ou le
 sous-titre ; aucun tracker nommé, nulle part.
 
 ## Où en est le code

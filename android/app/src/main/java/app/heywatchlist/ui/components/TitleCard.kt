@@ -1,6 +1,5 @@
 package app.heywatchlist.ui.components
 
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,8 +28,9 @@ fun TitleCard(title: Title, onClick: () -> Unit, modifier: Modifier = Modifier, 
     Column(
         modifier = modifier
             .pressScale(press)
-            .clip(HeyTheme.shapes.poster)
-            .clickable(interactionSource = press.interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick),
+            // Pas de découpe arrondie sur toute la carte : ses coins rognaient la légende
+            // sous l'affiche. L'enfoncement suffit comme retour au toucher.
+            .clickable(interactionSource = press.interaction, indication = null, role = Role.Button, onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         HeyPoster(

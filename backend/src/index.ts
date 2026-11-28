@@ -20,7 +20,7 @@ import type { Env } from "./env";
 import { ApiError, errorResponse, json, noContent, optionalString, readJson, requiredString } from "./http";
 import { ACCOUNT_DELETION_PATH, PRIVACY_PATH, accountDeletion, privacyPolicy } from "./legal";
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
-import { devicesOfUser, devicesOfUsers, pushTo } from "./availability";
+import { devicesOfUsers, pushTo } from "./availability";
 import { runAutomation } from "./autosearch";
 import { DEVICES_PATH, registerDevice, unregisterDevice } from "./devices";
 import { LivePushSender, type PushSender } from "./push";
@@ -126,22 +126,6 @@ async function deleteMe(request: Request, env: Env, deps: Deps): Promise<Respons
   return noContent();
 }
 
-/** Push d'essai vers les appareils de la personne connectée ; renvoie le nombre envoyé. */
-async function testPush(request: Request, env: Env, deps: Deps): Promise<Response> {
-  const now = deps.now();
-  const claims = await authenticate(request, env, now);
-  const devices = await devicesOfUser(env, claims.userId, now);
-  const sent = await pushTo(env, deps.push(env), devices, {
-    title: "HeyWatchlist",
-    bodyKey: "push_test",
-    bodyArgs: [],
-    collapseKey: "test",
-    mediaType: "movie",
-    tmdbId: 0,
-  });
-  return json({ devices: devices.length, sent });
-}
-
 /** Réglages publics dont les apps ont besoin pour se connecter. */
 function config(env: Env): Response {
   return json({
@@ -167,7 +151,6 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
     PUT: (request, env, deps) => registerDevice(request, env, deps.now()),
     DELETE: (request, env, deps) => unregisterDevice(request, env, deps.now()),
   },
-  "/v1/notifications/test": { POST: testPush },
   [WEBHOOK_SETTINGS_PATH]: {
     GET: (request, env, deps) => webhookStatus(request, env, deps.now()),
     POST: (request, env, deps) => regenerateWebhook(request, env, deps.now()),

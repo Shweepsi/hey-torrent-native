@@ -52,17 +52,6 @@ final class PushCenter: NSObject, UNUserNotificationCenterDelegate {
         return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
     }
 
-    /// Notification d'essai vers les appareils de ce compte.
-    func sendTest() async throws(AccountFailure) -> TestPushResult {
-        guard let source else { throw .notConfigured }
-        let account = try await source.account()
-        do {
-            return try await account.sendTestPush()
-        } catch {
-            throw AccountFailure(error)
-        }
-    }
-
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification

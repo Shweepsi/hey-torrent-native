@@ -13,15 +13,13 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::catalog::{
-    CastMember, Episode, Genre, MediaType, Provider, Providers, SeasonDetail, SeasonSummary,
-    TitleDetail, TitlePage, TitleSummary, Video, VideoKind,
+    CastMember, Episode, Genre, MediaType, SeasonDetail, SeasonSummary, TitleDetail, TitlePage,
+    TitleSummary, Video, VideoKind,
 };
 
 const IMAGE_BASE: &str = "https://image.tmdb.org/t/p/";
 /// Acteurs gardés dans une fiche.
 const MAX_CAST: usize = 20;
-/// Région des plateformes, imposée par le Worker (`watch_region`).
-const PROVIDER_REGION: &str = "FR";
 
 /// Tailles d'affiche et de fond selon l'écran.
 #[derive(Clone, Copy)]
@@ -41,7 +39,6 @@ const DETAIL: Sizes = Sizes {
     backdrop: "w1280",
 };
 const PROFILE_SIZE: &str = "w185";
-const LOGO_SIZE: &str = "w92";
 const STILL_SIZE: &str = "w300";
 
 /// Adresse d'une image, ou `None` si le chemin est absent ou suspect (TMDB ne
@@ -254,13 +251,6 @@ struct WireVideo {
 }
 
 #[derive(Deserialize)]
-struct WireProvider {
-    provider_id: u32,
-    provider_name: Option<String>,
-    logo_path: Option<String>,
-}
-
-#[derive(Deserialize)]
 struct WireSeason {
     season_number: u32,
     name: Option<String>,
@@ -352,25 +342,12 @@ fn videos(root: &Value) -> Vec<Video> {
     videos
 }
 
-/// Plateformes d'une catégorie (`flatrate`, `rent`, `buy`) en France.
-fn providers_in(root: &Value, category: &str) -> Vec<Provider> {
-    // `watch/providers` : la barre du nom de clé s'écrit `~1` dans un pointeur.
-    let pointer = format!("/watch~1providers/results/{PROVIDER_REGION}/{category}");
-    lenient::<WireProvider>(array(root, &pointer))
-        .into_iter()
-        .filter_map(|provider| {
-            Some(Provider {
-                id: provider.provider_id,
-                name: text(provider.provider_name.as_deref())?,
-                logo_url: image_url(provider.logo_path.as_deref(), LOGO_SIZE),
-            })
-        })
-        .collect()
-}
-
+/// Saisons d'une série, sans la saison 0 de TMDB (épisodes spéciaux) : elle
+/// ne se demande pas.
 fn seasons(root: &Value) -> Vec<SeasonSummary> {
     lenient::<WireSeason>(array(root, "/seasons"))
         .into_iter()
+        .filter(|season| season.season_number > 0)
         .map(|season| SeasonSummary {
             number: season.season_number,
             name: text(season.name.as_deref()).unwrap_or_default(),
@@ -382,7 +359,7 @@ fn seasons(root: &Value) -> Vec<SeasonSummary> {
 }
 
 /// Fiche d'un film ou d'une série, avec `append_to_response` (casting,
-/// vidéos, plateformes, similaires). Une fiche sans titre est illisible ; une
+/// vidéos, similaires). Une fiche sans titre est illisible ; une
 /// partie illisible (casting, vidéos…) est simplement vide.
 pub(crate) fn decode_detail(body: &[u8], media_type: MediaType) -> Option<TitleDetail> {
     let root: Value = serde_json::from_slice(body).ok()?;
@@ -420,11 +397,6 @@ pub(crate) fn decode_detail(body: &[u8], media_type: MediaType) -> Option<TitleD
         cast: cast(&root),
         directors: directors(&root, media_type),
         videos: videos(&root),
-        providers: Providers {
-            flatrate: providers_in(&root, "flatrate"),
-            rent: providers_in(&root, "rent"),
-            buy: providers_in(&root, "buy"),
-        },
         similar: titles(array(&root, "/similar/results"), Some(media_type), LIST),
         stale: false,
     })
@@ -698,7 +670,6 @@ mod tests {
         assert_eq!((detail.seasons_count, detail.episodes_count), (None, None));
         assert!(detail.seasons.is_empty() && detail.cast.is_empty());
         assert!(detail.videos.is_empty() && detail.similar.is_empty());
-        assert!(detail.providers.flatrate.is_empty());
         assert!(!detail.stale);
     }
 
@@ -719,7 +690,6 @@ mod tests {
         let mut root = movie_root();
         root["credits"] = json!("cassé");
         root["videos"] = json!({ "results": 3 });
-        root["watch/providers"] = json!([]);
         root["similar"] = json!({ "results": "non" });
         root["runtime"] = json!("long");
         let detail = decode_detail(&bytes(&root), MediaType::Movie).unwrap();
@@ -791,6 +761,7 @@ mod tests {
                 { "season_number": 0, "name": "Spéciaux", "episode_count": 2, "air_date": "" },
                 { "season_number": 1, "name": "Saison 1", "episode_count": 8,
                   "air_date": "2024-09-01", "poster_path": "/s1.jpg" },
+                { "season_number": 2, "name": "Saison 2", "air_date": "" },
                 { "name": "Sans numéro" }
             ]
         });
@@ -803,16 +774,17 @@ mod tests {
             (Some(2), Some(0))
         );
         assert_eq!(detail.directors, vec!["Créatrice", "Créateur"]);
+        // La saison 0 (épisodes spéciaux) n'est pas proposée.
         let numbers: Vec<u32> = detail.seasons.iter().map(|s| s.number).collect();
-        assert_eq!(numbers, vec![0, 1]);
-        let season = detail.seasons.get(1).unwrap();
+        assert_eq!(numbers, vec![1, 2]);
+        let season = detail.seasons.first().unwrap();
         assert_eq!(season.episode_count, 8);
         assert_eq!(season.air_date.as_deref(), Some("2024-09-01"));
         assert_eq!(
             season.poster_url.as_deref(),
             Some("https://image.tmdb.org/t/p/w342/s1.jpg")
         );
-        assert_eq!(detail.seasons.first().unwrap().air_date, None);
+        assert_eq!(detail.seasons.get(1).unwrap().air_date, None);
     }
 
     #[test]
@@ -854,34 +826,6 @@ mod tests {
             ]
         );
         assert_eq!(detail.videos.first().unwrap().name, "Bande-annonce");
-    }
-
-    #[test]
-    fn providers_come_from_france_only() {
-        let mut root = movie_root();
-        root["watch/providers"] = json!({ "results": {
-            "US": { "flatrate": [{ "provider_id": 1, "provider_name": "Américaine" }] },
-            "FR": {
-                "link": "https://example.com/fr",
-                "flatrate": [
-                    { "provider_id": 8, "provider_name": "Abonnement", "logo_path": "/l8.jpg" },
-                    { "provider_id": 9 },
-                    { "provider_name": "Sans id" }
-                ],
-                "rent": [{ "provider_id": 2, "provider_name": "Location" }],
-                "buy": []
-            }
-        }});
-        let detail = decode_detail(&bytes(&root), MediaType::Movie).unwrap();
-        let flatrate = &detail.providers.flatrate;
-        assert_eq!(flatrate.len(), 1);
-        assert_eq!(flatrate.first().unwrap().name, "Abonnement");
-        assert_eq!(
-            flatrate.first().unwrap().logo_url.as_deref(),
-            Some("https://image.tmdb.org/t/p/w92/l8.jpg")
-        );
-        assert_eq!(detail.providers.rent.first().unwrap().logo_url, None);
-        assert!(detail.providers.buy.is_empty());
     }
 
     #[test]

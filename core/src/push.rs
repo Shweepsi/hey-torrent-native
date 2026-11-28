@@ -2,8 +2,6 @@
 //! push du système (APNs ou FCM), le cœur l'enregistre auprès du Worker pour la
 //! session en cours. Le jeton n'est ni journalisé ni gardé par le cœur.
 
-use serde::Deserialize;
-
 use crate::account::{Account, AccountError};
 use crate::api;
 
@@ -23,21 +21,6 @@ impl PushPlatform {
             Self::Android => "android",
         }
     }
-}
-
-/// Résultat d'une notification d'essai.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
-pub struct TestPushResult {
-    /// Appareils de ce compte connus du serveur.
-    pub devices: u32,
-    /// Notifications acceptées par Apple ou Google.
-    pub sent: u32,
-}
-
-#[derive(Deserialize)]
-struct TestPushResponse {
-    devices: u32,
-    sent: u32,
 }
 
 const DEVICES_PATH: &str = "/v1/devices";
@@ -72,22 +55,5 @@ impl Account {
             .authorized(|http, access| http.delete(&url).bearer_auth(access))
             .await?;
         api::read_empty(response).await
-    }
-
-    /// Envoie une notification d'essai aux appareils de ce compte.
-    pub async fn send_test_push(&self) -> Result<TestPushResult, AccountError> {
-        let url = self.base.join("/v1/notifications/test");
-        let response = self
-            .authorized(|http, access| {
-                http.post(&url)
-                    .bearer_auth(access)
-                    .json(&serde_json::json!({}))
-            })
-            .await?;
-        let result: TestPushResponse = api::read(response).await?;
-        Ok(TestPushResult {
-            devices: result.devices,
-            sent: result.sent,
-        })
     }
 }

@@ -84,11 +84,11 @@ signature (`DEVELOPMENT_TEAM`, profils) est fournie par la CI, jamais écrite ic
 
 Les liaisons UniFFI (`Generated/`) sont compilées dans le même module que
 l'app. Un type de l'app ne peut donc pas porter le nom d'un type exporté par
-le cœur (`TitleSummary`, `Genre`, `Video`, `Provider`, `Episode`, `Shelf`,
+le cœur (`TitleSummary`, `Genre`, `Video`, `Episode`, `Shelf`,
 `MediaType`, `Catalog`…). Les types de domaine ont d'autres noms (`Title`,
-`TitleGenre`, `WatchProvider`, `EpisodeEntry`, `DiscoverShelf`, `TitleKind`…),
-et seul `LiveCatalogClient.swift` connaît les deux. Pour la même raison,
-l'ancien `Provider` de la connexion s'appelle `SignInProvider`.
+`TitleGenre`, `EpisodeEntry`, `DiscoverShelf`, `TitleKind`…),
+et seul `LiveCatalogClient.swift` connaît les deux. De même, le fournisseur
+de connexion de l'app s'appelle `SignInProvider`.
 
 ### Catalogue et écrans
 
@@ -126,10 +126,6 @@ l'ancien `Provider` de la connexion s'appelle `SignInProvider`.
   d'une tâche Swift ; un appel au cœur va à son terme. `LiveCatalogClient` ne
   lève donc jamais `CancellationError`, et c'est le numéro de génération de
   `TitlePager` qui écarte la réponse d'une requête remplacée.
-- **Plateformes de visionnage** : ces données viennent de JustWatch, via TMDB,
-  qui en impose la mention. La fiche la porte sous la liste des plateformes
-  (`detail.providers.attribution`), même quand la liste est vide ; le logo et la
-  phrase TMDB restent pour l'écran « À propos » (jalon 7).
 - **Lisibilité** : aucun texte directement sur une affiche. Le nom et l'année
   sont sous l'affiche dans les rangées. Dans le carrousel, le texte est posé
   sur une bande à 88 % d'opacité du fond de l'app, précédée d'un fondu de 40 pt :

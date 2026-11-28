@@ -99,7 +99,6 @@ font partie des réglages chiffrés de l'administrateur.
 | `DELETE /v1/watchlist/{movie\|tv}/{id}` | jeton d'accès | Retire un titre (204) |
 | `PUT /v1/devices` | jeton d'accès, tout état | `{platform: "ios"\|"android", token}` : jeton push de cet appareil, rattaché à la session (204) |
 | `DELETE /v1/devices` | jeton d'accès, tout état | Oublie l'appareil de cette session (204) |
-| `POST /v1/notifications/test` | jeton d'accès | Push d'essai vers mes appareils → `{devices, sent}` |
 | `GET /v1/notifications/webhook` | administrateur | `{configured, created_at, last_used_at}`, jamais l'URL |
 | `POST /v1/notifications/webhook` | administrateur | Nouvelle URL, l'ancienne est révoquée (201, `{plex_url, tautulli_url, tautulli_body}`, montrées une seule fois) |
 | `POST /v1/hooks/{plex\|tautulli}/<jeton>` | jeton de l'URL | Nouvel ajout sur Plex → `{status}` : `notified`, `grouped`, `duplicate`, `no_request`, `ignored` ou `unknown_media`. Jeton inconnu : `404 not_found` |
@@ -153,7 +152,7 @@ chemins existent ; tout le reste est `404 not_found`, jamais relayé.
 - Le Worker impose `language=fr-FR` partout, `include_adult=false` (tendances,
   listes, `discover`, recherche), `region=FR` (listes de films et de séries),
   `watch_region=FR` (`discover`), et pour une fiche
-  `append_to_response=credits,videos,watch/providers,similar` et
+  `append_to_response=credits,videos,similar` et
   `include_video_language=fr,en,null`.
 - Réponse : le JSON de TMDB, tel quel (200). TMDB répond 404 : `404 not_found`.
   Tout autre échec (429, 5xx, autre refus, délai de 10 s dépassé, réseau, JSON
@@ -193,7 +192,7 @@ chemins existent ; tout le reste est `404 not_found`, jamais relayé.
   est oublié.
 - **Texte** : le titre du média, tel que Plex ou Tautulli le donne, et une clé
   de traduction (`push_available_movie`, `push_available_show`,
-  `push_available_season`, `push_available_episode`, `push_test`) traduite par
+  `push_available_season`, `push_available_episode`) traduite par
   l'app. Aucun jeton d'appareil, URL ni clé n'est journalisé.
 - **URL secrète** : son jeton est dans le chemin (Plex ne sait pas ajouter
   d'en-tête) ; seul son condensé est gardé (`webhook_tokens`). Le journal des

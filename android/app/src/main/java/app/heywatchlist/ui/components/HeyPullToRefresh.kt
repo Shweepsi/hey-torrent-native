@@ -22,6 +22,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.heywatchlist.R
 import app.heywatchlist.ui.theme.HeyTheme
@@ -33,13 +34,15 @@ private const val DRAG_RESISTANCE = 0.5f
  * « Tirer pour rafraîchir » sans Material : quand le contenu est tout en haut et
  * qu'on tire encore vers le bas, un indicateur apparaît ; relâché au-delà du
  * seuil, il appelle [onRefresh]. [refreshing] garde l'indicateur affiché tant
- * que la lecture dure.
+ * que la lecture dure. [indicatorTop] : distance du haut (sous la barre d'état
+ * pour un écran bord à bord).
  */
 @Composable
 fun HeyPullToRefresh(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    indicatorTop: Dp = 8.dp,
     content: @Composable () -> Unit,
 ) {
     val triggerPx = with(LocalDensity.current) { TriggerDistance.toPx() }
@@ -78,7 +81,7 @@ fun HeyPullToRefresh(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 8.dp)
+                    .padding(top = indicatorTop)
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(colors.glassFillFallback)

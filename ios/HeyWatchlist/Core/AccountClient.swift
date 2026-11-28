@@ -18,8 +18,8 @@ struct Profile: Equatable, Sendable {
     var access: Access = .active
 }
 
-/// Fournisseur d'identité. Pas « Provider » : le cœur exporte déjà un type de
-/// ce nom (plateforme de streaming), compilé dans le même module.
+/// Fournisseur d'identité. Distinct de l'`IdentityProvider` du cœur, compilé
+/// dans le même module : seul `LiveAccountClient` connaît les deux.
 enum SignInProvider: Equatable, Sendable {
     case apple
     case google

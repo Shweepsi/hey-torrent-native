@@ -106,11 +106,6 @@ export function devicesOfUsers(env: Env, userIds: string[], now: number): Promis
   return devicesOf(env, userIds, now);
 }
 
-/** Appareils encore valables d'une seule personne (push d'essai). */
-export function devicesOfUser(env: Env, userId: string, now: number): Promise<DeviceRow[]> {
-  return devicesOf(env, [userId], now);
-}
-
 /**
  * Passe la demande en « disponible » : un film dès son arrivée, une série
  * quand chaque saison voulue est sur Plex en entier. Si TMDB ne répond pas,

@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +35,7 @@ import app.heywatchlist.R
 import app.heywatchlist.core.MediaKind
 import app.heywatchlist.core.Title
 import app.heywatchlist.core.WatchlistEntry
+import app.heywatchlist.ui.components.FloatingTopBar
 import app.heywatchlist.ui.components.GlassSurface
 import app.heywatchlist.ui.components.HeyIcon
 import app.heywatchlist.ui.components.HeyIcons
@@ -41,11 +43,16 @@ import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeySpinner
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
 import app.heywatchlist.ui.components.StaleBanner
+import app.heywatchlist.ui.components.barsPadding
 import app.heywatchlist.ui.components.glassEdge
 import app.heywatchlist.ui.components.pressScale
 import app.heywatchlist.ui.components.rememberPress
+import app.heywatchlist.ui.components.scrolledFraction
+import app.heywatchlist.ui.components.statusBarHeight
+import app.heywatchlist.ui.components.underBars
 import app.heywatchlist.ui.discover.pluralString
 import app.heywatchlist.ui.theme.HeyTheme
 
@@ -61,10 +68,26 @@ fun WatchlistScreen(viewModel: WatchlistViewModel, onOpenTitle: (Title) -> Unit)
 
 @Composable
 internal fun WatchlistContent(state: WatchlistUiState, onRefresh: () -> Unit, onOpenTitle: (Title) -> Unit) {
-    HeyPullToRefresh(refreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    // Bord à bord : la liste passe sous la barre du haut et sous la barre d'onglets, qui la floutent.
+    Box(modifier = Modifier.fillMaxSize()) {
+        WatchlistList(state, listState, onRefresh, onOpenTitle)
+        FloatingTopBar(title = stringResource(R.string.tab_watchlist), revealed = { listState.scrolledFraction() })
+    }
+}
+
+@Composable
+private fun WatchlistList(state: WatchlistUiState, listState: LazyListState, onRefresh: () -> Unit, onOpenTitle: (Title) -> Unit) {
+    HeyPullToRefresh(
+        refreshing = state.refreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+        indicatorTop = statusBarHeight() + 8.dp,
+    ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            state = listState,
+            modifier = Modifier.fillMaxSize().underBars(LocalHazeState.current),
+            contentPadding = barsPadding(horizontal = 16.dp, top = 8.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "title") {

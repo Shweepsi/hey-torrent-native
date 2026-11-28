@@ -21,8 +21,16 @@ import androidx.compose.ui.unit.sp
  */
 @Immutable
 class HeyColors(
+    /** Accent des textes, icônes et liens. */
     val primary: Color,
-    /** Texte posé sur [primary]. */
+    /**
+     * Aplat des boutons et pastilles accentués : plus profond que [primary],
+     * pour que le texte blanc posé dessus garde au moins 4,5:1.
+     */
+    val primaryFill: Color,
+    /** Bas du dégradé de [primaryFill]. */
+    val primaryFillEnd: Color,
+    /** Texte posé sur [primaryFill]. */
     val onPrimary: Color,
     val background: Color,
     val onBackground: Color,
@@ -33,6 +41,12 @@ class HeyColors(
     /** Verre sans flou (repli) : plus opaque, pour garder le texte lisible. */
     val glassFillFallback: Color,
     val glassBorder: Color,
+    /**
+     * Teinte des barres flottantes (haut et onglets) posée sur le flou du
+     * contenu qui défile dessous : plus couvrante que [glassFill], pour que le
+     * texte reste lisible au-dessus d'une affiche claire comme sombre.
+     */
+    val chromeFill: Color,
     val error: Color,
     /** Seconde couleur des halos décoratifs du fond. */
     val accent: Color,
@@ -46,13 +60,16 @@ class HeyColors(
 
 private val DarkColors = HeyColors(
     primary = Color(0xFF4F9CF7),
-    onPrimary = Color(0xFF0C0C0F),
+    primaryFill = Color(0xFF2E74DB),
+    primaryFillEnd = Color(0xFF2462C8),
+    onPrimary = Color.White,
     background = Color(0xFF0C0C0F),
     onBackground = Color(0xFFF5F5F8),
     onBackgroundMuted = Color(0xFFF5F5F8).copy(alpha = 0.72f),
     glassFill = Color.White.copy(alpha = 0.09f),
     glassFillFallback = Color(0xFF1B1B22).copy(alpha = 0.88f),
     glassBorder = Color.White.copy(alpha = 0.2f),
+    chromeFill = Color(0xFF101015).copy(alpha = 0.68f),
     error = Color(0xFFFF8A80),
     accent = Color(0xFF7C5CFF),
     glassHighlight = Color.White.copy(alpha = 0.42f),
@@ -62,6 +79,8 @@ private val DarkColors = HeyColors(
 
 private val LightColors = HeyColors(
     primary = Color(0xFF1A66CC),
+    primaryFill = Color(0xFF1A66CC),
+    primaryFillEnd = Color(0xFF1757B0),
     onPrimary = Color.White,
     background = Color(0xFFF3F5FA),
     onBackground = Color(0xFF121317),
@@ -69,6 +88,7 @@ private val LightColors = HeyColors(
     glassFill = Color.White.copy(alpha = 0.55f),
     glassFillFallback = Color.White.copy(alpha = 0.92f),
     glassBorder = Color(0xFF121317).copy(alpha = 0.12f),
+    chromeFill = Color(0xFFF7F8FC).copy(alpha = 0.76f),
     error = Color(0xFFB3261E),
     accent = Color(0xFFB9A8FF),
     glassHighlight = Color.White.copy(alpha = 0.95f),

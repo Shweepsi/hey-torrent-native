@@ -51,7 +51,7 @@ facile.
   créé « en attente » et ne voit qu'un écran d'attente ; l'administrateur
   l'accepte ou le refuse d'un geste dans l'onglet Accès de l'APK admin, et la
   personne est prévenue par une notification. Le serveur refuse tout le reste
-  (catalogue, watchlist, push d'essai) à un compte en attente ou refusé. Une
+  (catalogue, watchlist) à un compte en attente ou refusé. Une
   adresse peut être acceptée d'avance (proche prévenu, compte de démonstration
   pour la vérification d'Apple). Pas de mot de passe HeyWatchlist, pas de
   Cloudflare Access. Le Worker vérifie le jeton d'identité puis émet son
@@ -160,9 +160,11 @@ facile.
   Aventure vers « Action & Adventure », etc.) et renvoie une page vide quand
   il n'y a pas d'équivalent (Horreur, Romance…). Aucune règle de genre dans
   Swift ou Kotlin.
-- **Attribution** : « Disponibilités fournies par JustWatch » dans la section
-  des plateformes de la fiche, car TMDB l'exige pour ces données. Le logo TMDB
-  et sa phrase d'attribution restent pour « À propos » (jalon 7).
+- **Pas de « Où regarder »** (0.13.2, choix de Loïc) : la fiche ne propose
+  plus les plateformes de streaming ; le Worker ne les demande plus à TMDB.
+  Le logo TMDB et sa phrase d'attribution restent pour « À propos » (jalon 7).
+- **Saisons** : la saison 0 de TMDB (épisodes spéciaux) n'est pas proposée
+  dans le choix des saisons (0.13.2, choix de Loïc) ; le cœur l'écarte.
 - **Confidentialité iOS** : SQLite embarqué appelle `fstat` et `fstatfs` ;
   `PrivacyInfo.xcprivacy` déclare `FileTimestamp` (`C617.1`) et `DiskSpace`.
   **La raison `E174.1` de `DiskSpace` est provisoire** : à confirmer au premier

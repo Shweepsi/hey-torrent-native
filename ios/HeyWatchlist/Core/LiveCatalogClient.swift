@@ -183,22 +183,6 @@ extension CastPerson {
     }
 }
 
-extension WatchProvider {
-    init(core: Provider) {
-        self.init(id: Int(core.id), name: core.name, logoURL: core.logoUrl.flatMap { URL(string: $0) })
-    }
-}
-
-extension WatchProviders {
-    init(core: Providers) {
-        self.init(
-            flatrate: core.flatrate.map(WatchProvider.init(core:)),
-            rent: core.rent.map(WatchProvider.init(core:)),
-            buy: core.buy.map(WatchProvider.init(core:))
-        )
-    }
-}
-
 extension SeasonEntry {
     init(core: SeasonSummary) {
         self.init(
@@ -228,7 +212,6 @@ extension TitleSheet {
             cast: core.cast.map(CastPerson.init(core:)),
             directors: core.directors,
             trailerURL: trailer.flatMap { URL.youtubeVideo(key: $0.youtubeKey) },
-            providers: WatchProviders(core: core.providers),
             similar: core.similar.map(Title.init(core:)),
             stale: core.stale
         )
