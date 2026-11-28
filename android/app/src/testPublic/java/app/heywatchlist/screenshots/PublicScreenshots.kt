@@ -17,6 +17,9 @@ import app.heywatchlist.ui.discover.DiscoverContent
 import app.heywatchlist.ui.discover.DiscoverShelves
 import app.heywatchlist.ui.discover.DiscoverUiState
 import app.heywatchlist.ui.discover.GenresState
+import app.heywatchlist.ui.discover.SearchContent
+import app.heywatchlist.ui.discover.SearchState
+import app.heywatchlist.ui.discover.SearchUiState
 import app.heywatchlist.ui.discover.ShelfState
 import app.heywatchlist.ui.main.Tab
 import app.heywatchlist.ui.main.TabsScaffold
@@ -137,6 +140,24 @@ class PublicScreenshots {
             onRemoveFromWatchlist = {},
         )
     }
+
+    // En-tête flottant de la recherche, résultats défilés dessous.
+    @Test
+    fun recherche() = Screenshots.capture(rule, "10-recherche", act = { scrollDown() }) { SearchScene() }
+
+    @Test
+    fun rechercheSombre() = Screenshots.capture(rule, "10b-recherche-sombre", dark = true) { SearchScene() }
+
+    @Composable
+    private fun SearchScene() = SearchContent(
+        text = "la",
+        onTextChange = {},
+        state = SearchUiState(query = "la", state = SearchState.Results(SampleData.titles(12), nextPage = null)),
+        onBack = {},
+        onRetry = {},
+        onLoadMore = {},
+        onOpenTitle = {},
+    )
 
     @Test
     fun watchlist() = Screenshots.capture(rule, "07-watchlist") { Tabs(Tab.Watchlist) { WatchlistScene() } }

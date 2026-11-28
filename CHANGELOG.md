@@ -17,7 +17,8 @@ Retours de Loïc sur la 0.13.2.
   verre légèrement bleuté, en retrait ; les autres restent en verre neutre.
 - Android : en-tête des onglets revu. Grand titre identique sur Découvrir,
   Watchlist et Réglages (même marge, même taille, sous-titre estompé) ; la
-  barre flottante reprend le titre en petit, centré.
+  barre flottante reprend le titre en petit, centré, et son verre s'efface en
+  dégradé sous la barre au lieu de s'arrêter sur un trait.
 - Android : un seul « Rechercher » en haut de Découvrir. Le bouton loupe de la
   barre n'apparaît qu'une fois le champ de recherche passé sous la barre.
 - iPhone : l'onglet Rechercher n'affiche plus « Rechercher » deux fois (titre
