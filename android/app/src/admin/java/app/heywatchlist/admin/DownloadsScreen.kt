@@ -103,7 +103,7 @@ fun DownloadsScreen(viewModel: DownloadsViewModel) {
             HeyButton(
                 text = stringResource(R.string.admin_cancel),
                 onClick = viewModel::cancelDelete,
-                kind = HeyButtonKind.Secondary,
+                kind = HeyButtonKind.Link,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

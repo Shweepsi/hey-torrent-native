@@ -46,7 +46,7 @@ object Screenshots {
     }
 
     /** Pose [content] sur le décor de l'app, laisse finir les fondus, puis écrit `<name>.png`. */
-    fun capture(rule: ComposeContentTestRule, name: String, dark: Boolean = true, content: @Composable () -> Unit) {
+    fun capture(rule: ComposeContentTestRule, name: String, dark: Boolean = false, content: @Composable () -> Unit) {
         rule.setContent {
             HeyTheme(darkTheme = dark) {
                 AppBackdrop { content() }

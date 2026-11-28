@@ -65,6 +65,9 @@ interface AccountGateway {
     /** Client « Application Web » de Google, ou `null` s'il n'est pas configuré. */
     suspend fun googleWebClientId(): String?
 
+    /** Affiches en tendance (adresses d'images) pour le décor de l'accueil ; sans compte. */
+    suspend fun welcomePosters(): List<String>
+
     /** Nonce brut pour une nouvelle connexion. */
     suspend fun newNonce(): String
 

@@ -34,13 +34,13 @@ import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.theme.HeyTheme
 
 /**
- * Mise en page commune de l'accueil et de l'attente : le mur d'affiches en
- * fond, le contenu posé en bas de l'écran (à portée du pouce), et qui défile
- * si l'écran est petit ou le texte agrandi.
+ * Mise en page commune de l'accueil et de l'attente : le mur d'affiches
+ * ([posters], ou dessiné) en fond, le contenu posé en bas de l'écran (à
+ * portée du pouce), et qui défile si l'écran est petit ou le texte agrandi.
  */
 @Composable
-internal fun WelcomeLayout(content: @Composable ColumnScope.() -> Unit) {
-    CinemaBackdrop {
+internal fun WelcomeLayout(posters: List<String>, content: @Composable ColumnScope.() -> Unit) {
+    CinemaBackdrop(posters = posters) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Column(
                 modifier = Modifier

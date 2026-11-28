@@ -33,6 +33,12 @@ enum class HeyButtonKind {
 
     /** Action destructrice (suppression) : texte rouge sur verre. */
     Danger,
+
+    /** Action discrète, sans fond ni filet : texte bleu, comme un lien. */
+    Link,
+
+    /** Action destructrice discrète (retirer) : texte rouge, sans fond ni filet. */
+    DangerLink,
 }
 
 /**
@@ -56,8 +62,14 @@ fun HeyButton(
         HeyButtonKind.Primary -> Brush.verticalGradient(listOf(colors.primary, colors.primary.darken())) to colors.onPrimary
         HeyButtonKind.Secondary -> SolidColor(colors.glassFill) to colors.onBackground
         HeyButtonKind.Danger -> SolidColor(colors.glassFill) to colors.error
+        HeyButtonKind.Link -> SolidColor(Color.Transparent) to colors.primary
+        HeyButtonKind.DangerLink -> SolidColor(Color.Transparent) to colors.error
     }
-    val edge = if (kind == HeyButtonKind.Primary) SolidColor(Color.White.copy(alpha = 0.18f)) else glassEdge(colors)
+    val edge = when (kind) {
+        HeyButtonKind.Primary -> SolidColor(Color.White.copy(alpha = 0.18f))
+        HeyButtonKind.Link, HeyButtonKind.DangerLink -> SolidColor(Color.Transparent)
+        else -> glassEdge(colors)
+    }
     Box(
         modifier = modifier
             .heightIn(min = 48.dp)

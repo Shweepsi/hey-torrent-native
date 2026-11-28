@@ -39,7 +39,7 @@ fun HeyTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = HeyTheme.typography.title.copy(color = colors.onBackground),
+        textStyle = HeyTheme.typography.body.copy(color = colors.onBackground),
         cursorBrush = SolidColor(colors.primary),
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
@@ -48,14 +48,14 @@ fun HeyTextField(
         decorationBox = { field ->
             Box(
                 modifier = Modifier
-                    .heightIn(min = 56.dp)
+                    .heightIn(min = 52.dp)
                     .clip(shape)
                     .background(colors.glassFill)
                     .border(1.dp, colors.glassBorder, shape)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                if (value.isEmpty()) HeyText(text = placeholder, style = HeyTheme.typography.title, color = colors.onBackgroundMuted)
+                if (value.isEmpty()) HeyText(text = placeholder, style = HeyTheme.typography.body, color = colors.onBackgroundMuted)
                 field()
             }
         },

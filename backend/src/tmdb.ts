@@ -278,3 +278,32 @@ export async function cachedTmdb(
   if (found.ttl > 0) await writeCache(env, cacheKey, body, found.ttl, now);
   return body;
 }
+
+export const POSTERS_PATH = "/v1/posters";
+/** Affiches au plus dans la réponse publique. */
+export const MAX_POSTERS = 24;
+const POSTER_PATH = /^\/[A-Za-z0-9_-]+\.(?:jpg|png)$/;
+
+/**
+ * `GET /v1/posters`, sans compte : les chemins des affiches en tendance de la
+ * semaine (`/abc.jpg`), pour le décor de l'écran de connexion. Rien d'autre
+ * que ces chemins ne sort : ni titre, ni identifiant. La réponse vient du même
+ * cache que le relais (une heure) : TMDB est appelé au plus une fois par heure,
+ * quel que soit le nombre d'appels. Une entrée illisible est ignorée.
+ */
+export async function welcomePosters(env: Env, fetcher: FetchLike, now: number): Promise<Response> {
+  const body = await cachedTmdb(env, fetcher, "trending/all/week", new URLSearchParams(), now);
+  const results: unknown = (JSON.parse(body) as { results?: unknown }).results;
+  const posters: string[] = [];
+  if (Array.isArray(results)) {
+    for (const entry of results) {
+      if (typeof entry !== "object" || entry === null) continue;
+      const { poster_path: path, media_type: kind } = entry as { poster_path?: unknown; media_type?: unknown };
+      if ((kind === "movie" || kind === "tv") && typeof path === "string" && POSTER_PATH.test(path)) {
+        posters.push(path);
+      }
+      if (posters.length >= MAX_POSTERS) break;
+    }
+  }
+  return jsonText(JSON.stringify({ posters }));
+}

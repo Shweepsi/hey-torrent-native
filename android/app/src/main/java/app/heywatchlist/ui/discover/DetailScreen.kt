@@ -1,9 +1,6 @@
 package app.heywatchlist.ui.discover
 
-import android.app.Activity
 import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -40,7 +37,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,7 +52,6 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -65,7 +60,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.core.CastMember
@@ -148,38 +142,35 @@ internal fun DetailContent(
     onAddToWatchlist: (seasons: List<Int>?) -> Unit,
     onRemoveFromWatchlist: () -> Unit,
 ) {
-    HeyTheme(darkTheme = true) {
-        LightStatusBarIcons()
-        // Fond opaque : pas de décor à flouter derrière, le verre devient une surface sans flou.
-        CompositionLocalProvider(LocalHazeState provides null) {
-            val pulse = rememberSkeletonPulse(active = state is DetailUiState.Loading)
-            CompositionLocalProvider(LocalSkeletonPulse provides pulse) {
-                Box(modifier = Modifier.fillMaxSize().background(HeyTheme.colors.background)) {
-                    AmbientArtwork(url = state.preview.posterUrl ?: state.preview.backdropUrl)
-                    DetailList(
-                        state = state,
-                        watchlist = watchlist,
-                        onOpenTitle = onOpenTitle,
-                        onRetry = onRetry,
-                        onToggleSeason = onToggleSeason,
-                        onRetrySeason = onRetrySeason,
-                        onAddToWatchlist = onAddToWatchlist,
-                        onRemoveFromWatchlist = onRemoveFromWatchlist,
-                    )
-                    HeyIconButton(
-                        icon = HeyIcons.Back,
-                        contentDescription = stringResource(R.string.action_back),
-                        onClick = onBack,
-                        modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp),
-                    )
-                }
+    // Fond opaque : pas de décor à flouter derrière, le verre devient une surface sans flou.
+    CompositionLocalProvider(LocalHazeState provides null) {
+        val pulse = rememberSkeletonPulse(active = state is DetailUiState.Loading)
+        CompositionLocalProvider(LocalSkeletonPulse provides pulse) {
+            Box(modifier = Modifier.fillMaxSize().background(HeyTheme.colors.background)) {
+                AmbientArtwork(url = state.preview.posterUrl ?: state.preview.backdropUrl)
+                DetailList(
+                    state = state,
+                    watchlist = watchlist,
+                    onOpenTitle = onOpenTitle,
+                    onRetry = onRetry,
+                    onToggleSeason = onToggleSeason,
+                    onRetrySeason = onRetrySeason,
+                    onAddToWatchlist = onAddToWatchlist,
+                    onRemoveFromWatchlist = onRemoveFromWatchlist,
+                )
+                HeyIconButton(
+                    icon = HeyIcons.Back,
+                    contentDescription = stringResource(R.string.action_back),
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp),
+                )
             }
         }
     }
 }
 
 /**
- * Fond de toute la fiche : l'affiche du titre, très floutée et assombrie, qui
+ * Fond de toute la fiche : l'affiche du titre, très floutée et voilée, qui
  * teinte la page à ses couleurs. Elle ne défile pas : le flou n'est calculé
  * qu'une fois, pas à chaque image du défilement.
  */
@@ -204,31 +195,6 @@ private fun AmbientArtwork(url: String?) {
             ),
         )
     }
-}
-
-/**
- * La fiche est toujours sombre, même quand l'app est en thème clair : tant
- * qu'elle est affichée, les icônes de la barre d'état sont claires (sinon elles
- * disparaissent sur le fond). Le réglage d'avant revient à la sortie.
- */
-@Composable
-private fun LightStatusBarIcons() {
-    val window = LocalContext.current.findActivity()?.window ?: return
-    val view = LocalView.current
-    DisposableEffect(window, view) {
-        val controller = WindowCompat.getInsetsController(window, view)
-        val before = controller.isAppearanceLightStatusBars
-        // « Light » désigne ici le fond de la barre : faux = icônes claires.
-        controller.isAppearanceLightStatusBars = false
-        onDispose { controller.isAppearanceLightStatusBars = before }
-    }
-}
-
-/** L'activité qui porte ce contexte, que celui-ci soit enveloppé ou non. */
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }
 
 @Composable

@@ -135,7 +135,7 @@ private fun InWatchlist(
         }
         HeyButton(
             text = stringResource(R.string.watchlist_remove),
-            kind = HeyButtonKind.Danger,
+            kind = HeyButtonKind.DangerLink,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
             onClick = onRemove,

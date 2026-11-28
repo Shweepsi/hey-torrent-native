@@ -60,12 +60,22 @@ class PublicScreenshots {
     )
 
     @Test
-    fun accueil() = Screenshots.capture(rule, "01-accueil") { WelcomeContent(AccountUiState.SignedOut(), onGoogle = {}) }
+    fun accueil() = Screenshots.capture(rule, "01-accueil") {
+        WelcomeContent(AccountUiState.SignedOut(), onGoogle = {}, posters = posters)
+    }
 
     @Test
-    fun accueilClair() = Screenshots.capture(rule, "02-accueil-clair", dark = false) {
+    fun accueilSombre() = Screenshots.capture(rule, "02-accueil-sombre", dark = true) {
+        WelcomeContent(AccountUiState.SignedOut(), onGoogle = {}, posters = posters)
+    }
+
+    /** Sans affiches (pas de réseau) : le mur dessiné. */
+    @Test
+    fun accueilSansReseau() = Screenshots.capture(rule, "02b-accueil-sans-reseau") {
         WelcomeContent(AccountUiState.SignedOut(), onGoogle = {})
     }
+
+    private val posters = SampleData.titles(16).mapNotNull { it.posterUrl }
 
     @Test
     fun attente() = Screenshots.capture(rule, "03-attente") {
@@ -83,7 +93,7 @@ class PublicScreenshots {
     fun decouvrir() = Screenshots.capture(rule, "04-decouvrir") { Tabs(Tab.Discover) { DiscoverScene() } }
 
     @Test
-    fun decouvrirClair() = Screenshots.capture(rule, "05-decouvrir-clair", dark = false) { Tabs(Tab.Discover) { DiscoverScene() } }
+    fun decouvrirSombre() = Screenshots.capture(rule, "05-decouvrir-sombre", dark = true) { Tabs(Tab.Discover) { DiscoverScene() } }
 
     @Test
     fun fiche() = Screenshots.capture(rule, "06-fiche") {
@@ -104,7 +114,7 @@ class PublicScreenshots {
     fun watchlist() = Screenshots.capture(rule, "07-watchlist") { Tabs(Tab.Watchlist) { WatchlistScene() } }
 
     @Test
-    fun watchlistClair() = Screenshots.capture(rule, "08-watchlist-clair", dark = false) { Tabs(Tab.Watchlist) { WatchlistScene() } }
+    fun watchlistSombre() = Screenshots.capture(rule, "08-watchlist-sombre", dark = true) { Tabs(Tab.Watchlist) { WatchlistScene() } }
 
     @Test
     fun reglages() = Screenshots.capture(rule, "09-reglages") {

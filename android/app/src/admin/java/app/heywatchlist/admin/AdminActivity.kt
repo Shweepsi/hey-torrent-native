@@ -36,12 +36,15 @@ import app.heywatchlist.ui.components.GlassTabBar
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.theme.HeyTheme
+import app.heywatchlist.ui.theme.transparentBars
 import uniffi.heywatchlist_core.AdminRequest
 
 /** Espace admin, ouvert depuis Réglages : une activité à part, absente de l'app publique. */
 class AdminActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // Un changement de thème du téléphone recrée l'activité : les barres suivent.
+        val bars = transparentBars(dark = resources.configuration.isNightModeActive)
+        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
         super.onCreate(savedInstanceState)
         val gateway = adminGateway(this)
         setContent {

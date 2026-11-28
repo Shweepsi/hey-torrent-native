@@ -121,7 +121,7 @@ fun AccessScreen(viewModel: AccessViewModel) {
             )
             HeyButton(
                 text = stringResource(R.string.admin_cancel),
-                kind = HeyButtonKind.Secondary,
+                kind = HeyButtonKind.Link,
                 onClick = { removing = null },
                 modifier = Modifier.fillMaxWidth(),
             )

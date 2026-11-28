@@ -490,3 +490,38 @@ async fn the_bootstrap_code_makes_the_first_admin() {
     assert_eq!(profile.access, AccessStatus::Active);
     assert_eq!(account.current_user().await, Some(profile));
 }
+
+#[tokio::test]
+async fn welcome_posters_skip_unreadable_entries() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/posters"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "posters": ["/a1.jpg", 42, "../x.jpg", null, "/b-2_c.png"],
+        })))
+        .mount(&server)
+        .await;
+    let account = Account::new(server.uri(), Arc::new(MemoryStore::default())).unwrap();
+    let posters = account.welcome_posters().await.unwrap();
+    assert_eq!(
+        posters,
+        vec![
+            "https://image.tmdb.org/t/p/w342/a1.jpg".to_string(),
+            "https://image.tmdb.org/t/p/w342/b-2_c.png".to_string(),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn welcome_posters_report_an_unavailable_provider() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/posters"))
+        .respond_with(
+            ResponseTemplate::new(502).set_body_json(json!({ "error": "provider_unavailable" })),
+        )
+        .mount(&server)
+        .await;
+    let account = Account::new(server.uri(), Arc::new(MemoryStore::default())).unwrap();
+    assert!(account.welcome_posters().await.is_err());
+}

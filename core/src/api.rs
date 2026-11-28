@@ -252,6 +252,14 @@ pub(crate) struct ConfigResponse {
     pub google_ios_client_id: Option<String>,
 }
 
+/// `GET /v1/posters` : chemins TMDB des affiches en tendance. Gardés bruts pour
+/// qu'une entrée illisible soit ignorée, pas fatale à la liste.
+#[derive(Deserialize)]
+pub(crate) struct PostersResponse {
+    #[serde(default)]
+    pub posters: Vec<serde_json::Value>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
