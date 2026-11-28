@@ -25,6 +25,9 @@ Retours de Loïc sur la 0.13.2.
   sur deux lignes : la légende sous l'affiche a toujours la même hauteur (deux
   lignes de titre, une de légende), squelettes compris. Même correction sur
   iPhone (`lineLimit(2, reservesSpace: true)`).
+- Découvrir : le carrousel des grosses affiches défile seul toutes les 5 s,
+  s'arrête dès qu'on le touche et reste immobile avec les animations système
+  coupées (Android et iPhone).
 - iPhone : l'onglet Rechercher n'affiche plus « Rechercher » deux fois (titre
   de l'écran et message d'attente).
 

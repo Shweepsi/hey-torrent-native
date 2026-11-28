@@ -33,8 +33,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -84,6 +86,7 @@ import app.heywatchlist.ui.components.scrolledFraction
 import app.heywatchlist.ui.components.statusBarHeight
 import app.heywatchlist.ui.components.underBars
 import app.heywatchlist.ui.theme.HeyTheme
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 
 private val CardWidth = 124.dp
@@ -234,6 +237,17 @@ private fun HeroSkeleton() {
 @Composable
 private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
     val pagerState = rememberPagerState(pageCount = { titles.size })
+    // Le carrousel avance seul toutes les HERO_AUTO_SCROLL_MS ; il s'arrête au toucher (le délai repart
+    // de zéro quand on le lâche) et n'avance pas sans animations système.
+    val dragged by pagerState.interactionSource.collectIsDraggedAsState()
+    val animations = rememberAnimationsEnabled()
+    LaunchedEffect(titles.size, dragged, animations) {
+        if (titles.size < 2 || dragged || !animations) return@LaunchedEffect
+        while (true) {
+            delay(HERO_AUTO_SCROLL_MS)
+            pagerState.animateScrollToPage((pagerState.currentPage + 1) % titles.size)
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalPager(
             state = pagerState,
@@ -260,7 +274,6 @@ private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val animations = rememberAnimationsEnabled()
                 titles.indices.forEach { index ->
                     val current = index == pagerState.currentPage
                     // La page affichée s'allonge en pastille.
@@ -316,6 +329,7 @@ private fun HeroCard(title: Title, onOpen: (Title) -> Unit, modifier: Modifier =
     }
 }
 
+private const val HERO_AUTO_SCROLL_MS = 5_000L
 private const val HERO_SCRIM_HEIGHT = 0.7f
 private const val HERO_SIDE_SHRINK = 0.06f
 private val HeroEdge = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.06f)))
