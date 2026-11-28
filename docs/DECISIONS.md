@@ -296,6 +296,29 @@ facile.
 - **Journaux Cloudflare** : pas de journal d'appel par requête (l'URL des
   webhooks contient leur jeton).
 
+## Décidé le 2026-11-28 : Claude et recherche automatique
+
+- **Claude conseille, l'administrateur décide** : après une recherche, Claude
+  (`claude-opus-5-5`, choisi par le propriétaire) désigne la release qui
+  respecte le mieux ses règles, avec une phrase de raison. Rien ne part vers
+  qBittorrent sans un appui de l'administrateur. Un seul appel par recherche,
+  40 releases au plus, sans lien ni clé de source (noms, tailles, sources).
+- **Clé et règles** : la clé d'API Anthropic du propriétaire et ses règles
+  (une phrase libre) se saisissent dans Serveurs et sont chiffrées avec les
+  autres réglages (`CREDENTIALS_KEY`), jamais dans le chat ni le dépôt.
+- **Recherche automatique** : le Worker (déclencheur horaire) cherche chaque
+  demande en attente au plus toutes les 6 h, 8 par passage ; les films pas
+  encore sortis attendent. Elle ne tourne qu'avec une clé et une source
+  active. Une demande n'est « À traiter » qu'une fois qu'une release convient ;
+  les invités voient toujours « Demandé ». Pas de push quand une release est
+  trouvée ; une push à l'administrateur après 3 semaines sans rien.
+- **Sources** : le Worker lit lui-même les sources Torznab (noms et tailles
+  seulement, pas les liens). Une source qui refuse les adresses de Cloudflare
+  est signalée dans Serveurs et reste cherchable depuis le téléphone.
+- **Plex** : en plus des webhooks, une connexion directe facultative
+  (adresse HTTPS joignable depuis Internet + jeton) ; le Worker lit la
+  bibliothèque toutes les 6 h et passe « disponible » ce qui y est déjà.
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

@@ -8,6 +8,11 @@
  * clés), ni les noms de releases.
  */
 import { findUser, type AccessStatus, type User } from "./accounts";
+import type { FetchLike } from "./apple";
+import { automationEnabled, loadSettings, settingsAad } from "./adminsettings";
+import { RESET_SEARCH } from "./autosearch";
+import { MAX_CANDIDATES, recommend, type Candidate, type Wanted } from "./claude";
+import { testPlex } from "./plex";
 import { devicesOfUsers, pushTo } from "./availability";
 import { decryptText, encryptText } from "./crypto";
 import type { Env } from "./env";
@@ -55,6 +60,12 @@ interface RequestRow {
   created_at: number;
   updated_at: number;
   handled_at: number | null;
+  /** Release trouvée par la recherche automatique et jugée convenable par Claude. */
+  candidate_title: string | null;
+  candidate_reason: string | null;
+  candidate_found_at: number | null;
+  /** Dernière recherche automatique ; `null` : pas encore cherchée. */
+  auto_checked_at: number | null;
 }
 
 interface FollowerRow {
@@ -78,7 +89,8 @@ export interface AdminRequest extends RequestRow {
 }
 
 const REQUEST_COLUMNS = `id, media_type, tmdb_id, title, poster_path, year, status, refusal_reason,
-  release_title, torrent_hash, created_at, updated_at, handled_at`;
+  release_title, torrent_hash, created_at, updated_at, handled_at,
+  candidate_title, candidate_reason, candidate_found_at, auto_checked_at`;
 
 function seasonsOf(raw: string | null): number[] | null {
   if (raw === null) return null;
@@ -133,17 +145,21 @@ async function withFollowers(env: Env, rows: RequestRow[]): Promise<AdminRequest
 /**
  * `GET /v1/admin/requests?status=…` : la file. Sans paramètre, les demandes à
  * traiter (demandées puis en cours), les plus anciennes d'abord ; `status=all`
- * pour tout voir, les plus récemment changées d'abord.
+ * pour tout voir, les plus récemment changées d'abord. Quand la recherche
+ * automatique tourne, une demande n'est « à traiter » qu'une fois qu'une
+ * release convenable a été trouvée.
  */
 async function listRequests(request: Request, env: Env, now: number): Promise<Response> {
-  await requireAdmin(request, env, now);
+  const admin = await requireAdmin(request, env, now);
   const filter = new URL(request.url).searchParams.get("status");
   let statement: D1PreparedStatement;
   if (filter === null || filter === "open") {
+    const waitForCandidate = automationEnabled(await loadSettings(env, admin.id)) ? 1 : 0;
     statement = env.DB.prepare(
-      `SELECT ${REQUEST_COLUMNS} FROM requests WHERE status IN ('requested', 'in_progress')
+      `SELECT ${REQUEST_COLUMNS} FROM requests
+       WHERE status = 'in_progress' OR (status = 'requested' AND (?1 = 0 OR candidate_title IS NOT NULL))
        ORDER BY CASE status WHEN 'requested' THEN 0 ELSE 1 END, created_at LIMIT ${MAX_REQUESTS}`,
-    );
+    ).bind(waitForCandidate);
   } else if (filter === "all") {
     statement = env.DB.prepare(`SELECT ${REQUEST_COLUMNS} FROM requests ORDER BY updated_at DESC LIMIT ${MAX_REQUESTS}`);
   } else if ((STATUSES as readonly string[]).includes(filter)) {
@@ -241,22 +257,30 @@ async function available(request: Request, env: Env, now: number, id: string): P
   return json({ request: await oneRequest(env, id) });
 }
 
-/** `POST …/reopen` : retour à « demandée » (annuler un refus ou un envoi). */
+/**
+ * `POST …/reopen` : retour à « demandée » (annuler un refus, un envoi ou un
+ * « disponible » posé par erreur). Personne n'est prévenu.
+ */
 async function reopen(request: Request, env: Env, now: number, id: string): Promise<Response> {
   await requireAdmin(request, env, now);
-  return transition(
-    env,
-    id,
-    ["in_progress", "refused"],
-    { status: "requested", refusal_reason: null, release_title: null, torrent_hash: null },
-    now,
-  );
+  // La recherche automatique repart de zéro.
+  const result = await env.DB.prepare(
+    `UPDATE requests SET status = 'requested', refusal_reason = NULL, release_title = NULL, torrent_hash = NULL,
+       handled_at = ?1, updated_at = ?1, ${RESET_SEARCH}
+     WHERE id = ?2 AND status IN ('in_progress', 'refused', 'available')`,
+  )
+    .bind(now, id)
+    .run();
+  if (result.meta.changes !== 1) {
+    const exists = await env.DB.prepare("SELECT 1 FROM requests WHERE id = ?").bind(id).first();
+    throw new ApiError(exists ? "conflict" : "not_found");
+  }
+  return json({ request: await oneRequest(env, id) });
 }
 
 // ── Réglages des serveurs ────────────────────────────────────────
 
-/** Données associées au chiffrement : un texte chiffré ne se recolle pas sur un autre compte. */
-const aad = (userId: string) => `heywatchlist-credentials:${userId}`;
+const aad = settingsAad;
 
 /** `GET /v1/admin/settings` : les réglages déchiffrés, ou `null` s'il n'y en a pas. */
 async function getSettings(request: Request, env: Env, now: number): Promise<Response> {
@@ -287,6 +311,106 @@ async function deleteSettings(request: Request, env: Env, now: number): Promise<
   const user = await requireAdmin(request, env, now);
   await env.DB.prepare("DELETE FROM credentials WHERE user_id = ?").bind(user.id).run();
   return noContent();
+}
+
+// ── Recommandation par Claude ────────────────────────────────────
+
+function candidateOf(value: unknown): Candidate | null {
+  if (typeof value !== "object" || value === null) return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.id !== "string" || typeof v.title !== "string") return null;
+  const id = v.id.trim();
+  const title = v.title.trim();
+  if (!id || id.length > 64 || !title || title.length > 300) return null;
+  const count = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : undefined);
+  return {
+    id,
+    title,
+    size_bytes: count(v.size_bytes),
+    seeders: count(v.seeders),
+    indexer: typeof v.indexer === "string" ? v.indexer.trim().slice(0, 60) || undefined : undefined,
+  };
+}
+
+/**
+ * `POST /v1/admin/recommend` `{media_type, title, original_title?, year?, season?, releases}` :
+ * la release que Claude recommande (`release_id`, ou `null` si aucune ne
+ * convient) et sa raison, selon la clé et les règles des réglages chiffrés.
+ */
+async function recommendRelease(request: Request, env: Env, now: number, _push: PushSender, fetcher: FetchLike): Promise<Response> {
+  const user = await requireAdmin(request, env, now);
+  const body = await readJson(request);
+  const mediaType = body.media_type;
+  if (mediaType !== "movie" && mediaType !== "tv") throw new ApiError("invalid_request");
+  const positive = (key: string) => {
+    const value = body[key];
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 10_000) {
+      throw new ApiError("invalid_request");
+    }
+    return value;
+  };
+  const wanted: Wanted = {
+    media_type: mediaType,
+    title: requiredString(body, "title", 300),
+    original_title: optionalString(body, "original_title", 300),
+    year: positive("year"),
+    season: positive("season"),
+  };
+  if (!Array.isArray(body.releases)) throw new ApiError("invalid_request");
+  // Tolérant : une release illisible est ignorée.
+  const candidates = body.releases.slice(0, MAX_CANDIDATES).flatMap((r) => candidateOf(r) ?? []);
+  const settings = await loadSettings(env, user.id);
+  if (!settings?.anthropicKey) throw new ApiError("assistant_not_configured");
+  return json(await recommend(settings.anthropicKey, settings.rules, wanted, candidates, fetcher));
+}
+
+// ── Tâches planifiées ────────────────────────────────────────────
+
+/**
+ * `GET /v1/admin/automation` : dernier passage de la recherche automatique
+ * (échecs des sources vus depuis Cloudflare, état de Claude) et dernière
+ * lecture de la bibliothèque Plex.
+ */
+async function automationStatus(request: Request, env: Env, now: number): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const row = await env.DB.prepare(
+    "SELECT searched_at, source_reports, assistant_status, plex_synced_at, plex_status, plex_items FROM automation WHERE id = 1",
+  ).first<{
+    searched_at: number | null;
+    source_reports: string | null;
+    assistant_status: string | null;
+    plex_synced_at: number | null;
+    plex_status: string | null;
+    plex_items: number | null;
+  }>();
+  let sources: unknown = [];
+  try {
+    sources = row?.source_reports ? JSON.parse(row.source_reports) : [];
+  } catch {
+    sources = [];
+  }
+  return json({
+    searched_at: row?.searched_at ?? null,
+    sources,
+    assistant_status: row?.assistant_status ?? null,
+    plex_synced_at: row?.plex_synced_at ?? null,
+    plex_status: row?.plex_status ?? null,
+    plex_items: row?.plex_items ?? null,
+  });
+}
+
+/**
+ * `POST /v1/admin/plex/test` `{url, token}` : le Worker joint-il ce Plex ?
+ * Rend `{sections}` (nombre de bibliothèques films et séries) ou l'erreur
+ * `plex_unreachable` / `plex_auth_failed`.
+ */
+async function plexTest(request: Request, env: Env, now: number, _push: PushSender, fetcher: FetchLike): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const body = await readJson(request);
+  const url = requiredString(body, "url", 512);
+  const token = requiredString(body, "token", 512);
+  return json({ sections: await testPlex({ url, token }, fetcher) });
 }
 
 // ── Accès des comptes ────────────────────────────────────────────
@@ -419,7 +543,7 @@ async function removeAllowedEmail(request: Request, env: Env, now: number): Prom
 
 // ── Aiguillage ───────────────────────────────────────────────────
 
-type AdminHandler = (request: Request, env: Env, now: number, push: PushSender) => Promise<Response>;
+type AdminHandler = (request: Request, env: Env, now: number, push: PushSender, fetcher: FetchLike) => Promise<Response>;
 
 /** Identifiant tel que le Worker les crée (UUID). */
 const ID = "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})";
@@ -436,6 +560,9 @@ export function adminHandler(method: string, pathname: string): AdminHandler | u
     return undefined;
   }
   if (pathname === "/v1/admin/members") return method === "GET" ? listMembers : undefined;
+  if (pathname === "/v1/admin/recommend") return method === "POST" ? recommendRelease : undefined;
+  if (pathname === "/v1/admin/automation") return method === "GET" ? automationStatus : undefined;
+  if (pathname === "/v1/admin/plex/test") return method === "POST" ? plexTest : undefined;
   if (pathname === "/v1/admin/allowed-emails") {
     if (method === "GET") return listAllowedEmails;
     if (method === "POST") return allowEmail;

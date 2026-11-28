@@ -865,6 +865,18 @@
         }
       }
     },
+    "push_requests_stale" : {
+      "comment" : "Corps d’une notification pour l’administrateur : nombre de demandes sans version convenable depuis 3 semaines ; clé envoyée par le serveur (loc-key) : ne pas renommer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sans version convenable depuis 3 semaines : %@ demande(s)."
+          }
+        }
+      }
+    },
     "push_test" : {
       "comment" : "Corps d’une notification, clé envoyée par le serveur (loc-key) : ne pas renommer. Le titre est celui du média.",
       "extractionState" : "manual",

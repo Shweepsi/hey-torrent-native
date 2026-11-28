@@ -112,6 +112,20 @@ appareil.
 - [x] Vérification des développeurs Android (point n°4) : voir
       `docs/DECISIONS.md`, « Décidé au jalon 5 ».
 
+## Claude et recherche automatique (v0.12.0)
+
+Écrit. Worker et cœur testés en local (réponses simulées, aucun vrai appel à
+Anthropic, aux sources ni à Plex) ; l'APK admin ne se compile que sur la CI.
+
+- [x] Recommandation par Claude après une recherche, release conseillée en tête.
+- [x] Recherche automatique toutes les 6 h, « À traiter » seulement quand une
+      release convient, alerte après 3 semaines.
+- [x] Connexion directe à Plex, « disponible » automatique.
+- [ ] Fusion sur `main` : la CI applique `0007_recherche_auto.sql` et déploie
+      le Worker, avec son déclencheur horaire.
+- [ ] Saisir la clé d'API Anthropic, les règles et la connexion Plex dans
+      Serveurs (APK admin), puis vérifier « Dernier passage » le lendemain.
+
 ## Jalon 6 : notifications « Disponible sur Plex »
 
 Écrit (v0.6.0). Worker et cœur testés en local (réponses simulées) ; Android et
@@ -122,7 +136,7 @@ iPhone ne se compilent que sur la CI. Rien n'a encore été reçu sur un télép
 - [x] Enregistrement des appareils (`PUT /v1/devices`), rattachés à leur
       session ; jetons périmés oubliés.
 - [x] Webhooks Plex (`library.new`) et Tautulli, URL secrète régénérable
-      (carte « Notifications Plex » de l'APK admin), dédoublonnage.
+      (section Plex de l'onglet Serveurs de l'APK admin), dédoublonnage.
 - [x] Mise à jour de `library`, passage des demandes en `disponible`, push vers
       les personnes qui attendent (filtrées par saisons voulues).
 - [ ] Secret GitHub `GOOGLE_SERVICES_JSON` (base64 de `google-services.json`) :

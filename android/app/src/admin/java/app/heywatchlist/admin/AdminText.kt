@@ -141,5 +141,9 @@ fun bytesLabel(bytes: Long): String {
     return stringResource(units[unit], number)
 }
 
+/** Date et heure courtes (« 26 nov. 2026, 14:05 ») d'un instant en secondes Unix. */
+fun formatDateTime(seconds: Long): String =
+    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.FRANCE).format(Date(seconds * 1000))
+
 /** Date courte (« 26 nov. 2026 ») d'un instant en secondes Unix. */
 fun formatDate(seconds: Long): String = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.FRANCE).format(Date(seconds * 1000))

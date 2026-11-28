@@ -21,6 +21,7 @@ import { ApiError, errorResponse, json, noContent, optionalString, readJson, req
 import { ACCOUNT_DELETION_PATH, PRIVACY_PATH, accountDeletion, privacyPolicy } from "./legal";
 import { remoteKeySets, verifyIdToken, type KeySets, type Provider } from "./providers";
 import { devicesOfUser, devicesOfUsers, pushTo } from "./availability";
+import { runAutomation } from "./autosearch";
 import { DEVICES_PATH, registerDevice, unregisterDevice } from "./devices";
 import { LivePushSender, type PushSender } from "./push";
 import { authenticate, authenticateSession, openSession, refreshSession, revokeSession } from "./sessions";
@@ -189,7 +190,7 @@ function findHandler(method: string, pathname: string): Handler | undefined {
   }
   if (pathname.startsWith(ADMIN_PREFIX)) {
     const handler = adminHandler(method, pathname);
-    return handler ? (request, env, deps) => handler(request, env, deps.now(), deps.push(env)) : undefined;
+    return handler ? (request, env, deps) => handler(request, env, deps.now(), deps.push(env), deps.fetch) : undefined;
   }
   if (pathname === WATCHLIST_PATH || pathname.startsWith(`${WATCHLIST_PATH}/`)) {
     const handler = watchlistHandler(method, pathname);
@@ -211,6 +212,10 @@ export function createHandler(deps: Deps): ExportedHandler<Env> {
         console.error("unexpected error", error instanceof Error ? error.name : typeof error);
         return errorResponse("internal");
       }
+    },
+    // Déclencheur horaire (`wrangler.toml`) : recherche automatique, alertes, Plex.
+    async scheduled(_controller, env, ctx) {
+      ctx.waitUntil(runAutomation(env, deps.fetch, deps.push(env), deps.now()));
     },
   };
 }

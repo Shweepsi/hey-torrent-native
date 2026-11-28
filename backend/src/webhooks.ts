@@ -88,6 +88,19 @@ function readLegacyGuid(guid: unknown, into: Sighting): void {
   else into.imdb ??= imdbId(match[2]);
 }
 
+/**
+ * Identifiant TMDB d'un élément de bibliothèque Plex (film ou série), lu dans
+ * ses `Guid` ou son ancien `guid` ; `undefined` sans identifiant TMDB.
+ */
+export function plexTmdbId(metadata: unknown): number | undefined {
+  const item = record(metadata);
+  if (!item) return undefined;
+  const sighting: Sighting = { kind: "movie", title: "", episodeIds: false };
+  readGuids(item.Guid, sighting);
+  readLegacyGuid(item.guid, sighting);
+  return sighting.tmdb;
+}
+
 /** Charge `payload` d'un webhook Plex ; `null` si ce n'est pas un nouvel ajout. */
 export function readPlex(payload: unknown): Sighting | null {
   const body = record(payload);

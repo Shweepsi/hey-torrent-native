@@ -173,6 +173,15 @@ describe("traitement", () => {
     expect(response.status).toBe(409);
     expect(await errorOf(response)).toBe("conflict");
     expect((await action(MOVIE_ID, "refuse")).status).toBe(409);
+  });
+
+  it("un « disponible » posé par erreur se rouvre", async () => {
+    await action(MOVIE_ID, "start", { release_title: "Film.2020.1080p" });
+    expect((await action(MOVIE_ID, "available")).status).toBe(200);
+    const response = await action(MOVIE_ID, "reopen");
+    expect(response.status).toBe(200);
+    const { request } = (await response.json()) as { request: AdminRequest };
+    expect(request).toMatchObject({ status: "requested", release_title: null });
     expect((await action(MOVIE_ID, "reopen")).status).toBe(409);
   });
 

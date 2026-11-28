@@ -56,11 +56,41 @@ sealed interface RequestAction {
     data object MarkedAvailable : RequestAction
 }
 
+/** Avis de Claude sur les releases trouvées. */
+sealed interface Advice {
+    /** Pas d'avis : pas de résultat, ou pas de clé Anthropic dans Serveurs. */
+    data object None : Advice
+
+    data object Thinking : Advice
+
+    /**
+     * [releaseId] : la release conseillée, `null` si aucune ne convient ;
+     * [automatic] : trouvée par la recherche automatique (sans nouvel appel).
+     */
+    data class Ready(val releaseId: String?, val reason: String, val automatic: Boolean = false) : Advice
+
+    data class Failed(val failure: AdminFailure) : Advice
+}
+
+/** Catégories qBittorrent proposées à l'envoi. */
+sealed interface CategoryChoice {
+    data object Loading : CategoryChoice
+
+    /** [options] : catégories existantes de qBittorrent ; [selected] : celle de l'envoi. */
+    data class Ready(val options: List<String>, val selected: String) : CategoryChoice
+
+    data class Failed(val failure: AdminFailure) : CategoryChoice
+}
+
 data class RequestUiState(
     val request: AdminRequest,
     val search: ReleaseSearch = ReleaseSearch.Idle,
+    val advice: Advice = Advice.None,
     /** Release choisie, en attente de confirmation de l'envoi. */
     val confirming: Release? = null,
+    val categories: CategoryChoice = CategoryChoice.Loading,
+    /** Fenêtre de confirmation de « Déjà sur Plex » ouverte. */
+    val confirmingAvailable: Boolean = false,
     /** Fenêtre de refus ouverte. */
     val refusing: Boolean = false,
     val action: RequestAction = RequestAction.Idle,
@@ -101,7 +131,7 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
             season = if (request.mediaType == MediaType.TV) season.trim().toUIntOrNull() else null,
         )
         searchJob?.cancel()
-        _uiState.update { it.copy(search = ReleaseSearch.Running(emptyList(), emptyList(), pending = 0)) }
+        _uiState.update { it.copy(search = ReleaseSearch.Running(emptyList(), emptyList(), pending = 0), advice = Advice.None) }
         searchJob = viewModelScope.launch {
             attemptAdmin {
                 gateway.search(query) { progress ->
@@ -114,14 +144,72 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
                     }
                 }
             }
-                .onSuccess { outcome -> _uiState.update { it.copy(search = ReleaseSearch.Done(outcome.releases, outcome.reports)) } }
+                .onSuccess { outcome ->
+                    _uiState.update { it.copy(search = ReleaseSearch.Done(outcome.releases, outcome.reports)) }
+                    advise(query, outcome.releases)
+                }
                 .onFailure { error -> _uiState.update { it.copy(search = ReleaseSearch.Failed(error.adminFailure)) } }
         }
+    }
+
+    /**
+     * Avis de Claude sur une recherche finie. La release déjà trouvée par la
+     * recherche automatique est reprise telle quelle si elle est dans la
+     * liste : pas de second appel.
+     */
+    private suspend fun advise(query: SearchQuery, releases: List<Release>) {
+        if (releases.isEmpty()) return
+        val request = _uiState.value.request
+        val known = request.candidateTitle?.let { title -> releases.firstOrNull { it.title == title } }
+        if (known != null) {
+            _uiState.update { it.copy(advice = Advice.Ready(known.id, request.candidateReason.orEmpty(), automatic = true)) }
+            return
+        }
+        _uiState.update { it.copy(advice = Advice.Thinking) }
+        val advice = attemptAdmin { gateway.recommend(query, releases) }.fold(
+            onSuccess = { Advice.Ready(it.releaseId, it.reason) },
+            onFailure = { error ->
+                // Sans clé Anthropic, l'app marche comme avant, sans avis.
+                if (error.adminFailure == AdminFailure.AssistantNotConfigured) Advice.None else Advice.Failed(error.adminFailure)
+            },
+        )
+        _uiState.update { it.copy(advice = advice) }
     }
 
     fun choose(release: Release) {
         if (_uiState.value.action == RequestAction.Working) return
         _uiState.update { it.copy(confirming = release) }
+        if (_uiState.value.categories !is CategoryChoice.Ready) loadCategories()
+    }
+
+    /**
+     * Lit les catégories de qBittorrent. Présélection : la catégorie par défaut
+     * du type (Serveurs) si elle existe, sinon la première ; si qBittorrent
+     * n'en a aucune, la catégorie par défaut, créée à l'envoi.
+     */
+    fun loadCategories() {
+        val request = _uiState.value.request
+        _uiState.update { it.copy(categories = CategoryChoice.Loading) }
+        viewModelScope.launch {
+            val choice = attemptAdmin {
+                val settings = gateway.settings()
+                val preferred = if (request.mediaType == MediaType.TV) settings.seriesCategory else settings.movieCategory
+                val existing = gateway.qbitCategories()
+                val options = existing.ifEmpty { listOf(preferred) }
+                val selected = options.firstOrNull { it == preferred }
+                    ?: options.firstOrNull { it.equals(preferred, ignoreCase = true) }
+                    ?: options.first()
+                CategoryChoice.Ready(options, selected)
+            }.getOrElse { CategoryChoice.Failed(it.adminFailure) }
+            _uiState.update { it.copy(categories = choice) }
+        }
+    }
+
+    fun selectCategory(category: String) {
+        _uiState.update { state ->
+            val ready = state.categories as? CategoryChoice.Ready ?: return@update state
+            if (category in ready.options) state.copy(categories = ready.copy(selected = category)) else state
+        }
     }
 
     fun cancelChoice() {
@@ -132,9 +220,10 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
     fun send() {
         val state = _uiState.value
         val release = state.confirming ?: return
+        val category = (state.categories as? CategoryChoice.Ready)?.selected ?: return
         val request = state.request
         run(close = { it.copy(confirming = null) }) {
-            attemptAdmin { gateway.sendRelease(request.id, request.mediaType, release.id) }
+            attemptAdmin { gateway.sendRelease(request.id, release.id, category) }
                 .fold(
                     onSuccess = { updated -> RequestAction.Sent to updated },
                     onFailure = { error ->
@@ -188,9 +277,20 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
         run { attemptAdmin { gateway.reopen(request.id) }.toAction(RequestAction.Reopened) }
     }
 
+    fun askMarkAvailable() {
+        _uiState.update { it.copy(confirmingAvailable = true) }
+    }
+
+    fun cancelMarkAvailable() {
+        _uiState.update { it.copy(confirmingAvailable = false) }
+    }
+
+    /** Après confirmation : marque la demande « disponible » (réversible par [reopen]). */
     fun markAvailable() {
         val request = _uiState.value.request
-        run { attemptAdmin { gateway.markAvailable(request.id) }.toAction(RequestAction.MarkedAvailable) }
+        run(close = { it.copy(confirmingAvailable = false) }) {
+            attemptAdmin { gateway.markAvailable(request.id) }.toAction(RequestAction.MarkedAvailable)
+        }
     }
 
     /** Lance une action ; [block] rend l'état suivant et, si elle a réussi, la demande à jour. */

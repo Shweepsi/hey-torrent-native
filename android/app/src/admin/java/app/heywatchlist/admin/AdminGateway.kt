@@ -4,10 +4,12 @@ import androidx.annotation.StringRes
 import app.heywatchlist.R
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AllowedEmail
+import uniffi.heywatchlist_core.AutomationStatus
 import uniffi.heywatchlist_core.Download
-import uniffi.heywatchlist_core.MediaType
 import uniffi.heywatchlist_core.Member
+import uniffi.heywatchlist_core.PlexSettings
 import uniffi.heywatchlist_core.QbitSettings
+import uniffi.heywatchlist_core.Recommendation
 import uniffi.heywatchlist_core.Release
 import uniffi.heywatchlist_core.RequestFilter
 import uniffi.heywatchlist_core.SearchOutcome
@@ -37,6 +39,11 @@ enum class AdminFailure(@param:StringRes val messageRes: Int) {
 
     /** Le torrent est parti, mais la demande n'a pas pu être marquée « en cours ». */
     StatusNotSaved(R.string.admin_error_status_not_saved),
+    AssistantNotConfigured(R.string.admin_error_assistant_not_configured),
+    AssistantAuthFailed(R.string.admin_error_assistant_auth),
+    AssistantUnavailable(R.string.admin_error_assistant_unavailable),
+    PlexUnreachable(R.string.admin_error_plex_unreachable),
+    PlexAuthFailed(R.string.admin_error_plex_auth),
     Unavailable(R.string.error_core_unavailable),
     Unknown(R.string.error_unknown),
 }
@@ -68,7 +75,20 @@ interface AdminGateway {
     /** Recherche dans toutes les sources ; [onUpdate] reçoit les résultats au fil de l'eau. */
     suspend fun search(query: SearchQuery, onUpdate: (SearchProgress) -> Unit): SearchOutcome
 
-    suspend fun sendRelease(requestId: String, mediaType: MediaType, releaseId: String): AdminRequest
+    /** Avis de Claude sur une recherche finie : la release la plus adaptée aux règles, et pourquoi. */
+    suspend fun recommend(query: SearchQuery, releases: List<Release>): Recommendation
+
+    /** Recherche automatique et lecture de Plex, vues du serveur. */
+    suspend fun automationStatus(): AutomationStatus
+
+    /** Test de Plex depuis le serveur ; nombre de bibliothèques films et séries. */
+    suspend fun testPlex(settings: PlexSettings): Int
+
+    /** Catégories qui existent déjà dans qBittorrent (vide s'il n'en a aucune). */
+    suspend fun qbitCategories(): List<String>
+
+    /** Envoie la release dans [category] de qBittorrent, puis marque la demande « en cours ». */
+    suspend fun sendRelease(requestId: String, releaseId: String, category: String): AdminRequest
 
     /** Après [AdminFailure.StatusNotSaved] : marque la demande « en cours » sans renvoyer le torrent. */
     suspend fun confirmRelease(requestId: String, releaseId: String): AdminRequest

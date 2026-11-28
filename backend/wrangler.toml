@@ -20,6 +20,10 @@ invocation_logs = false
 # Identifiant de l'app iPhone : public, c'est l'audience des jetons Apple.
 APPLE_CLIENT_ID = "io.github.shweepsi.heywatchlist"
 
+# Recherche automatique, alertes et lecture de Plex (src/autosearch.ts).
+[triggers]
+crons = ["0 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "heywatchlist"

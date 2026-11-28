@@ -1,6 +1,9 @@
 package app.heywatchlist.admin
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -9,18 +12,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -29,11 +39,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyTag
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.components.HeyTextField
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
+import app.heywatchlist.ui.components.StatusPill
+import app.heywatchlist.ui.components.StatusTone
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.MediaType
@@ -67,7 +80,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
                     action = state.action,
                     onRefuse = viewModel::openRefusal,
                     onReopen = viewModel::reopen,
-                    onMarkAvailable = viewModel::markAvailable,
+                    onMarkAvailable = viewModel::askMarkAvailable,
                     onRetryStatus = viewModel::retryStatus,
                 )
             }
@@ -82,7 +95,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
                         onSearch = viewModel::search,
                     )
                 }
-                searchResults(state.search, enabled = !working, onChoose = viewModel::choose)
+                searchResults(state.search, state.advice, enabled = !working, onChoose = viewModel::choose)
             }
         }
     }
@@ -93,15 +106,41 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
             onDismiss = viewModel::cancelChoice,
         ) {
             ReleaseSummary(release)
+            CategoryPicker(
+                choice = state.categories,
+                onSelect = viewModel::selectCategory,
+                onRetry = viewModel::loadCategories,
+            )
             HeyButton(
                 text = stringResource(R.string.admin_send_confirm),
                 onClick = viewModel::send,
+                enabled = state.categories is CategoryChoice.Ready,
                 modifier = Modifier.fillMaxWidth(),
             )
             HeyButton(
                 text = stringResource(R.string.admin_cancel),
                 onClick = viewModel::cancelChoice,
                 kind = HeyButtonKind.Link,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    if (state.confirmingAvailable) {
+        AdminDialog(
+            title = stringResource(R.string.admin_available_title),
+            body = stringResource(R.string.admin_available_body, request.title),
+            onDismiss = viewModel::cancelMarkAvailable,
+        ) {
+            HeyButton(
+                text = stringResource(R.string.admin_available_confirm),
+                onClick = viewModel::markAvailable,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            HeyButton(
+                text = stringResource(R.string.admin_cancel),
+                onClick = viewModel::cancelMarkAvailable,
+                kind = HeyButtonKind.Secondary,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -151,6 +190,9 @@ private fun RequestSummary(request: AdminRequest) {
                 )
             }
         }
+        request.candidateTitle?.takeIf { request.status == RequestStatus.REQUESTED }?.let {
+            HeyText(text = stringResource(R.string.admin_candidate_found, softBreaks(it)), style = HeyTheme.typography.caption)
+        }
         request.releaseTitle?.takeIf { request.status == RequestStatus.IN_PROGRESS }?.let {
             HeyText(text = stringResource(R.string.admin_release_sent, it), style = HeyTheme.typography.caption)
         }
@@ -170,7 +212,8 @@ private fun ActionCard(
     onRetryStatus: () -> Unit,
 ) {
     val canRefuse = request.status == RequestStatus.REQUESTED || request.status == RequestStatus.IN_PROGRESS
-    val canReopen = request.status == RequestStatus.IN_PROGRESS || request.status == RequestStatus.REFUSED
+    // « Disponible » posé par erreur : on peut revenir à « Demandé ».
+    val canReopen = request.status != RequestStatus.REQUESTED
     val canMarkAvailable = request.status != RequestStatus.AVAILABLE
     val working = action == RequestAction.Working
     if (!canRefuse && !canReopen && !canMarkAvailable && action == RequestAction.Idle) return
@@ -266,8 +309,38 @@ private fun SearchCard(
     }
 }
 
+/** Catégorie qBittorrent de l'envoi, parmi celles qui existent déjà. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CategoryPicker(choice: CategoryChoice, onSelect: (String) -> Unit, onRetry: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HeyText(text = stringResource(R.string.admin_send_category), style = HeyTheme.typography.label)
+        when (choice) {
+            CategoryChoice.Loading -> LoadingRow(stringResource(R.string.admin_categories_loading))
+            is CategoryChoice.Failed -> {
+                FailureText(choice.failure)
+                HeyButton(
+                    text = stringResource(R.string.action_retry),
+                    onClick = onRetry,
+                    kind = HeyButtonKind.Secondary,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            is CategoryChoice.Ready -> FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                choice.options.forEach { option ->
+                    CategoryChip(text = option, selected = option == choice.selected, onClick = { onSelect(option) })
+                }
+            }
+        }
+    }
+}
+
 private fun LazyListScope.searchResults(
     search: ReleaseSearch,
+    advice: Advice,
     enabled: Boolean,
     onChoose: (Release) -> Unit,
 ) {
@@ -287,8 +360,30 @@ private fun LazyListScope.searchResults(
             count = releases.size,
         )
     }
-    items(releases, key = { it.id }) { release ->
+    // La release conseillée par Claude passe en tête, avec sa raison.
+    val ready = advice as? Advice.Ready
+    val advised = ready?.releaseId?.let { id -> releases.firstOrNull { it.id == id } }
+    when {
+        advice == Advice.Thinking -> item { LoadingRow(stringResource(R.string.admin_advice_thinking)) }
+        advice is Advice.Failed -> item { FailureText(advice.failure) }
+        ready != null && advised == null && ready.reason.isNotBlank() -> item { AdviceNone(ready.reason) }
+    }
+    if (advised != null && ready != null) {
+        item(key = "advised:${advised.id}") {
+            ReleaseRow(release = advised, enabled = enabled, onClick = { onChoose(advised) }, advice = ready)
+        }
+    }
+    items(releases.filter { it.id != advised?.id }, key = { it.id }) { release ->
         ReleaseRow(release = release, enabled = enabled, onClick = { onChoose(release) })
+    }
+}
+
+/** Claude n'a rien retenu : sa raison, en clair. */
+@Composable
+private fun AdviceNone(reason: String) {
+    AdminCard {
+        HeyText(text = stringResource(R.string.admin_advice_none_title), style = HeyTheme.typography.label)
+        HeyText(text = reason, style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
     }
 }
 
@@ -323,8 +418,16 @@ private fun SearchStatus(reports: List<SourceReport>, pending: Int?, count: Int)
 }
 
 @Composable
-private fun ReleaseRow(release: Release, enabled: Boolean, onClick: () -> Unit) {
+private fun ReleaseRow(release: Release, enabled: Boolean, onClick: () -> Unit, advice: Advice.Ready? = null) {
     AdminCard(onClick = onClick.takeIf { enabled }) {
+        if (advice != null) {
+            StatusPill(
+                text = stringResource(if (advice.automatic) R.string.admin_advice_found else R.string.admin_advice_badge),
+                tone = StatusTone.Success,
+                icon = HeyIcons.Star,
+            )
+            if (advice.reason.isNotBlank()) HeyText(text = advice.reason, style = HeyTheme.typography.label)
+        }
         ReleaseSummary(release)
     }
 }
@@ -378,4 +481,26 @@ private fun releaseDetails(release: Release): String {
     parts += release.indexer?.takeIf { it.isNotBlank() } ?: release.sourceName
     release.publishedAt?.let { parts += formatDate(it) }
     return parts.joinToString(" · ")
+}
+
+/** Pastille de choix exclusif (radio), cible d'au moins 48 dp. */
+@Composable
+private fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = HeyTheme.colors
+    Box(
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .clip(CircleShape)
+            .background(if (selected) colors.primary else colors.glassFill)
+            .border(1.dp, if (selected) colors.primary else colors.glassBorder, CircleShape)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        HeyText(
+            text = text,
+            style = HeyTheme.typography.label,
+            color = if (selected) colors.onPrimary else colors.onBackground,
+        )
+    }
 }

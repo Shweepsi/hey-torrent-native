@@ -58,6 +58,26 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
   et envoie une push à chaque personne qui l'attend : APNs pour l'iPhone, FCM
   pour Android. Voir « Notifications » plus bas.
 
+## Ce qu'il fait en plus (recherche automatique, 2026-11-28)
+
+- **Claude** : `POST /v1/admin/recommend` envoie à l'API Anthropic la demande,
+  les règles de l'administrateur et les releases trouvées (noms, tailles,
+  sources ; jamais les liens), avec sa clé d'API gardée chiffrée dans ses
+  réglages. Réponse : `{release_id, reason}` (`release_id` nul si aucune ne
+  convient). Erreurs : `assistant_not_configured`, `assistant_auth_failed`,
+  `assistant_unavailable`.
+- **Déclencheur horaire** (`[triggers]` de `wrangler.toml`,
+  `src/autosearch.ts`) : recherche automatique des demandes en attente (au
+  plus toutes les 6 h chacune, 8 par passage), alerte à l'administrateur après
+  3 semaines sans release convenable, lecture de la bibliothèque Plex toutes
+  les 6 h si une connexion est réglée. État : `GET /v1/admin/automation`.
+- **Plex** : `POST /v1/admin/plex/test` `{url, token}` vérifie la connexion
+  depuis le Worker (`plex_unreachable`, `plex_auth_failed`). Le jeton part en
+  en-tête `X-Plex-Token`, jamais dans l'URL.
+
+La clé Anthropic et le jeton Plex ne sont pas des secrets du Worker : ils
+font partie des réglages chiffrés de l'administrateur.
+
 ## Routes
 
 | Méthode et chemin | Accès | Rôle |

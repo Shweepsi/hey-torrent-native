@@ -6,6 +6,8 @@
 use serde::Deserialize;
 
 use super::AdminError;
+use super::search::{Release, SearchQuery, SourceFailure};
+use super::settings::PlexSettings;
 use crate::account::{AccessStatus, Account, AccountError};
 use crate::catalog::MediaType;
 use crate::watchlist::RequestStatus;
@@ -58,6 +60,18 @@ pub struct AdminRequest {
     pub followers: Vec<RequestFollower>,
     /// Série : saisons à chercher ; `None` si quelqu'un veut toute la série.
     pub seasons: Option<Vec<u32>>,
+    /// Release jugée convenable par la recherche automatique (Claude), à
+    /// chercher puis envoyer depuis l'app.
+    #[uniffi(default = None)]
+    pub candidate_title: Option<String>,
+    /// Pourquoi Claude l'a choisie, en français.
+    #[uniffi(default = None)]
+    pub candidate_reason: Option<String>,
+    #[uniffi(default = None)]
+    pub candidate_found_at: Option<i64>,
+    /// Dernière recherche automatique, en secondes Unix.
+    #[uniffi(default = None)]
+    pub auto_checked_at: Option<i64>,
 }
 
 /// Un compte, vu par l'administrateur.
@@ -107,6 +121,14 @@ struct WireRequest {
     #[serde(default)]
     followers: Vec<serde_json::Value>,
     seasons: Option<Vec<u32>>,
+    #[serde(default)]
+    candidate_title: Option<String>,
+    #[serde(default)]
+    candidate_reason: Option<String>,
+    #[serde(default)]
+    candidate_found_at: Option<i64>,
+    #[serde(default)]
+    auto_checked_at: Option<i64>,
 }
 
 impl WireRequest {
@@ -139,6 +161,10 @@ impl WireRequest {
                 })
                 .collect(),
             seasons: self.seasons,
+            candidate_title: self.candidate_title.filter(|t| !t.trim().is_empty()),
+            candidate_reason: self.candidate_reason.filter(|r| !r.trim().is_empty()),
+            candidate_found_at: self.candidate_found_at,
+            auto_checked_at: self.auto_checked_at,
         })
     }
 }
@@ -240,6 +266,11 @@ fn failure(status: u16, body: &[u8]) -> AdminError {
         Some("not_found") => AdminError::NotFound,
         Some("conflict") => AdminError::Conflict,
         Some("invalid_request") => AdminError::InvalidSettings,
+        Some("assistant_not_configured") => AdminError::AssistantNotConfigured,
+        Some("assistant_auth_failed") => AdminError::AssistantAuthFailed,
+        Some("assistant_unavailable") => AdminError::AssistantUnavailable,
+        Some("plex_unreachable") => AdminError::PlexUnreachable,
+        Some("plex_auth_failed") => AdminError::PlexAuthFailed,
         // Clé de chiffrement absente du Worker.
         Some("provider_unavailable") => AdminError::Server,
         _ if status == 401 => AdminError::SignedOut,
@@ -452,6 +483,207 @@ pub(crate) async fn remove_allowed_email(account: &Account, email: &str) -> Resu
     )
     .await
     .map(|_| ())
+}
+
+/// Avis de Claude sur une recherche.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct Recommendation {
+    /// Release choisie (identifiant d'une des releases données), ou `None`
+    /// si aucune ne convient.
+    pub release_id: Option<String>,
+    /// Une phrase en français, à montrer telle quelle.
+    pub reason: String,
+}
+
+/// Au plus autant de releases partent vers Claude : les mieux notées.
+const MAX_RECOMMEND: usize = 40;
+
+#[derive(Deserialize)]
+struct WireRecommendation {
+    release_id: Option<String>,
+    #[serde(default)]
+    reason: String,
+}
+
+/// Demande à Claude (par le Worker, avec la clé et les règles de
+/// l'administrateur) la release la plus adaptée parmi `releases`, déjà triées.
+/// Aucun lien ne part : seuls noms, tailles et sources.
+pub(crate) async fn recommend(
+    account: &Account,
+    query: &SearchQuery,
+    releases: &[Release],
+) -> Result<Recommendation, AdminError> {
+    let releases: Vec<serde_json::Value> = releases
+        .iter()
+        .take(MAX_RECOMMEND)
+        .map(|r| {
+            serde_json::json!({
+                "id": r.id,
+                "title": r.title,
+                "size_bytes": r.size_bytes,
+                "seeders": r.seeders,
+                "indexer": r.indexer,
+            })
+        })
+        .collect();
+    let body = serde_json::json!({
+        "media_type": match query.media_type { MediaType::Movie => "movie", MediaType::Tv => "tv" },
+        "title": query.title,
+        "original_title": query.original_title,
+        "year": query.year,
+        "season": query.season,
+        "releases": releases,
+    });
+    let bytes = call(
+        account,
+        reqwest::Method::POST,
+        "/v1/admin/recommend",
+        Some(&body),
+    )
+    .await?;
+    let wire: WireRecommendation =
+        serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
+    let release_id = wire.release_id.filter(|id| !id.is_empty());
+    // Un identifiant inconnu ne doit rien mettre en avant.
+    if release_id
+        .as_ref()
+        .is_some_and(|id| !releases.iter().any(|r| r["id"] == id.as_str()))
+    {
+        return Err(AdminError::Unexpected);
+    }
+    Ok(Recommendation {
+        release_id,
+        reason: wire.reason.trim().to_owned(),
+    })
+}
+
+/// État de Claude au dernier passage de la recherche automatique.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum AssistantStatus {
+    Ok,
+    /// Clé refusée : la recherche automatique est arrêtée.
+    AuthFailed,
+    /// Claude n'a pas répondu ; nouvel essai au passage suivant.
+    Unavailable,
+}
+
+/// État de la dernière lecture de la bibliothèque Plex par le Worker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum PlexStatus {
+    Ok,
+    Unreachable,
+    AuthFailed,
+    InvalidResponse,
+}
+
+/// Une source vue depuis le Worker (Cloudflare) au dernier passage.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AutoSourceReport {
+    /// Identifiant de la source dans les réglages.
+    pub source_id: String,
+    /// `None` : la source a répondu. Un échec ici mais pas depuis le
+    /// téléphone : la source refuse sans doute les adresses de Cloudflare.
+    pub failure: Option<SourceFailure>,
+}
+
+/// Où en sont les tâches automatiques du Worker.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AutomationStatus {
+    /// Dernier passage de la recherche automatique, en secondes Unix.
+    pub searched_at: Option<i64>,
+    pub sources: Vec<AutoSourceReport>,
+    pub assistant: Option<AssistantStatus>,
+    /// Dernière lecture de Plex, en secondes Unix.
+    pub plex_synced_at: Option<i64>,
+    pub plex: Option<PlexStatus>,
+    /// Films et séries reconnus dans la bibliothèque.
+    pub plex_items: Option<u32>,
+}
+
+fn parse_source_failure(raw: &str) -> Option<SourceFailure> {
+    Some(match raw {
+        "timeout" => SourceFailure::Timeout,
+        "unreachable" => SourceFailure::Unreachable,
+        "auth_failed" => SourceFailure::AuthFailed,
+        "rate_limited" => SourceFailure::RateLimited,
+        "server" => SourceFailure::Server,
+        "invalid_response" => SourceFailure::InvalidResponse,
+        "invalid_address" => SourceFailure::InvalidAddress,
+        _ => return None,
+    })
+}
+
+#[derive(Deserialize)]
+struct WireAutoSource {
+    id: String,
+    failure: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct WireAutomation {
+    searched_at: Option<i64>,
+    #[serde(default)]
+    sources: Vec<serde_json::Value>,
+    assistant_status: Option<String>,
+    plex_synced_at: Option<i64>,
+    plex_status: Option<String>,
+    plex_items: Option<u32>,
+}
+
+pub(crate) async fn automation_status(account: &Account) -> Result<AutomationStatus, AdminError> {
+    let bytes = call(account, reqwest::Method::GET, "/v1/admin/automation", None).await?;
+    let wire: WireAutomation =
+        serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
+    Ok(AutomationStatus {
+        searched_at: wire.searched_at,
+        // Tolérant : une entrée illisible est ignorée ; un échec inconnu
+        // compte comme réponse illisible.
+        sources: wire
+            .sources
+            .into_iter()
+            .filter_map(|v| serde_json::from_value::<WireAutoSource>(v).ok())
+            .map(|s| AutoSourceReport {
+                source_id: s.id,
+                failure: s
+                    .failure
+                    .map(|f| parse_source_failure(&f).unwrap_or(SourceFailure::InvalidResponse)),
+            })
+            .collect(),
+        assistant: wire.assistant_status.as_deref().and_then(|s| match s {
+            "ok" => Some(AssistantStatus::Ok),
+            "auth_failed" => Some(AssistantStatus::AuthFailed),
+            "unavailable" => Some(AssistantStatus::Unavailable),
+            _ => None,
+        }),
+        plex_synced_at: wire.plex_synced_at,
+        plex: wire.plex_status.as_deref().and_then(|s| match s {
+            "ok" => Some(PlexStatus::Ok),
+            "unreachable" => Some(PlexStatus::Unreachable),
+            "auth_failed" => Some(PlexStatus::AuthFailed),
+            "invalid_response" => Some(PlexStatus::InvalidResponse),
+            _ => None,
+        }),
+        plex_items: wire.plex_items,
+    })
+}
+
+#[derive(Deserialize)]
+struct PlexTestBody {
+    sections: u32,
+}
+
+/// Le Worker joint-il ce Plex ? Rend le nombre de bibliothèques films et séries.
+pub(crate) async fn test_plex(account: &Account, plex: &PlexSettings) -> Result<u32, AdminError> {
+    let body = serde_json::json!({ "url": plex.url.trim(), "token": plex.token.trim() });
+    let bytes = call(
+        account,
+        reqwest::Method::POST,
+        "/v1/admin/plex/test",
+        Some(&body),
+    )
+    .await?;
+    let body: PlexTestBody = serde_json::from_slice(&bytes).map_err(|_| AdminError::Unexpected)?;
+    Ok(body.sections)
 }
 
 #[cfg(test)]

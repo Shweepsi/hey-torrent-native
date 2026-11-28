@@ -16,6 +16,8 @@ pub(crate) const DEFAULT_SERIES_CATEGORY: &str = "series";
 const MAX_SOURCES: usize = 20;
 const MAX_EXCLUDED: usize = 50;
 const MAX_FIELD: usize = 512;
+/// Longueur maximale des règles de choix (une ou deux phrases).
+const MAX_RULES: usize = 500;
 
 /// Une source Torznab ajoutée par l'administrateur (un indexeur de son
 /// Prowlarr, ou tout service compatible). Aucune n'est fournie par l'app.
@@ -50,6 +52,16 @@ pub struct QbitSettings {
     pub auth: QbitAuth,
 }
 
+/// Connexion à Plex Media Server, lue par le Worker pour marquer
+/// « disponible » ce qui est déjà dans la bibliothèque.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct PlexSettings {
+    /// Adresse HTTPS du serveur Plex, joignable depuis Internet. Secret.
+    pub url: String,
+    /// Jeton `X-Plex-Token` du compte propriétaire. Secret.
+    pub token: String,
+}
+
 /// Tous les réglages des serveurs, gardés ensemble.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ServerSettings {
@@ -66,6 +78,19 @@ pub struct ServerSettings {
     /// Mots écartés des résultats (mots entiers, sans casse), par exemple `HC`.
     #[serde(default)]
     pub excluded_terms: Vec<String>,
+    /// Clé d'API Anthropic de l'administrateur : recommandation des releases
+    /// et recherche automatique par le Worker. Secret.
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub anthropic_api_key: Option<String>,
+    /// Règles de choix en une phrase libre (« 4K léger en MULTi VFF, 15 Go
+    /// maximum »), appliquées par Claude.
+    #[serde(default)]
+    #[uniffi(default = "")]
+    pub release_rules: String,
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub plex: Option<PlexSettings>,
 }
 
 fn default_movie_category() -> String {
@@ -84,6 +109,9 @@ impl Default for ServerSettings {
             movie_category: default_movie_category(),
             series_category: default_series_category(),
             excluded_terms: Vec::new(),
+            anthropic_api_key: None,
+            release_rules: String::new(),
+            plex: None,
         }
     }
 }
@@ -113,11 +141,22 @@ impl std::fmt::Debug for QbitAuth {
     }
 }
 
+impl std::fmt::Debug for PlexSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlexSettings").finish_non_exhaustive()
+    }
+}
+
 impl std::fmt::Debug for ServerSettings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ServerSettings")
             .field("sources", &self.sources)
             .field("qbittorrent", &self.qbittorrent)
+            .field(
+                "anthropic_api_key",
+                &self.anthropic_api_key.as_ref().map(|_| "…"),
+            )
+            .field("plex", &self.plex)
             .finish_non_exhaustive()
     }
 }
@@ -134,6 +173,18 @@ fn valid_category(value: &str) -> bool {
 
 fn bounded(value: &str) -> bool {
     !value.trim().is_empty() && value.len() <= MAX_FIELD
+}
+
+impl PlexSettings {
+    /// Adresse HTTPS et jeton rempli ; [`AdminError::InvalidSettings`] sinon.
+    pub(crate) fn validate(&self) -> Result<(), AdminError> {
+        BaseUrl::parse(&self.url).map_err(|_| AdminError::InvalidSettings)?;
+        if bounded(&self.token) {
+            Ok(())
+        } else {
+            Err(AdminError::InvalidSettings)
+        }
+    }
 }
 
 impl ServerSettings {
@@ -170,6 +221,17 @@ impl ServerSettings {
         }
         if self.excluded_terms.iter().any(|t| t.len() > 100) {
             return Err(invalid);
+        }
+        if let Some(key) = &self.anthropic_api_key
+            && !bounded(key)
+        {
+            return Err(invalid);
+        }
+        if self.release_rules.len() > MAX_RULES {
+            return Err(invalid);
+        }
+        if let Some(plex) = &self.plex {
+            plex.validate()?;
         }
         Ok(())
     }
@@ -246,6 +308,31 @@ mod tests {
     }
 
     #[test]
+    fn assistant_and_plex_settings_are_checked() {
+        let mut settings = ServerSettings {
+            anthropic_api_key: Some("cle".into()),
+            release_rules: "MULTi VFF, 15 Go maximum".into(),
+            plex: Some(PlexSettings {
+                url: "https://plex.example.com".into(),
+                token: "jeton".into(),
+            }),
+            ..ServerSettings::default()
+        };
+        assert!(settings.validate().is_ok());
+        settings.release_rules = "x".repeat(501);
+        assert!(settings.validate().is_err());
+        settings.release_rules = String::new();
+        settings.anthropic_api_key = Some(" ".into());
+        assert!(settings.validate().is_err());
+        settings.anthropic_api_key = None;
+        settings.plex = Some(PlexSettings {
+            url: "http://plex.example.com".into(),
+            token: "jeton".into(),
+        });
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
     fn stored_form_round_trips_and_tolerates_missing_fields() {
         let settings = ServerSettings {
             qbittorrent: Some(QbitSettings {
@@ -274,7 +361,15 @@ mod tests {
                 password: "hunter2".into(),
             },
         });
+        settings.anthropic_api_key = Some("cle-anthropic-secrete".into());
+        settings.plex = Some(PlexSettings {
+            url: "https://plex.example.com".into(),
+            token: "jeton-plex".into(),
+        });
         let shown = format!("{settings:?}");
+        assert!(!shown.contains("cle-anthropic"));
+        assert!(!shown.contains("jeton-plex"));
+        assert!(!shown.contains("plex.example.com"));
         assert!(!shown.contains("secret-host"));
         assert!(!shown.contains("kkkk"));
         assert!(!shown.contains("hunter2"));

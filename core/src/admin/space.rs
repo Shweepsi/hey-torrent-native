@@ -7,16 +7,18 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::AdminError;
-use super::qbittorrent::{Download, NewTorrent, Qbit};
+use super::qbittorrent::{Download, NewTorrent, Qbit, valid_category};
+use super::search::Release;
 use super::search::{
     self, ReleaseLink, SearchObserver, SearchOutcome, SearchQuery, SourceFailure, year_of_unix,
 };
-use super::settings::{QbitSettings, ServerSettings, TorznabSource};
+use super::settings::{PlexSettings, QbitSettings, ServerSettings, TorznabSource};
 use super::torznab;
-use super::worker::{self, AdminRequest, AllowedEmail, Member, RequestFilter};
+use super::worker::{
+    self, AdminRequest, AllowedEmail, AutomationStatus, Member, Recommendation, RequestFilter,
+};
 use crate::account::{Account, SessionStore};
 use crate::cache::unix_now;
-use crate::catalog::MediaType;
 
 /// Espace d'administration. Un par processus suffit ; ses méthodes peuvent
 /// être appelées en parallèle.
@@ -179,8 +181,43 @@ impl AdminSpace {
         Ok(found.outcome)
     }
 
-    /// Envoie la release choisie à qBittorrent, dans la catégorie du type de
-    /// média, puis passe la demande « en cours ».
+    /// Avis de Claude sur une recherche : la release la plus adaptée aux
+    /// règles de l'administrateur parmi `releases` (les 40 premières), et
+    /// pourquoi. Un seul appel ; à faire une fois la recherche finie.
+    pub async fn recommend(
+        &self,
+        query: SearchQuery,
+        releases: Vec<Release>,
+    ) -> Result<Recommendation, AdminError> {
+        if releases.is_empty() {
+            return Ok(Recommendation {
+                release_id: None,
+                reason: String::new(),
+            });
+        }
+        worker::recommend(&self.account, &query, &releases).await
+    }
+
+    /// Où en sont la recherche automatique et la lecture de Plex, vues du Worker.
+    pub async fn automation_status(&self) -> Result<AutomationStatus, AdminError> {
+        worker::automation_status(&self.account).await
+    }
+
+    /// Teste une connexion Plex depuis le Worker (c'est lui qui la lira) ;
+    /// rend le nombre de bibliothèques films et séries.
+    pub async fn test_plex(&self, settings: PlexSettings) -> Result<u32, AdminError> {
+        settings.validate()?;
+        worker::test_plex(&self.account, &settings).await
+    }
+
+    /// Catégories qui existent déjà dans qBittorrent, pour choisir celle de
+    /// l'envoi. Vide si qBittorrent n'en a aucune.
+    pub async fn qbit_categories(&self) -> Result<Vec<String>, AdminError> {
+        self.qbit().await?.categories().await
+    }
+
+    /// Envoie la release choisie à qBittorrent, dans `category` (créée au
+    /// besoin), puis passe la demande « en cours ».
     ///
     /// [`AdminError::StatusNotSaved`] : le torrent est parti mais le Worker n'a
     /// pas enregistré l'état ; [`AdminSpace::confirm_release`] réessaie sans
@@ -188,9 +225,13 @@ impl AdminSpace {
     pub async fn send_release(
         &self,
         request_id: String,
-        media_type: MediaType,
         release_id: String,
+        category: String,
     ) -> Result<AdminRequest, AdminError> {
+        if !valid_category(&category) {
+            return Err(AdminError::InvalidSettings);
+        }
+        let category = category.trim();
         let link = self
             .links
             .lock()
@@ -198,15 +239,10 @@ impl AdminSpace {
             .get(&release_id)
             .cloned()
             .ok_or(AdminError::ReleaseExpired)?;
-        let (movies, series) = self.categories().await;
-        let category = match media_type {
-            MediaType::Movie => movies,
-            MediaType::Tv => series,
-        };
         let qbit = self.qbit().await?;
         qbit.add(&NewTorrent {
             link: &link.link,
-            category: &category,
+            category,
             request_id: Some(&request_id),
         })
         .await?;
@@ -257,7 +293,8 @@ impl AdminSpace {
         worker::mark_available(&self.account, &request_id).await
     }
 
-    /// Téléchargements des catégories films et séries, les plus récents d'abord.
+    /// Téléchargements envoyés par l'app ou rangés dans les catégories films
+    /// et séries par défaut, les plus récents d'abord.
     pub async fn downloads(&self) -> Result<Vec<Download>, AdminError> {
         let (movies, series) = self.categories().await;
         self.qbit()
