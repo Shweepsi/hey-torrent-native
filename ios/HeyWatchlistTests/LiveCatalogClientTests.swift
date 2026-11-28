@@ -46,6 +46,7 @@ struct LiveCatalogClientTests {
         #expect(list.items.count == 1)
         #expect(list.totalPages == 7)
         #expect(list.stale)
+        #expect(list.page == 2)
     }
 
     @Test func aDetailBecomesASheetWithItsTrailer() {

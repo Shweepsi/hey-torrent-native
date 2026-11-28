@@ -1345,3 +1345,154 @@ async fn a_corrupted_cache_file_is_never_fatal() {
         3
     );
 }
+
+// ------------------------------------------------- langue d'origine (Découvrir)
+
+/// Page de titres `(id, langue d'origine, genres)`.
+fn page_with_languages(
+    page: u32,
+    total_pages: u32,
+    titles: &[(u64, Option<&str>, &[u32])],
+) -> String {
+    let results: Vec<serde_json::Value> = titles
+        .iter()
+        .map(|(id, language, genres)| {
+            json!({
+                "id": id, "title": "Titre", "media_type": "movie",
+                "original_language": language, "genre_ids": genres
+            })
+        })
+        .collect();
+    json!({ "page": page, "results": results, "total_pages": total_pages }).to_string()
+}
+
+#[tokio::test]
+async fn discover_keeps_european_titles_and_japanese_animation_only() {
+    let (server, catalog) = setup().await;
+    let body = page_with_languages(
+        1,
+        5,
+        &[
+            (1, Some("fr"), &[18]),
+            (2, Some("ko"), &[18]),
+            (3, Some("en"), &[28]),
+            (4, Some("ja"), &[16, 10759]),
+            (5, Some("ja"), &[18]),
+            (6, Some("hi"), &[16]),
+            (7, None, &[35]),
+            (8, Some("ES"), &[]),
+            (9, Some("zh"), &[]),
+        ],
+    );
+    route("trending/all/week")
+        .and(query_param("page", "1"))
+        .respond_with(ok(&body))
+        .mount(&server)
+        .await;
+    let page = catalog.shelf(Shelf::TrendingWeek, 1).await.unwrap();
+    // Coréen, japonais hors animation, hindi et chinois écartés ; sans langue :
+    // gardé.
+    assert_eq!(ids(&page), vec![1, 3, 4, 7, 8]);
+}
+
+#[tokio::test]
+async fn genres_and_similar_titles_are_sorted_by_language_too() {
+    let (server, catalog) = setup().await;
+    route("discover/movie")
+        .respond_with(ok(&page_with_languages(
+            1,
+            5,
+            &[(1, Some("th"), &[28]), (2, Some("it"), &[28])],
+        )))
+        .mount(&server)
+        .await;
+    let page = catalog.by_genre(MediaType::Movie, 28, 1).await.unwrap();
+    assert_eq!(ids(&page), vec![2]);
+
+    route("movie/42")
+        .respond_with(ok(&json!({
+            "id": 42, "title": "Fiche", "original_language": "ko",
+            "similar": { "results": [
+                { "id": 7, "title": "A", "original_language": "ko" },
+                { "id": 8, "title": "B", "original_language": "de" }
+            ] }
+        })
+        .to_string()))
+        .mount(&server)
+        .await;
+    // La fiche elle-même reste lisible, quelle que soit sa langue.
+    let detail = catalog.detail(MediaType::Movie, 42).await.unwrap();
+    assert_eq!(detail.summary.id, 42);
+    let similar: Vec<u64> = detail.similar.iter().map(|title| title.id).collect();
+    assert_eq!(similar, vec![8]);
+}
+
+#[tokio::test]
+async fn search_keeps_every_language() {
+    let (server, catalog) = setup().await;
+    route("search/multi")
+        .respond_with(ok(&page_with_languages(
+            1,
+            1,
+            &[(1, Some("ko"), &[18]), (2, Some("ja"), &[18])],
+        )))
+        .mount(&server)
+        .await;
+    let page = catalog.search("titre".to_owned(), 1).await.unwrap();
+    assert_eq!(ids(&page), vec![1, 2]);
+}
+
+#[tokio::test]
+async fn a_page_emptied_by_the_language_sort_is_skipped() {
+    let (server, catalog) = setup().await;
+    for (number, language) in [(2, "ko"), (3, "zh")] {
+        route("movie/popular")
+            .and(query_param("page", number.to_string()))
+            .respond_with(ok(&page_with_languages(
+                number,
+                9,
+                &[(number.into(), Some(language), &[])],
+            )))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    route("movie/popular")
+        .and(query_param("page", "4"))
+        .respond_with(ok(&page_with_languages(4, 9, &[(40, Some("en"), &[])])))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let page = catalog.shelf(Shelf::PopularMovies, 2).await.unwrap();
+    // La page rendue porte son vrai numéro : l'interface reprend à la 5.
+    assert_eq!((page.page, ids(&page)), (4, vec![40]));
+}
+
+#[tokio::test]
+async fn skipping_stops_at_the_last_page_and_after_three_pages() {
+    let (server, catalog) = setup().await;
+    route("tv/popular")
+        .and(query_param("page", "9"))
+        .respond_with(ok(&page_with_languages(9, 9, &[(1, Some("ko"), &[])])))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let last = catalog.shelf(Shelf::PopularSeries, 9).await.unwrap();
+    assert_eq!((last.page, last.items.len()), (9, 0));
+
+    for number in 1..=4 {
+        route("tv/top_rated")
+            .and(query_param("page", number.to_string()))
+            .respond_with(ok(&page_with_languages(
+                number,
+                50,
+                &[(1, Some("ja"), &[18])],
+            )))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    let page = catalog.shelf(Shelf::TopRatedSeries, 1).await.unwrap();
+    // Trois pages vides sautées, la quatrième est rendue même vide.
+    assert_eq!((page.page, page.items.len()), (4, 0));
+}

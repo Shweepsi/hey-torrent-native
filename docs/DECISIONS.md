@@ -327,6 +327,17 @@ facile.
   arrivé avant d'être demandé. Une demande remise en attente à la main n'est
   pas repassée « disponible » par cette lecture.
 
+## Décidé le 2026-11-28 : Découvrir selon la langue d'origine
+
+- TMDB n'a pas de popularité par pays : les tendances et listes sont
+  mondiales. Pour ne pas proposer ce que les sources n'ont presque jamais en
+  français, Découvrir (rangées, grandes images, genres) et les titres
+  similaires d'une fiche ne gardent que les titres en **langue d'origine
+  européenne** (anglais compris) et l'**animation japonaise** (animés). Le
+  reste de l'Asie en sort. La **recherche reste complète**, et une fiche
+  s'ouvre quelle que soit sa langue. Tri fait par le cœur
+  (`core/src/tmdb.rs`, `Origin`).
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

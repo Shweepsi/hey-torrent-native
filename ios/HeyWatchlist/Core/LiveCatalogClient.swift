@@ -162,7 +162,8 @@ extension TitleList {
         self.init(
             items: core.items.map(Title.init(core:)),
             totalPages: Int(core.totalPages),
-            stale: core.stale
+            stale: core.stale,
+            page: Int(core.page)
         )
     }
 }
