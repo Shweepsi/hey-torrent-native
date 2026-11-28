@@ -253,13 +253,16 @@ impl Watchlist {
     /// Vide la file dans l'ordre, puis relit la liste du serveur.
     ///
     /// - Réseau, service ou serveur en échec : arrêt, la file reste (`offline`).
-    /// - Changement refusé (titre inconnu, requête invalide, réponse imprévue) :
+    /// - Changement refusé par le Worker (titre inconnu, requête invalide) :
     ///   abandonné, pour ne pas bloquer la file.
+    /// - Réponse imprévue (intermédiaire, limitation) : le changement reste en
+    ///   file pour la prochaine fois, les suivants partent (`offline`).
     /// - Session expirée : [`WatchlistError::SignedOut`], la file reste.
     async fn sync(&self, store: &Store) -> Result<SyncOutcome, WatchlistError> {
         let _guard = self.sync_lock.lock().await;
         let mut rejected = Vec::new();
-        while let Some(change) = store.next_change() {
+        let mut postponed = Vec::new();
+        while let Some(change) = store.next_change(&postponed) {
             let target = format!(
                 "{LIST_PATH}/{}/{}",
                 change.change.media_type.wire(),
@@ -281,10 +284,11 @@ impl Watchlist {
             match result {
                 Ok(body) => store.complete(&change, decode_put(&body)),
                 Err(ApiFailure::SignedOut) => return Err(WatchlistError::SignedOut),
-                Err(ApiFailure::NotFound | ApiFailure::Rejected | ApiFailure::Unexpected) => {
+                Err(ApiFailure::NotFound | ApiFailure::Rejected) => {
                     store.drop_change(&change);
                     rejected.push((change.change.media_type, change.change.tmdb_id));
                 }
+                Err(ApiFailure::Unexpected) => postponed.push(change.seq),
                 Err(_) => {
                     return Ok(SyncOutcome {
                         offline: true,
@@ -304,7 +308,10 @@ impl Watchlist {
             Err(ApiFailure::SignedOut) => return Err(WatchlistError::SignedOut),
             Err(_) => true,
         };
-        Ok(SyncOutcome { offline, rejected })
+        Ok(SyncOutcome {
+            offline: offline || !postponed.is_empty(),
+            rejected,
+        })
     }
 }
 
@@ -600,8 +607,11 @@ impl Store {
             .collect()
     }
 
-    fn next_change(&self) -> Option<Queued> {
-        self.queued().into_iter().next()
+    /// Plus ancien changement en file, hors ceux remis à plus tard (`postponed`).
+    fn next_change(&self, postponed: &[i64]) -> Option<Queued> {
+        self.queued()
+            .into_iter()
+            .find(|queued| !postponed.contains(&queued.seq))
     }
 
     /// Retire ce changement de la file, sauf s'il a été remplacé entre-temps.
@@ -911,7 +921,7 @@ mod tests {
         store
             .queue(&change(MediaType::Movie, 1, draft("Film", None)))
             .unwrap();
-        let sent = store.next_change().unwrap();
+        let sent = store.next_change(&[]).unwrap();
         store
             .queue(&change(MediaType::Movie, 1, Action::Delete))
             .unwrap();

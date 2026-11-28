@@ -5,6 +5,40 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.13.1] - 2026-11-28
+
+Corrections de l'audit du cœur du 2026-11-28 (points 1 à 9).
+
+### Corrigé
+
+- Plex : un titre arrivé sur Plex avant d'être demandé passe bien
+  « disponible » à la lecture de la bibliothèque (l'arrivée « déjà vue »
+  n'empêche plus que la notification). Une demande remise en attente à la main
+  depuis « disponible » n'y repasse pas toute seule.
+- Recherche automatique : un échec de Claude sur une demande ne bloque plus
+  les suivantes ; le passage ne s'arrête qu'après deux échecs de suite ou une
+  clé refusée.
+- « À traiter » : une demande dont la recherche n'a pas pu se faire (Claude en
+  échec, toutes les sources en échec depuis Cloudflare, clé Anthropic refusée)
+  y apparaît, au lieu d'attendre l'alerte des 3 semaines.
+- Des règles changées font rejuger par Claude les releases déjà écartées.
+- Séries : Claude reçoit les saisons voulues (ou « toutes ») ; quand elles
+  changent, la release trouvée est oubliée et la recherche reprend.
+- Recommandation : l'app attend la réponse 90 s (20 s avant) ; le Worker laisse
+  à Claude deux essais de 40 s.
+- Catégorie retenue à l'envoi : une seule règle pour l'envoi et les réglages.
+  Une sous-catégorie (`Films/4K`) ou un nom avec un point est maintenant
+  retenu ; `..` et les segments vides sont refusés.
+- Watchlist : un changement qui reçoit une réponse imprévue (limitation,
+  intermédiaire) reste en file au lieu d'être abandonné, sans bloquer les
+  suivants.
+
+### Modifié
+
+- Recherche automatique : les essais sans résultat s'espacent (6 h, puis 24 h
+  après 4 essais, puis 3 jours après 8) pour ménager les sources.
+- Migration `0008_recherche_fiable.sql`.
+
 ## [0.13.0] - 2026-11-28
 
 Demandes de Loïc sur l'APK admin.

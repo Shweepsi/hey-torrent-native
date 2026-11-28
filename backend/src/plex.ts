@@ -180,7 +180,7 @@ export async function syncPlex(
     if (!wanted.has(`${item.mediaType}:${item.tmdbId}`)) continue;
     try {
       if (item.mediaType === "movie") {
-        await processArrival(env, fetcher, sender, { mediaType: "movie", tmdbId: item.tmdbId, title: item.title }, now);
+        await processArrival(env, fetcher, sender, { mediaType: "movie", tmdbId: item.tmdbId, title: item.title }, now, "library");
         continue;
       }
       // Une arrivée par saison complète (épisodes déjà diffusés, d'après
@@ -196,7 +196,7 @@ export async function syncPlex(
       for (const [season, episodes] of present) {
         const count = aired.get(season) ?? 0;
         if (count === 0 || episodes.size < count) continue;
-        await processArrival(env, fetcher, sender, { mediaType: "tv", tmdbId: item.tmdbId, season, title: item.title }, now);
+        await processArrival(env, fetcher, sender, { mediaType: "tv", tmdbId: item.tmdbId, season, title: item.title }, now, "library");
       }
     } catch (error) {
       // Une série illisible n'arrête pas les autres.

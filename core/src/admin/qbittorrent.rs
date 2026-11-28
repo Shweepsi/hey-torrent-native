@@ -474,13 +474,18 @@ impl Qbit {
 /// Longueur maximale d'un nom de catégorie accepté.
 const MAX_CATEGORY: usize = 100;
 
-/// Un nom de catégorie utilisable : non vide, court, sans retour à la ligne
-/// ni barre oblique inverse (refusée par qBittorrent).
+/// Un nom de catégorie utilisable, à l'envoi comme dans les réglages : non
+/// vide, court, sans retour à la ligne ni barre oblique inverse (refusée par
+/// qBittorrent). `/` sépare des sous-catégories (`Films/4K`) : aucun segment
+/// vide, ni `.` ou `..` (une catégorie sert aussi de dossier).
 pub(crate) fn valid_category(name: &str) -> bool {
     let trimmed = name.trim();
     !trimmed.is_empty()
         && trimmed.len() <= MAX_CATEGORY
         && !trimmed.chars().any(|c| c.is_control() || c == '\\')
+        && trimmed
+            .split('/')
+            .all(|segment| !matches!(segment.trim(), "" | "." | ".."))
 }
 
 /// Une empreinte reçue de l'app : 40 caractères hexadécimaux, rien d'autre
@@ -541,6 +546,10 @@ mod tests {
         assert!(!valid_category("  "));
         assert!(!valid_category("a\nb"));
         assert!(!valid_category("a\\b"));
+        assert!(valid_category("Séries.HD"));
+        assert!(!valid_category("films/../.."));
+        assert!(!valid_category("/films"));
+        assert!(!valid_category("films//4K"));
         assert!(!valid_category(&"x".repeat(101)));
     }
 

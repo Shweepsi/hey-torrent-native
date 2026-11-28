@@ -121,6 +121,9 @@ Anthropic, aux sources ni à Plex) ; l'APK admin ne se compile que sur la CI.
 - [x] Recherche automatique toutes les 6 h, « À traiter » seulement quand une
       release convient, alerte après 3 semaines.
 - [x] Connexion directe à Plex, « disponible » automatique.
+- [x] Corrections de l'audit du cœur du 2026-11-28 (v0.13.1) : Plex, pannes
+      de Claude, espacement des recherches, saisons, délai, catégories, file
+      de la watchlist. Migration `0008_recherche_fiable.sql`.
 - [ ] Fusion sur `main` : la CI applique `0007_recherche_auto.sql` et déploie
       le Worker, avec son déclencheur horaire.
 - [ ] Saisir la clé d'API Anthropic, les règles et la connexion Plex dans

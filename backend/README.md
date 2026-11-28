@@ -67,8 +67,9 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
   convient). Erreurs : `assistant_not_configured`, `assistant_auth_failed`,
   `assistant_unavailable`.
 - **Déclencheur horaire** (`[triggers]` de `wrangler.toml`,
-  `src/autosearch.ts`) : recherche automatique des demandes en attente (au
-  plus toutes les 6 h chacune, 8 par passage), alerte à l'administrateur après
+  `src/autosearch.ts`) : recherche automatique des demandes en attente (toutes
+  les 6 h chacune, puis toutes les 24 h après 4 essais sans résultat, puis tous
+  les 3 jours après 8 ; 8 par passage), alerte à l'administrateur après
   3 semaines sans release convenable, lecture de la bibliothèque Plex toutes
   les 6 h si une connexion est réglée. État : `GET /v1/admin/automation`.
 - **Plex** : `POST /v1/admin/plex/test` `{url, token}` vérifie la connexion

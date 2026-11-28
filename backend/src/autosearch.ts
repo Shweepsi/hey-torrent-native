@@ -2,9 +2,11 @@
  * Tâches planifiées du Worker (déclencheur `cron`, toutes les heures) :
  *
  * - recherche automatique : chaque demande en attente sans release convenable
- *   est cherchée sur les sources de l'administrateur au plus toutes les 6 h ;
- *   Claude juge les résultats (un appel par recherche, et aucun si les noms
- *   trouvés n'ont pas changé depuis un « aucune ne convient ») ;
+ *   est cherchée sur les sources de l'administrateur, toutes les 6 h d'abord,
+ *   puis toutes les 24 h, puis tous les 3 jours ; Claude juge les résultats
+ *   (un appel par recherche, et aucun si ni les noms trouvés, ni les règles,
+ *   ni les saisons voulues n'ont changé depuis un « aucune ne convient ») ;
+ *   une recherche qui n'a pas pu se faire laisse la demande « à traiter » ;
  * - alerte : une demande sans release convenable depuis 3 semaines prévient
  *   l'administrateur, une fois ;
  * - Plex : la bibliothèque est relue toutes les 6 h si une connexion est réglée.
@@ -20,13 +22,21 @@ import { sha256Hex } from "./crypto";
 import type { Env } from "./env";
 import { ApiError } from "./http";
 import { syncPlex } from "./plex";
+import { wantedSeasons } from "./seasons";
 import type { PushSender } from "./push";
 import { cachedTmdb } from "./tmdb";
 import { containsWord, searchSource, type FeedItem, type Mode, type SourceFailure } from "./torznab";
 import type { MediaType } from "./watchlist";
 
-/** Intervalle entre deux recherches d'une même demande. */
+/** Intervalle entre deux recherches d'une même demande, pour ses premiers essais. */
 export const SEARCH_INTERVAL = 6 * 3600;
+/** Essais à l'intervalle court, puis à l'intervalle moyen, avant l'intervalle long. */
+export const QUICK_ATTEMPTS = 4;
+export const DAILY_ATTEMPTS = 8;
+export const DAILY_INTERVAL = 24 * 3600;
+export const SLOW_INTERVAL = 3 * 86_400;
+/** Échecs de Claude de suite qui arrêtent un passage (panne générale probable). */
+const MAX_ASSISTANT_FAILURES = 2;
 /** Intervalle entre deux lectures de la bibliothèque Plex. */
 export const PLEX_INTERVAL = 6 * 3600;
 /** Attente sans release convenable avant l'alerte à l'administrateur. */
@@ -39,7 +49,12 @@ export const MAX_PER_RUN = 8;
  * saison manquante) ; `?1` est l'heure courante.
  */
 export const RESET_SEARCH = `candidate_title = NULL, candidate_reason = NULL, candidate_found_at = NULL,
-  auto_checked_at = NULL, auto_fingerprint = NULL, waiting_since = ?1, stale_notified_at = NULL`;
+  auto_checked_at = NULL, auto_fingerprint = NULL, auto_attempts = 0, auto_failed = 0,
+  waiting_since = ?1, stale_notified_at = NULL`;
+
+/** Colonnes remises à zéro quand ce qui est cherché change (saisons voulues) : l'attente continue. */
+export const RESET_CANDIDATE = `candidate_title = NULL, candidate_reason = NULL, candidate_found_at = NULL,
+  auto_checked_at = NULL, auto_fingerprint = NULL, auto_attempts = 0, auto_failed = 0`;
 
 interface DueRequest {
   id: string;
@@ -64,25 +79,6 @@ async function tmdbFacts(env: Env, fetcher: FetchLike, request: DueRequest, now:
   } catch {
     return { originalTitle: undefined, releasedAt: undefined };
   }
-}
-
-/** Série : la saison à chercher quand tous les suiveurs veulent la même, seule. */
-async function singleSeason(env: Env, requestId: string): Promise<number | undefined> {
-  const { results } = await env.DB.prepare("SELECT seasons FROM watchlist_items WHERE request_id = ? AND deleted_at IS NULL")
-    .bind(requestId)
-    .all<{ seasons: string | null }>();
-  const union = new Set<number>();
-  for (const { seasons } of results) {
-    if (seasons === null) return undefined;
-    try {
-      const list: unknown = JSON.parse(seasons);
-      if (!Array.isArray(list)) return undefined;
-      for (const s of list) if (typeof s === "number") union.add(s);
-    } catch {
-      return undefined;
-    }
-  }
-  return union.size === 1 ? [...union][0] : undefined;
 }
 
 /** Candidats envoyés à Claude : sans source morte ni terme exclu, sans doublon, les mieux partagés d'abord. */
@@ -113,19 +109,36 @@ type AssistantStatus = "ok" | "auth_failed" | "unavailable";
 interface SearchRun {
   reports: Map<string, SourceFailure | null>;
   assistant: AssistantStatus | null;
+  /** Échecs de Claude de suite dans ce passage. */
+  assistantFailures: number;
 }
 
-/** Cherche une demande ; rend faux si Claude est injoignable (le passage s'arrête). */
+/** Issue d'une recherche sans release retenue. */
+interface Checked {
+  fingerprint: string | null;
+  /** La recherche n'a pas pu se faire : la demande reste « à traiter ». */
+  failed?: boolean;
+  /** Compte comme un essai (les suivants s'espacent). */
+  attempt?: boolean;
+}
+
+/** Cherche une demande ; rend faux quand le passage doit s'arrêter (clé refusée, Claude en panne). */
 async function searchOne(env: Env, fetcher: FetchLike, settings: WorkerSettings, request: DueRequest, run: SearchRun, now: number): Promise<boolean> {
   const facts = await tmdbFacts(env, fetcher, request, now);
-  const checked = (fingerprint: string | null) =>
-    env.DB.prepare("UPDATE requests SET auto_checked_at = ?, auto_fingerprint = ? WHERE id = ?").bind(now, fingerprint, request.id).run();
-  // Film pas encore sorti : rien à chercher avant sa date.
+  const checked = ({ fingerprint, failed = false, attempt = true }: Checked) =>
+    env.DB.prepare(
+      "UPDATE requests SET auto_checked_at = ?1, auto_fingerprint = ?2, auto_failed = ?3, auto_attempts = auto_attempts + ?4 WHERE id = ?5",
+    )
+      .bind(now, fingerprint, failed ? 1 : 0, attempt ? 1 : 0, request.id)
+      .run();
+  // Film pas encore sorti : rien à chercher avant sa date, et aucune source n'est appelée.
   if (request.media_type === "movie" && facts.releasedAt !== undefined && facts.releasedAt > now) {
-    await checked(request.auto_fingerprint);
+    await checked({ fingerprint: request.auto_fingerprint, attempt: false });
     return true;
   }
-  const season = request.media_type === "tv" ? await singleSeason(env, request.id) : undefined;
+  // Série : `null` quand quelqu'un la veut entière.
+  const seasons = request.media_type === "tv" ? await wantedSeasons(env, request.id) : undefined;
+  const season = seasons?.length === 1 ? seasons[0] : undefined;
   const mode: Mode = request.media_type === "movie" ? { kind: "movie" } : { kind: "tv", season };
   const texts = [request.title];
   if (facts.originalTitle && facts.originalTitle.toLowerCase() !== request.title.toLowerCase()) texts.push(facts.originalTitle);
@@ -138,30 +151,52 @@ async function searchOne(env: Env, fetcher: FetchLike, settings: WorkerSettings,
   }
   const candidates = shortlist(items, settings.excludedTerms);
   if (candidates.length === 0) {
-    await checked(null);
+    // Aucune source n'a répondu : ce n'est pas « rien trouvé ».
+    await checked({ fingerprint: null, failed: results.every((result) => result.failure !== null) });
     return true;
   }
-  const fingerprint = await sha256Hex(candidates.map((c) => c.title).sort().join("\n"));
+  // Mêmes noms, mêmes règles, mêmes saisons voulues : même réponse de Claude.
+  const fingerprint = await sha256Hex(
+    JSON.stringify({ rules: settings.rules, seasons: seasons ?? null, titles: candidates.map((c) => c.title).sort() }),
+  );
   if (fingerprint === request.auto_fingerprint) {
-    await checked(fingerprint);
+    await checked({ fingerprint });
     return true;
   }
-  const wanted: Wanted = { media_type: request.media_type, title: request.title, original_title: facts.originalTitle, year: request.year ?? undefined, season };
+  const wanted: Wanted = {
+    media_type: request.media_type,
+    title: request.title,
+    original_title: facts.originalTitle,
+    year: request.year ?? undefined,
+    season,
+    seasons: request.media_type === "tv" ? (seasons ?? "all") : undefined,
+  };
   let choice;
   try {
     choice = await recommend(settings.anthropicKey ?? "", settings.rules, wanted, candidates, fetcher);
   } catch (error) {
-    run.assistant = error instanceof ApiError && error.code === "assistant_auth_failed" ? "auth_failed" : "unavailable";
-    return false;
+    if (error instanceof ApiError && error.code === "assistant_auth_failed") {
+      // Clé refusée : tout s'arrête, et la file montre toutes les demandes.
+      run.assistant = "auth_failed";
+      return false;
+    }
+    // Échec propre à cette demande ou panne passagère : elle reste « à
+    // traiter » et les suivantes sont cherchées, sauf panne générale.
+    run.assistant = "unavailable";
+    run.assistantFailures += 1;
+    await checked({ fingerprint: null, failed: true });
+    return run.assistantFailures < MAX_ASSISTANT_FAILURES;
   }
   run.assistant = "ok";
+  run.assistantFailures = 0;
   const chosen = candidates.find((c) => c.id === choice.release_id);
   if (!chosen) {
-    await checked(fingerprint);
+    await checked({ fingerprint });
     return true;
   }
   await env.DB.prepare(
-    `UPDATE requests SET candidate_title = ?1, candidate_reason = ?2, candidate_found_at = ?3, auto_checked_at = ?3, auto_fingerprint = ?4
+    `UPDATE requests SET candidate_title = ?1, candidate_reason = ?2, candidate_found_at = ?3, auto_checked_at = ?3,
+       auto_fingerprint = ?4, auto_failed = 0
      WHERE id = ?5 AND status = 'requested'`,
   )
     .bind(chosen.title, choice.reason, now, fingerprint, request.id)
@@ -172,13 +207,17 @@ async function searchOne(env: Env, fetcher: FetchLike, settings: WorkerSettings,
 async function searchDue(env: Env, fetcher: FetchLike, settings: WorkerSettings, now: number): Promise<void> {
   const { results } = await env.DB.prepare(
     `SELECT id, media_type, tmdb_id, title, year, auto_fingerprint FROM requests
-     WHERE status = 'requested' AND candidate_title IS NULL AND (auto_checked_at IS NULL OR auto_checked_at <= ?1)
+     WHERE status = 'requested' AND candidate_title IS NULL
+       AND (auto_checked_at IS NULL OR auto_checked_at <= ?1 - CASE
+         WHEN auto_attempts < ${QUICK_ATTEMPTS} THEN ${SEARCH_INTERVAL}
+         WHEN auto_attempts < ${DAILY_ATTEMPTS} THEN ${DAILY_INTERVAL}
+         ELSE ${SLOW_INTERVAL} END)
      ORDER BY auto_checked_at IS NOT NULL, auto_checked_at, created_at LIMIT ${MAX_PER_RUN}`,
   )
-    .bind(now - SEARCH_INTERVAL)
+    .bind(now)
     .all<DueRequest>();
   if (results.length === 0) return;
-  const run: SearchRun = { reports: new Map(), assistant: null };
+  const run: SearchRun = { reports: new Map(), assistant: null, assistantFailures: 0 };
   for (const request of results) {
     if (!(await searchOne(env, fetcher, settings, request, run, now))) break;
   }

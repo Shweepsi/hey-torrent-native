@@ -3,6 +3,8 @@
 //!
 //! Lecture tolérante : une demande illisible est ignorée, pas toute la file.
 
+use std::time::Duration;
+
 use serde::Deserialize;
 
 use super::AdminError;
@@ -285,8 +287,19 @@ async fn call(
     target: &str,
     body: Option<&serde_json::Value>,
 ) -> Result<Vec<u8>, AdminError> {
+    call_within(account, method, target, body, None).await
+}
+
+/// Comme [`call`], avec un délai propre à la route (`None` : le délai commun).
+async fn call_within(
+    account: &Account,
+    method: reqwest::Method,
+    target: &str,
+    body: Option<&serde_json::Value>,
+    timeout: Option<Duration>,
+) -> Result<Vec<u8>, AdminError> {
     let (status, bytes) = account
-        .send_json(method, target, body)
+        .send_json(method, target, body, timeout)
         .await
         .map_err(account_error)?;
     if (200..300).contains(&status) {
@@ -534,6 +547,9 @@ pub struct Recommendation {
 
 /// Au plus autant de releases partent vers Claude : les mieux notées.
 const MAX_RECOMMEND: usize = 40;
+/// Délai de la recommandation : le Worker laisse à Claude deux essais de 40 s
+/// (`backend/src/claude.ts`), bien plus que le délai commun des autres routes.
+const RECOMMEND_TIMEOUT: Duration = Duration::from_secs(90);
 
 #[derive(Deserialize)]
 struct WireRecommendation {
@@ -571,11 +587,12 @@ pub(crate) async fn recommend(
         "season": query.season,
         "releases": releases,
     });
-    let bytes = call(
+    let bytes = call_within(
         account,
         reqwest::Method::POST,
         "/v1/admin/recommend",
         Some(&body),
+        Some(RECOMMEND_TIMEOUT),
     )
     .await?;
     let wire: WireRecommendation =

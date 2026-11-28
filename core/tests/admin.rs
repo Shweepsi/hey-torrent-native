@@ -496,7 +496,7 @@ async fn a_request_is_processed_end_to_end() {
         .and(path("/api/v2/torrents/add"))
         .and(header("cookie", "SID=session-qbit"))
         .and(body_string_contains(format!("magnet:?xt=urn:btih:{HASH}")))
-        .and(body_string_contains("Films 4K"))
+        .and(body_string_contains("Films/4K"))
         .and(body_string_contains(format!(
             "heywatchlist,hw-{REQUEST_ID}"
         )))
@@ -555,12 +555,12 @@ async fn a_request_is_processed_end_to_end() {
     let outcome = space.search(dune(), None).await.unwrap();
     let best = outcome.releases[0].clone();
     let updated = space
-        .send_release(request.id.clone(), best.id, "Films 4K".into())
+        .send_release(request.id.clone(), best.id, "Films/4K".into())
         .await
         .unwrap();
     assert_eq!(updated.status, RequestStatus::InProgress);
     assert_eq!(updated.release_title.as_deref(), Some(best.title.as_str()));
-    assert_eq!(space.settings().await.movie_category, "Films 4K");
+    assert_eq!(space.settings().await.movie_category, "Films/4K");
     assert_eq!(space.settings().await.series_category, "series");
 
     // Une catégorie vide ou piégée est refusée avant tout envoi.
