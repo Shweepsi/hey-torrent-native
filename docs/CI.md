@@ -67,27 +67,21 @@ Dépôt GitHub > **Settings** > **Secrets and variables** > **Actions**. Les
 | `ANDROID_KEY_PASSWORD` | secret | Mot de passe de la clé (le même que celui du keystore) |
 | `PLAY_SERVICE_ACCOUNT_JSON` | secret | Clé JSON du compte de service Google Play (brute ou en base64), posée par hey-kit : envoi de l'AAB public sur le test fermé (`docs/PUBLICATION.md`, étape 7) |
 | `PLAY_TRACK` | variable, facultative | Piste Google Play : `alpha` (test fermé, par défaut), `internal`, `beta` |
-| `FIREBASE_DISTRIBUTION_KEY` | secret | Clé JSON d'un compte de service Firebase au rôle « Firebase App Distribution Admin » : envoi privé de l'APK admin (voir « APK admin privé » ci-dessous) |
-| `FIREBASE_TESTER_GROUP` | variable, facultative | Alias du groupe de testeurs App Distribution (`admin` par défaut) |
+| `FIREBASE_DISTRIBUTION_KEY` | secret | Clé JSON (brute ou en base64) d'un compte de service au rôle « Firebase App Distribution Admin » : envoi privé de l'APK admin (voir « APK admin privé » ci-dessous), posée par hey-kit |
+| `FIREBASE_TESTERS` | secret | E-mail(s) qui reçoivent l'APK admin, séparés par des virgules, posé par hey-kit. Secret pour rester masqué dans les journaux, publics ici |
 
 ### APK admin privé
 
 Le dépôt est public : n'importe quel compte GitHub peut télécharger les
 artefacts d'une exécution. L'APK admin n'y est donc plus publié ; il part par
 [Firebase App Distribution](https://firebase.google.com/docs/app-distribution/android/distribute-cli)
-vers les seuls testeurs du groupe, qui le reçoivent par e-mail et l'installent
-depuis leur téléphone. À faire une fois (non vérifié en vrai, le 2026-11-28) :
+vers les seules adresses de `FIREBASE_TESTERS`, qui le reçoivent par e-mail et
+l'installent depuis leur téléphone. Tout se règle dans hey-kit, onglet « Mes
+apps », guide « APK admin privé » : démarrer App Distribution pour l'app admin
+dans la console Firebase, créer le compte de service et sa clé, saisir son
+e-mail, puis « Envoyer ». Pas encore essayé en vrai (2026-11-28).
 
-1. Console Firebase, projet `heywatchlist-60448` > **App Distribution** >
-   choisir l'app « HeyWatchlist Admin » > **Commencer**.
-2. Onglet **Testeurs et groupes** > créer le groupe d'alias `admin`, y ajouter
-   son adresse.
-3. Console Google Cloud du même projet > **IAM** > **Comptes de service** >
-   créer un compte au rôle « Firebase App Distribution Admin » > **Clés** >
-   ajouter une clé JSON > coller son contenu dans le secret
-   `FIREBASE_DISTRIBUTION_KEY`, puis supprimer le fichier.
-
-Tant que ce secret manque, l'APK admin signé reste en artefact (7 jours) comme
+Tant que ces secrets manquent, l'APK admin signé reste en artefact (7 jours) comme
 avant. L'APK admin de debug n'est plus jamais publié.
 
 Notifications (jalon 6) : `GOOGLE_SERVICES_JSON`, le contenu de

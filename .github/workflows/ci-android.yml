@@ -262,20 +262,27 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         env:
           FIREBASE_DISTRIBUTION_KEY: ${{ secrets.FIREBASE_DISTRIBUTION_KEY }}
-        run: bash .github/scripts/check-secrets.sh FIREBASE_DISTRIBUTION_KEY GOOGLE_SERVICES_JSON
+          FIREBASE_TESTERS: ${{ secrets.FIREBASE_TESTERS }}
+        run: bash .github/scripts/check-secrets.sh FIREBASE_DISTRIBUTION_KEY FIREBASE_TESTERS GOOGLE_SERVICES_JSON
 
       - name: Envoyer l'APK admin par Firebase App Distribution
         if: steps.distribution.outputs.ready == 'true'
         env:
           FIREBASE_DISTRIBUTION_KEY: ${{ secrets.FIREBASE_DISTRIBUTION_KEY }}
-          # Groupe de testeurs créé dans la console Firebase (App Distribution).
-          TESTER_GROUP: ${{ vars.FIREBASE_TESTER_GROUP || 'admin' }}
+          # E-mails des testeurs, séparés par des virgules. Secret : masqué
+          # dans le journal, public pour ce dépôt.
+          FIREBASE_TESTERS: ${{ secrets.FIREBASE_TESTERS }}
           ADMIN_PACKAGE: io.github.shweepsi.heywatchlist.admin
         run: |
           set -euo pipefail
           key="$RUNNER_TEMP/firebase-distribution.json"
           trap 'rm -f "$key"' EXIT
-          printf '%s' "$FIREBASE_DISTRIBUTION_KEY" >"$key"
+          # Clé JSON brute ou en base64 (hey-kit l'envoie en base64).
+          if [[ "$FIREBASE_DISTRIBUTION_KEY" == \{* ]]; then
+            printf '%s' "$FIREBASE_DISTRIBUTION_KEY" >"$key"
+          else
+            printf '%s' "$FIREBASE_DISTRIBUTION_KEY" | base64 --decode >"$key"
+          fi
           # Identifiant Firebase de l'app admin, lu dans google-services.json
           # (JSON brut ou base64, comme pour la compilation).
           services="${GOOGLE_SERVICES_JSON#"${GOOGLE_SERVICES_JSON%%[![:space:]]*}"}"
@@ -285,7 +292,7 @@ jobs:
             <<<"$services" | head -n 1)"
           apk="$(find android/app/build/outputs/apk/admin/release -name '*.apk' | head -n 1)"
           GOOGLE_APPLICATION_CREDENTIALS="$key" npx --yes firebase-tools@15.37.0 appdistribution:distribute "$apk" \
-            --app "$app_id" --groups "$TESTER_GROUP" \
+            --app "$app_id" --testers "$FIREBASE_TESTERS" \
             --release-notes "HeyWatchlist Admin, commit ${GITHUB_SHA::7}"
 
       - name: Publier l'APK admin signé (sans App Distribution)

@@ -14,8 +14,9 @@ Corrections de la relecture du code du 2026-11-27.
 - APK admin : bouton « Déjà sur Plex » sur une demande, pour un titre arrivé
   avant les webhooks ou une arrivée qu'ils n'ont pas vue (personne n'est
   prévenu). Route `POST /v1/admin/requests/{id}/available`.
-- CI Android : l'APK admin signé part par Firebase App Distribution (secret
-  `FIREBASE_DISTRIBUTION_KEY`) au lieu d'un artefact téléchargeable par tous.
+- CI Android : l'APK admin signé part par Firebase App Distribution (secrets
+  `FIREBASE_DISTRIBUTION_KEY` et `FIREBASE_TESTERS`, posés par hey-kit) au lieu
+  d'un artefact téléchargeable par tous.
 
 ### Corrigé
 
