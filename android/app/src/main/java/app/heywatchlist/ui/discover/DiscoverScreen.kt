@@ -1,10 +1,15 @@
 package app.heywatchlist.ui.discover
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,8 +33,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -40,12 +48,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -65,6 +70,7 @@ import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeySearchEntry
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LargeTitle
 import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.components.LocalSkeletonPulse
 import app.heywatchlist.ui.components.OnScrim
@@ -80,6 +86,7 @@ import app.heywatchlist.ui.components.scrolledFraction
 import app.heywatchlist.ui.components.statusBarHeight
 import app.heywatchlist.ui.components.underBars
 import app.heywatchlist.ui.theme.HeyTheme
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 
 private val CardWidth = 124.dp
@@ -146,15 +153,19 @@ internal fun DiscoverContent(
                     modifier = Modifier.underBars(haze),
                 )
             }
+            // La recherche n'apparaît dans la barre qu'une fois le champ de l'en-tête passé dessous : jamais deux à la fois.
+            val headerGone by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
             FloatingTopBar(
                 title = stringResource(R.string.tab_discover),
                 revealed = { listState.scrolledFraction() },
                 actions = {
-                    HeyIconButton(
-                        icon = HeyIcons.Search,
-                        contentDescription = stringResource(R.string.search_label),
-                        onClick = onOpenSearch,
-                    )
+                    AnimatedVisibility(visible = headerGone, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
+                        HeyIconButton(
+                            icon = HeyIcons.Search,
+                            contentDescription = stringResource(R.string.search_label),
+                            onClick = onOpenSearch,
+                        )
+                    }
                 },
             )
         }
@@ -164,16 +175,12 @@ internal fun DiscoverContent(
 /** Grand titre de l'onglet et champ de recherche, en tête de la liste. */
 @Composable
 private fun DiscoverHeader(onRefresh: () -> Unit, onOpenSearch: () -> Unit) {
-    Column(modifier = Modifier.screenPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Pas de geste de tirer avec TalkBack : « Actualiser » est une action du titre de l'écran.
-        val refreshLabel = stringResource(R.string.action_refresh)
-        HeyText(
-            text = stringResource(R.string.tab_discover),
-            style = HeyTheme.typography.display,
-            modifier = Modifier.semantics {
-                heading()
-                customActions = listOf(CustomAccessibilityAction(refreshLabel) { onRefresh(); true })
-            },
+    Column(modifier = Modifier.screenPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LargeTitle(
+            title = stringResource(R.string.tab_discover),
+            subtitle = stringResource(R.string.discover_subtitle),
+            refreshLabel = stringResource(R.string.action_refresh),
+            onRefresh = onRefresh,
         )
         HeySearchEntry(text = stringResource(R.string.search_placeholder), onClick = onOpenSearch)
     }
@@ -230,6 +237,17 @@ private fun HeroSkeleton() {
 @Composable
 private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
     val pagerState = rememberPagerState(pageCount = { titles.size })
+    // Le carrousel avance seul toutes les HERO_AUTO_SCROLL_MS ; il s'arrête au toucher (le délai repart
+    // de zéro quand on le lâche) et n'avance pas sans animations système.
+    val dragged by pagerState.interactionSource.collectIsDraggedAsState()
+    val animations = rememberAnimationsEnabled()
+    LaunchedEffect(titles.size, dragged, animations) {
+        if (titles.size < 2 || dragged || !animations) return@LaunchedEffect
+        while (true) {
+            delay(HERO_AUTO_SCROLL_MS)
+            pagerState.animateScrollToPage((pagerState.currentPage + 1) % titles.size)
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalPager(
             state = pagerState,
@@ -256,7 +274,6 @@ private fun HeroCarousel(titles: List<Title>, onOpen: (Title) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val animations = rememberAnimationsEnabled()
                 titles.indices.forEach { index ->
                     val current = index == pagerState.currentPage
                     // La page affichée s'allonge en pastille.
@@ -312,6 +329,7 @@ private fun HeroCard(title: Title, onOpen: (Title) -> Unit, modifier: Modifier =
     }
 }
 
+private const val HERO_AUTO_SCROLL_MS = 5_000L
 private const val HERO_SCRIM_HEIGHT = 0.7f
 private const val HERO_SIDE_SHRINK = 0.06f
 private val HeroEdge = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.06f)))

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,23 +20,30 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.heywatchlist.ui.theme.HeyTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -112,8 +118,12 @@ fun ScrollState.scrolledFraction(): Float = (value / SCROLL_REVEAL_PX).coerceIn(
 /**
  * Fond d'une barre flottante, sous la barre d'état comprise : transparent tant
  * que [revealed] vaut 0 (contenu tout en haut), puis verre (flou du contenu qui
- * passe dessous, teinte couvrante, filet en bas) : la barre d'état et ce qui est
- * posé dans la barre restent lisibles sur une affiche claire comme sombre.
+ * passe dessous, teinte couvrante) : la barre d'état et ce qui est posé dans la
+ * barre restent lisibles sur une affiche claire comme sombre.
+ *
+ * Pas de bord net en bas : le verre déborde de [BarFade] sous la barre et s'y
+ * efface en dégradé (flou et teinte), le contenu s'y fond au lieu d'être coupé
+ * par un trait, comme sous un bandeau d'outil ordinaire.
  * [revealed] est lu au dessin seulement : le défilement ne recompose rien.
  */
 @Composable
@@ -125,34 +135,53 @@ fun GlassBar(
 ) {
     val colors = HeyTheme.colors
     val style = remember(colors) { colors.glassStyle(colors.chromeFill) }
+    // Hauteur de la barre elle-même (px) : le dégradé commence là.
+    var barHeight by remember { mutableIntStateOf(0) }
+    val fadePx = with(LocalDensity.current) { BarFade.toPx() }
     val glass = if (hazeState != null) {
-        Modifier.hazeEffect(state = hazeState, style = style) { alpha = revealed() }
+        Modifier.hazeEffect(state = hazeState, style = style) {
+            alpha = revealed()
+            mask = fadeMask(barHeight.toFloat(), fadePx)
+        }
     } else {
-        Modifier.drawBehind { drawRect(colors.glassFillFallback, alpha = revealed()) }
+        Modifier.drawBehind {
+            drawRect(fadeMask(barHeight.toFloat(), fadePx), alpha = revealed(), colorFilter = ColorFilter.tint(colors.glassFillFallback))
+        }
     }
-    Box(modifier = modifier.fillMaxWidth()) {
+    Box(modifier = modifier.fillMaxWidth().onSizeChanged { barHeight = it.height }) {
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .then(glass)
-                .drawBehind {
-                    val line = 1.dp.toPx()
-                    drawRect(
-                        color = colors.glassBorder,
-                        topLeft = Offset(0f, size.height - line),
-                        size = Size(size.width, line),
-                        alpha = revealed(),
-                    )
-                },
+                .extendBelow(BarFade)
+                .then(glass),
         )
         Column(modifier = Modifier.fillMaxWidth().statusBarsPadding(), content = content)
     }
 }
 
+/** Opaque sur la barre, puis effacé sur [fadePx] en dessous. */
+private fun fadeMask(barHeight: Float, fadePx: Float): Brush = Brush.verticalGradient(
+    colors = listOf(Color.Black, Color.Black.copy(alpha = 0.6f), Color.Transparent),
+    startY = barHeight - fadePx * 0.25f,
+    endY = barHeight + fadePx,
+)
+
+/** Agrandit l'élément de [extra] vers le bas, sans changer la place qu'il occupe. */
+private fun Modifier.extendBelow(extra: Dp): Modifier = layout { measurable, constraints ->
+    val add = extra.roundToPx()
+    val placeable = measurable.measure(
+        constraints.copy(minHeight = constraints.minHeight + add, maxHeight = constraints.maxHeight + add),
+    )
+    layout(placeable.width, constraints.minHeight) { placeable.place(0, 0) }
+}
+
+/** Profondeur du fondu du verre sous une barre flottante. */
+private val BarFade = 28.dp
+
 /**
  * Barre du haut flottante d'un onglet. Au repos, seuls [navigation] et
  * [actions] s'y voient : le grand titre de l'écran est dans le contenu. Dès que
- * le contenu passe dessous, le verre apparaît avec [title] en petit.
+ * le contenu passe dessous, le verre apparaît avec [title] en petit, centré.
  */
 @Composable
 fun FloatingTopBar(
@@ -164,25 +193,26 @@ fun FloatingTopBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     GlassBar(revealed = revealed, modifier = modifier, hazeState = hazeState) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(TopBarHeight).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (navigation != null) navigation() else Spacer(Modifier.width(12.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(TopBarHeight).padding(horizontal = 8.dp)) {
             // Le grand titre du contenu est déjà lu par TalkBack : celui-ci est décoratif.
             HeyText(
                 text = title,
-                style = HeyTheme.typography.label,
+                style = HeyTheme.typography.title.copy(fontSize = 17.sp, lineHeight = 22.sp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
+                    .align(Alignment.Center)
+                    .padding(horizontal = 56.dp)
                     .graphicsLayer { alpha = revealed() }
                     .clearAndSetSemantics { },
             )
-            actions()
+            Box(modifier = Modifier.align(Alignment.CenterStart)) { navigation?.invoke() }
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                content = actions,
+            )
         }
     }
 }

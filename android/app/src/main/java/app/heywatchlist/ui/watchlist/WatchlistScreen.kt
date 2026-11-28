@@ -25,8 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +41,7 @@ import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeySpinner
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LargeTitle
 import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
 import app.heywatchlist.ui.components.StaleBanner
@@ -91,19 +90,12 @@ private fun WatchlistList(state: WatchlistUiState, listState: LazyListState, onR
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "title") {
-                Column(modifier = Modifier.padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    HeyText(
-                        text = stringResource(R.string.tab_watchlist),
-                        style = HeyTheme.typography.display,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    if (state.entries.isNotEmpty()) {
-                        HeyText(
-                            text = pluralString(R.plurals.watchlist_count, state.entries.size, state.entries.size),
-                            color = HeyTheme.colors.onBackgroundMuted,
-                        )
-                    }
-                }
+                LargeTitle(
+                    title = stringResource(R.string.tab_watchlist),
+                    subtitle = state.entries.size.takeIf { it > 0 }?.let { pluralString(R.plurals.watchlist_count, it, it) },
+                    refreshLabel = stringResource(R.string.action_refresh),
+                    onRefresh = onRefresh,
+                )
             }
             if (state.offline) {
                 item(key = "offline") { StaleBanner(textRes = R.string.watchlist_offline) }

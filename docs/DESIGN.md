@@ -35,7 +35,19 @@ Valeurs communes aux deux plateformes.
 Compléments aujourd'hui dans le code Android (`HeyTheme.kt`) : texte
 `#f5f5f8`, texte secondaire à 72 % d'opacité, texte sur `primaryFill` en
 blanc, erreur `#ff8a80`, accent décoratif `#7c5cff`, formes à 28 dp
-(cartes) et 20 dp (boutons).
+(cartes), pastille entièrement arrondie (boutons, barre d'onglets, champ de
+recherche).
+
+**Boutons (Android)** : pastilles de verre, comme la barre d'onglets. Un seul
+bouton principal par écran, en verre bleu lumineux (reflet sur la moitié haute,
+halo coloré dessous) ; une action d'appoint accentuée en verre légèrement bleuté
+(`Tinted`) ; les autres en verre neutre ; annuler et retirer en simple lien.
+
+**En-tête des onglets** : un seul grand titre (`LargeTitle`), même marge et même
+taille sur les trois onglets, sous-titre estompé facultatif. La barre flottante
+reprend le titre en petit, centré, quand le contenu passe dessous. Une action
+n'apparaît jamais deux fois : la loupe de la barre de Découvrir ne se montre
+qu'une fois le champ de recherche passé dessous.
 
 **Thème clair** : décliné côté Android (fond `#f3f5fa`, `primary` `#1a66cc`,
 verre blanc à 55 %, filet foncé à 12 %). Depuis la v0.11.0, l'app Android suit le

@@ -119,7 +119,7 @@ struct PosterCard: View {
                 Text(verbatim: title.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .lineLimit(2, reservesSpace: true)
                     .multilineTextAlignment(.leading)
                 Text(verbatim: title.caption)
                     .font(.caption)

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import app.heywatchlist.core.Access
 import app.heywatchlist.core.Profile
+import app.heywatchlist.core.WatchlistEntry
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.discover.DetailContent
 import app.heywatchlist.ui.discover.DetailUiState
@@ -16,6 +17,9 @@ import app.heywatchlist.ui.discover.DiscoverContent
 import app.heywatchlist.ui.discover.DiscoverShelves
 import app.heywatchlist.ui.discover.DiscoverUiState
 import app.heywatchlist.ui.discover.GenresState
+import app.heywatchlist.ui.discover.SearchContent
+import app.heywatchlist.ui.discover.SearchState
+import app.heywatchlist.ui.discover.SearchUiState
 import app.heywatchlist.ui.discover.ShelfState
 import app.heywatchlist.ui.main.Tab
 import app.heywatchlist.ui.main.TabsScaffold
@@ -113,11 +117,20 @@ class PublicScreenshots {
     @Test
     fun ficheDefilee() = Screenshots.capture(rule, "06c-fiche-defilee", act = { scrollDown() }) { DetailScene() }
 
+    // Titre pas encore dans la watchlist : le bouton principal « Ajouter à ma watchlist ».
+    @Test
+    fun ficheAAjouter() = Screenshots.capture(rule, "06d-fiche-a-ajouter") { DetailScene(entries = emptyList()) }
+
+    @Test
+    fun ficheAAjouterSombre() = Screenshots.capture(rule, "06e-fiche-a-ajouter-sombre", dark = true) {
+        DetailScene(entries = emptyList())
+    }
+
     @Composable
-    private fun DetailScene() {
+    private fun DetailScene(entries: List<WatchlistEntry> = SampleData.watchlist) {
         DetailContent(
             state = DetailUiState.Loaded(SampleData.seriesDetail),
-            watchlist = WatchlistUiState(entries = SampleData.watchlist, loaded = true),
+            watchlist = WatchlistUiState(entries = entries, loaded = true),
             onBack = {},
             onOpenTitle = {},
             onRetry = {},
@@ -127,6 +140,24 @@ class PublicScreenshots {
             onRemoveFromWatchlist = {},
         )
     }
+
+    // En-tête flottant de la recherche, résultats défilés dessous.
+    @Test
+    fun recherche() = Screenshots.capture(rule, "10-recherche", act = { scrollDown() }) { SearchScene() }
+
+    @Test
+    fun rechercheSombre() = Screenshots.capture(rule, "10b-recherche-sombre", dark = true) { SearchScene() }
+
+    @Composable
+    private fun SearchScene() = SearchContent(
+        text = "la",
+        onTextChange = {},
+        state = SearchUiState(query = "la", state = SearchState.Results(SampleData.titles(12), nextPage = null)),
+        onBack = {},
+        onRetry = {},
+        onLoadMore = {},
+        onOpenTitle = {},
+    )
 
     @Test
     fun watchlist() = Screenshots.capture(rule, "07-watchlist") { Tabs(Tab.Watchlist) { WatchlistScene() } }

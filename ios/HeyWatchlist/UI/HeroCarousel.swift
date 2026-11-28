@@ -8,6 +8,8 @@ struct HeroCarousel: View {
     let zoom: Namespace.ID
 
     @State private var current: TitleRef?
+    @State private var touching = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 12) {
@@ -23,6 +25,18 @@ struct HeroCarousel: View {
             }
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $current)
+            .onScrollPhaseChange { _, phase in touching = phase == .interacting }
+            // Avance seul toutes les 5 s ; s'arrête au toucher (le délai repart au relâchement)
+            // et n'avance pas avec « Réduire les animations ».
+            .task(id: touching) {
+                guard !touching, !reduceMotion, titles.count > 1 else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(5))
+                    if Task.isCancelled { return }
+                    let index = titles.firstIndex { $0.ref == (current ?? titles.first?.ref) } ?? 0
+                    withAnimation { current = titles[(index + 1) % titles.count].ref }
+                }
+            }
             .scrollIndicators(.hidden)
             .contentMargins(.horizontal, 20, for: .scrollContent)
 

@@ -5,6 +5,32 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.13.4] - 2026-11-28
+
+Retours de Loïc sur la 0.13.2.
+
+### Modifié
+
+- Android : boutons en pastille de verre, de la même famille que la barre
+  d'onglets. Le bouton principal (« Ajouter à ma watchlist », « Valider ») est
+  un verre bleu lumineux, avec reflet et halo ; « Bande-annonce » passe en
+  verre légèrement bleuté, en retrait ; les autres restent en verre neutre.
+- Android : en-tête des onglets revu. Grand titre identique sur Découvrir,
+  Watchlist et Réglages (même marge, même taille, sous-titre estompé) ; la
+  barre flottante reprend le titre en petit, centré, et son verre s'efface en
+  dégradé sous la barre au lieu de s'arrêter sur un trait.
+- Android : un seul « Rechercher » en haut de Découvrir. Le bouton loupe de la
+  barre n'apparaît qu'une fois le champ de recherche passé sous la barre.
+- Android : les affiches ne font plus « sauter » la rangée quand un titre tient
+  sur deux lignes : la légende sous l'affiche a toujours la même hauteur (deux
+  lignes de titre, une de légende), squelettes compris. Même correction sur
+  iPhone (`lineLimit(2, reservesSpace: true)`).
+- Découvrir : le carrousel des grosses affiches défile seul toutes les 5 s,
+  s'arrête dès qu'on le touche et reste immobile avec les animations système
+  coupées (Android et iPhone).
+- iPhone : l'onglet Rechercher n'affiche plus « Rechercher » deux fois (titre
+  de l'écran et message d'attente).
+
 ## [0.13.3] - 2026-11-28
 
 ### Modifié
