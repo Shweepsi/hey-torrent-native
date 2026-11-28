@@ -35,16 +35,19 @@ class KeystoreSessionStore(
         null
     }
 
+    // `commit()` et non `apply()` : le cœur appelle hors du fil principal, et un
+    // jeton de rafraîchissement renouvelé doit être écrit avant que l'app
+    // puisse être fermée.
     override fun save(value: String) {
         try {
-            preferences.edit().putString(KEY_VALUE, encrypt(value)).apply()
+            preferences.edit().putString(KEY_VALUE, encrypt(value)).commit()
         } catch (error: Exception) {
             clear()
         }
     }
 
     override fun clear() {
-        preferences.edit().remove(KEY_VALUE).apply()
+        preferences.edit().remove(KEY_VALUE).commit()
     }
 
     private fun key(): SecretKey {

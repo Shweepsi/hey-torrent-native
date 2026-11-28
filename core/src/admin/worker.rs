@@ -349,6 +349,13 @@ pub(crate) async fn reopen(account: &Account, id: &str) -> Result<AdminRequest, 
     action(account, id, "reopen", serde_json::json!({})).await
 }
 
+pub(crate) async fn mark_available(
+    account: &Account,
+    id: &str,
+) -> Result<AdminRequest, AdminError> {
+    action(account, id, "available", serde_json::json!({})).await
+}
+
 /// Réglages gardés sur le Worker (texte du cœur), ou `None`.
 pub(crate) async fn load_settings(account: &Account) -> Result<Option<String>, AdminError> {
     let bytes = call(account, reqwest::Method::GET, "/v1/admin/settings", None).await?;

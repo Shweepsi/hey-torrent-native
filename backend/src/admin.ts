@@ -221,6 +221,26 @@ async function refuse(request: Request, env: Env, now: number, id: string): Prom
   );
 }
 
+/**
+ * `POST …/available` : déjà sur Plex (arrivé avant les webhooks, ou saison que
+ * les webhooks n'ont pas vue). Personne n'est prévenu ; la release envoyée,
+ * s'il y en a une, est gardée.
+ */
+async function available(request: Request, env: Env, now: number, id: string): Promise<Response> {
+  await requireAdmin(request, env, now);
+  const result = await env.DB.prepare(
+    `UPDATE requests SET status = 'available', refusal_reason = NULL, handled_at = ?, updated_at = ?
+     WHERE id = ? AND status IN ('requested', 'in_progress', 'refused')`,
+  )
+    .bind(now, now, id)
+    .run();
+  if (result.meta.changes !== 1) {
+    const exists = await env.DB.prepare("SELECT 1 FROM requests WHERE id = ?").bind(id).first();
+    throw new ApiError(exists ? "conflict" : "not_found");
+  }
+  return json({ request: await oneRequest(env, id) });
+}
+
 /** `POST …/reopen` : retour à « demandée » (annuler un refus ou un envoi). */
 async function reopen(request: Request, env: Env, now: number, id: string): Promise<Response> {
   await requireAdmin(request, env, now);
@@ -403,7 +423,7 @@ type AdminHandler = (request: Request, env: Env, now: number, push: PushSender) 
 
 /** Identifiant tel que le Worker les crée (UUID). */
 const ID = "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})";
-const REQUEST_ACTION = new RegExp(`^/v1/admin/requests/${ID}/(start|refuse|reopen)$`);
+const REQUEST_ACTION = new RegExp(`^/v1/admin/requests/${ID}/(start|refuse|reopen|available)$`);
 const MEMBER_ACTION = new RegExp(`^/v1/admin/members/${ID}/(approve|refuse)$`);
 
 /** Route `/v1/admin/…` ; `undefined` si la méthode ou le chemin n'existe pas. */
@@ -425,7 +445,7 @@ export function adminHandler(method: string, pathname: string): AdminHandler | u
   const action = REQUEST_ACTION.exec(pathname);
   if (action?.[1] && action[2] && method === "POST") {
     const id = action[1];
-    const handlers = { start, refuse, reopen } as const;
+    const handlers = { start, refuse, reopen, available } as const;
     const handler = handlers[action[2] as keyof typeof handlers];
     return (request, env, now) => handler(request, env, now, id);
   }

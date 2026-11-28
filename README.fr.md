@@ -134,7 +134,7 @@ lancé seulement quand les fichiers qui le concernent changent :
 | Workflow | Runner | Fait |
 |---|---|---|
 | CI cœur | Linux | Format, clippy et tests du cœur, avec et sans `admin` |
-| CI Android | Linux | Tests de l'édition publique, APK admin de debug en artefact ; sur `main` ou un tag, et si les secrets de signature existent, APK admin et public signés et AAB public |
+| CI Android | Linux | Tests des deux éditions ; sur `main` ou un tag, et si les secrets de signature existent, APK admin signé (Firebase App Distribution, privé), APK public signé et AAB public |
 | CI iOS | macOS | XCFramework du cœur, XcodeGen, tests sur simulateur ; sur `main` ou un tag, et si les secrets existent, envoi sur TestFlight avec fastlane |
 
 Les minutes macOS coûtent dix fois celles de Linux : le job iOS ne se lance

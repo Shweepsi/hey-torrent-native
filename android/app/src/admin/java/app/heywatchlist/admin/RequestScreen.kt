@@ -68,6 +68,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
                     action = state.action,
                     onRefuse = viewModel::openRefusal,
                     onReopen = viewModel::reopen,
+                    onMarkAvailable = viewModel::markAvailable,
                     onRetryStatus = viewModel::retryStatus,
                 )
             }
@@ -166,18 +167,21 @@ private fun ActionCard(
     action: RequestAction,
     onRefuse: () -> Unit,
     onReopen: () -> Unit,
+    onMarkAvailable: () -> Unit,
     onRetryStatus: () -> Unit,
 ) {
     val canRefuse = request.status == RequestStatus.REQUESTED || request.status == RequestStatus.IN_PROGRESS
     val canReopen = request.status == RequestStatus.IN_PROGRESS || request.status == RequestStatus.REFUSED
+    val canMarkAvailable = request.status != RequestStatus.AVAILABLE
     val working = action == RequestAction.Working
-    if (!canRefuse && !canReopen && action == RequestAction.Idle) return
+    if (!canRefuse && !canReopen && !canMarkAvailable && action == RequestAction.Idle) return
     AdminCard {
         when (action) {
             RequestAction.Working -> LoadingRow(stringResource(R.string.admin_working))
             RequestAction.Sent -> HeyText(text = stringResource(R.string.admin_sent))
             RequestAction.Refused -> HeyText(text = stringResource(R.string.admin_refused))
             RequestAction.Reopened -> HeyText(text = stringResource(R.string.admin_reopened))
+            RequestAction.MarkedAvailable -> HeyText(text = stringResource(R.string.admin_marked_available))
             is RequestAction.Failed -> FailureText(action.failure)
             is RequestAction.NotSaved -> {
                 FailureText(AdminFailure.StatusNotSaved)
@@ -211,6 +215,16 @@ private fun ActionCard(
                     )
                 }
             }
+        }
+        if (action !is RequestAction.NotSaved && canMarkAvailable) {
+            // Titre déjà sur Plex avant les webhooks, ou arrivée qu'ils n'ont pas vue.
+            HeyButton(
+                text = stringResource(R.string.admin_mark_available),
+                onClick = onMarkAvailable,
+                kind = HeyButtonKind.Secondary,
+                enabled = !working,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

@@ -132,18 +132,29 @@ interface SessionRow {
   user_id: string;
   role: Role;
   refresh_hash: string;
+  last_used_at: number;
   expires_at: number;
   revoked_at: number | null;
 }
 
 /**
- * Échange un jeton de rafraîchissement contre une nouvelle paire. Un ancien
- * jeton présenté de nouveau signe un vol : la session est coupée.
+ * Délai pendant lequel le jeton de rafraîchissement précédent reste accepté :
+ * la réponse d'un renouvellement se perd parfois (réseau coupé, app fermée
+ * avant d'avoir rangé le nouveau jeton). Passé ce délai, un ancien jeton
+ * présenté de nouveau signe un vol probable.
+ */
+export const REFRESH_GRACE_SECONDS = 24 * 3600;
+
+/**
+ * Échange un jeton de rafraîchissement contre une nouvelle paire. Le jeton
+ * précédent est encore accepté pendant `REFRESH_GRACE_SECONDS` après le
+ * renouvellement (le nouveau, jamais reçu, est alors remplacé) ; au-delà, il
+ * coupe la session.
  */
 export async function refreshSession(env: Env, refresh: string, now: number): Promise<TokenPair> {
   const hash = await sha256Hex(refresh);
   const row = await env.DB.prepare(
-    `SELECT s.id, s.user_id, u.role, s.refresh_hash, s.expires_at, s.revoked_at
+    `SELECT s.id, s.user_id, u.role, s.refresh_hash, s.last_used_at, s.expires_at, s.revoked_at
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.refresh_hash = ?1 OR s.previous_hash = ?1`,
   )
@@ -151,19 +162,23 @@ export async function refreshSession(env: Env, refresh: string, now: number): Pr
     .first<SessionRow>();
 
   if (!row || row.revoked_at !== null || row.expires_at <= now) throw new ApiError("session_expired");
-  if (row.refresh_hash !== hash) {
+  const current = row.refresh_hash === hash;
+  // `last_used_at` est la date du dernier renouvellement.
+  if (!current && now - row.last_used_at > REFRESH_GRACE_SECONDS) {
     await env.DB.prepare("UPDATE sessions SET revoked_at = ? WHERE id = ?").bind(now, row.id).run();
     throw new ApiError("session_expired");
   }
 
   const next = randomToken();
-  // La condition sur l'ancien condensé rend l'échange atomique : deux
-  // rafraîchissements simultanés ne peuvent pas réussir tous les deux.
+  // La condition sur le condensé actuel rend l'échange atomique : deux
+  // rafraîchissements simultanés ne peuvent pas réussir tous les deux. Avec
+  // le jeton précédent, `previous_hash` ne change pas : il reste le seul
+  // ancien jeton accepté pendant le délai.
   const result = await env.DB.prepare(
     `UPDATE sessions SET refresh_hash = ?, previous_hash = ?, last_used_at = ?, expires_at = ?
      WHERE id = ? AND refresh_hash = ? AND revoked_at IS NULL`,
   )
-    .bind(await sha256Hex(next), hash, now, now + SESSION_TTL_SECONDS, row.id, hash)
+    .bind(await sha256Hex(next), hash, current ? now : row.last_used_at, now + SESSION_TTL_SECONDS, row.id, row.refresh_hash)
     .run();
   if (result.meta.changes !== 1) throw new ApiError("session_expired");
 

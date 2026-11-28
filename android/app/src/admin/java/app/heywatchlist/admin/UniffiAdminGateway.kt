@@ -83,6 +83,9 @@ class UniffiAdminGateway(
 
     override suspend fun reopen(requestId: String): AdminRequest = space().let { call { it.reopen(requestId) } }
 
+    override suspend fun markAvailable(requestId: String): AdminRequest =
+        space().let { call { it.markAvailable(requestId) } }
+
     override suspend fun downloads(): List<Download> = space().let { call { it.downloads() } }
 
     override suspend fun pauseDownload(hash: String) = space().let { call { it.pauseDownload(hash) } }

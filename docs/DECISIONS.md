@@ -280,6 +280,22 @@ facile.
   aucun écran qui touche aux serveurs de l'administrateur : un serveur de démo
   ne montrerait rien de plus.
 
+## Corrigé après la relecture du 2026-11-27 (accord du propriétaire le 2026-11-28)
+
+- **Session** : le jeton de rafraîchissement précédent reste accepté 24 h
+  après un renouvellement (`REFRESH_GRACE_SECONDS`), pour qu'une réponse perdue
+  ne déconnecte plus. Au-delà, il coupe la session comme avant. Android écrit
+  la session avec `commit()`.
+- **Séries** : une demande de série ne passe « disponible » que quand chaque
+  saison voulue est sur Plex en entier (épisodes déjà diffusés d'après TMDB ;
+  « toute la série » = saisons commencées, sans les spéciaux). Ajouter une
+  saison absente à une série disponible la remet « demandée ». L'administrateur
+  a un bouton « Déjà sur Plex » pour ce que les webhooks n'ont pas vu.
+- **APK admin** : plus jamais en artefact public ; envoyé par Firebase App
+  Distribution (`docs/CI.md`, « APK admin privé »).
+- **Journaux Cloudflare** : pas de journal d'appel par requête (l'URL des
+  webhooks contient leur jeton).
+
 ## Par défaut, à confirmer par le propriétaire
 
 2. « Sur Plex » pour les invités : table `library` dans D1, remplie par les

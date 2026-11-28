@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { exportPKCS8, generateKeyPair } from "jose";
 import { beforeEach, describe, expect, it } from "vitest";
 import { verifyIdToken } from "../src/providers";
+import { REFRESH_GRACE_SECONDS } from "../src/sessions";
 import {
   NOW,
   bootstrapAdmin,
@@ -263,15 +264,42 @@ describe("sessions", () => {
     expect((await call("GET", "/v1/me", undefined, next.access_token)).status).toBe(200);
   });
 
-  it("coupe la session si un ancien jeton de rafraîchissement revient", async () => {
+  it("accepte encore le jeton précédent si la réponse s'est perdue", async () => {
+    const session = await member();
+    // Réponse perdue : l'app n'a jamais reçu `lost` et renvoie l'ancien jeton.
+    const lost = (await (await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token })).json()) as SessionBody;
+    setNow(NOW + 3 * 3600);
+    const retry = await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token });
+    expect(retry.status).toBe(200);
+    const next = (await retry.json()) as SessionBody;
+    expect((await call("GET", "/v1/me", undefined, next.access_token)).status).toBe(200);
+    // Le jeton jamais reçu est remplacé ; le nouveau continue de servir.
+    expect(await error(await call("POST", "/v1/auth/refresh", { refresh_token: lost.refresh_token }))).toBe(
+      "session_expired",
+    );
+    expect((await call("POST", "/v1/auth/refresh", { refresh_token: next.refresh_token })).status).toBe(200);
+  });
+
+  it("coupe la session si un ancien jeton revient après le délai de grâce", async () => {
     const session = await member();
     const next = (await (await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token })).json()) as SessionBody;
+    setNow(NOW + REFRESH_GRACE_SECONDS + 1);
     expect(await error(await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token }))).toBe(
       "session_expired",
     );
     expect(await error(await call("POST", "/v1/auth/refresh", { refresh_token: next.refresh_token }))).toBe(
       "session_expired",
     );
+  });
+
+  it("n'accepte que le jeton immédiatement précédent", async () => {
+    const session = await member();
+    const second = (await (await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token })).json()) as SessionBody;
+    const third = (await (await call("POST", "/v1/auth/refresh", { refresh_token: second.refresh_token })).json()) as SessionBody;
+    expect(await error(await call("POST", "/v1/auth/refresh", { refresh_token: session.refresh_token }))).toBe(
+      "session_expired",
+    );
+    expect((await call("POST", "/v1/auth/refresh", { refresh_token: third.refresh_token })).status).toBe(200);
   });
 
   it("expire après 90 jours sans usage", async () => {

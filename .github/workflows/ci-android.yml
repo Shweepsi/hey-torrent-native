@@ -1,7 +1,8 @@
 # Android : tests (buildSrc et édition publique), contrôle de la release publique
-# (R8), APK admin de debug en artefact, puis, sur main ou un tag et si les
-# secrets de signature existent, APK admin signé, APK public signé (installation
-# directe) et AAB public (Play Store). Sur un tag de version `v*`, ou à la main,
+# (R8), APK admin de debug compilé (jamais publié : le dépôt est public), puis,
+# sur main ou un tag et si les secrets de signature existent, APK admin signé
+# (par Firebase App Distribution), APK public signé (installation directe) et
+# AAB public (Play Store). Sur un tag de version `v*`, ou à la main,
 # l'AAB part sur Google Play (test fermé) si la clé du compte de service existe.
 # Linux seulement (aucune minute macOS).
 name: CI Android
@@ -106,14 +107,6 @@ jobs:
       - name: Vérifier la release de l'édition publique (R8)
         working-directory: android
         run: ./gradlew assemblePublicRelease --stacktrace
-
-      - name: Publier l'APK admin de debug
-        uses: actions/upload-artifact@v7
-        with:
-          name: heywatchlist-admin-debug-apk
-          path: android/app/build/outputs/apk/admin/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
 
       - name: Publier les rapports de tests (en cas d'échec)
         if: failure()
@@ -260,14 +253,49 @@ jobs:
             done
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Publier l'APK admin signé
+      # Le dépôt est public : tout compte GitHub peut télécharger les artefacts.
+      # L'APK admin part donc par Firebase App Distribution (lien privé, reçu
+      # sur le téléphone) dès que la clé existe ; sans elle, en artefact comme
+      # avant, le temps de la créer (docs/CI.md, « APK admin privé »).
+      - name: Vérifier la clé Firebase App Distribution
+        id: distribution
         if: steps.secrets.outputs.ready == 'true'
+        env:
+          FIREBASE_DISTRIBUTION_KEY: ${{ secrets.FIREBASE_DISTRIBUTION_KEY }}
+        run: bash .github/scripts/check-secrets.sh FIREBASE_DISTRIBUTION_KEY GOOGLE_SERVICES_JSON
+
+      - name: Envoyer l'APK admin par Firebase App Distribution
+        if: steps.distribution.outputs.ready == 'true'
+        env:
+          FIREBASE_DISTRIBUTION_KEY: ${{ secrets.FIREBASE_DISTRIBUTION_KEY }}
+          # Groupe de testeurs créé dans la console Firebase (App Distribution).
+          TESTER_GROUP: ${{ vars.FIREBASE_TESTER_GROUP || 'admin' }}
+          ADMIN_PACKAGE: io.github.shweepsi.heywatchlist.admin
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/firebase-distribution.json"
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "$FIREBASE_DISTRIBUTION_KEY" >"$key"
+          # Identifiant Firebase de l'app admin, lu dans google-services.json
+          # (JSON brut ou base64, comme pour la compilation).
+          services="${GOOGLE_SERVICES_JSON#"${GOOGLE_SERVICES_JSON%%[![:space:]]*}"}"
+          [[ "$services" == \{* ]] || services="$(printf '%s' "$services" | base64 --decode)"
+          app_id="$(jq -er --arg pkg "$ADMIN_PACKAGE" \
+            '.client[] | select(.client_info.android_client_info.package_name == $pkg) | .client_info.mobilesdk_app_id' \
+            <<<"$services" | head -n 1)"
+          apk="$(find android/app/build/outputs/apk/admin/release -name '*.apk' | head -n 1)"
+          GOOGLE_APPLICATION_CREDENTIALS="$key" npx --yes firebase-tools@15.37.0 appdistribution:distribute "$apk" \
+            --app "$app_id" --groups "$TESTER_GROUP" \
+            --release-notes "HeyWatchlist Admin, commit ${GITHUB_SHA::7}"
+
+      - name: Publier l'APK admin signé (sans App Distribution)
+        if: steps.secrets.outputs.ready == 'true' && steps.distribution.outputs.ready != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: heywatchlist-admin-release-apk
           path: android/app/build/outputs/apk/admin/release/*.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
 
       # APK de l'édition publique, signé avec la même clé que l'AAB : il
       # s'installe directement sur un téléphone, sans passer par le Play Store.

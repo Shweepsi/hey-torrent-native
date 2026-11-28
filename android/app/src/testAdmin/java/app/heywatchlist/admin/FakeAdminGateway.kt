@@ -87,6 +87,11 @@ class FakeAdminGateway : AdminGateway {
         return request(requestId, RequestStatus.REQUESTED)
     }
 
+    override suspend fun markAvailable(requestId: String): AdminRequest {
+        calls += "available:$requestId"
+        return request(requestId, RequestStatus.AVAILABLE)
+    }
+
     override suspend fun downloads(): List<Download> {
         calls += "downloads"
         return downloadsResult.getOrThrow()

@@ -99,6 +99,18 @@ class RequestViewModelTest {
     }
 
     @Test
+    fun `déjà sur Plex marque la demande disponible`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway()
+        val model = RequestViewModel(gateway, request(status = RequestStatus.IN_PROGRESS))
+        model.markAvailable()
+        advanceUntilIdle()
+
+        assertTrue("available:r1" in gateway.calls)
+        assertEquals(RequestAction.MarkedAvailable, model.uiState.value.action)
+        assertEquals(RequestStatus.AVAILABLE, model.uiState.value.request.status)
+    }
+
+    @Test
     fun `un échec de recherche s'affiche`() = runTest(main.dispatcher) {
         val gateway = FakeAdminGateway().apply { searchResult = failure(AdminFailure.NotConfigured) }
         val model = RequestViewModel(gateway, request())

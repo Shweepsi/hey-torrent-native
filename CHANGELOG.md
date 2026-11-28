@@ -5,6 +5,30 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.10.0] - 2026-11-28
+
+Corrections de la relecture du code du 2026-11-27.
+
+### Ajouté
+
+- APK admin : bouton « Déjà sur Plex » sur une demande, pour un titre arrivé
+  avant les webhooks ou une arrivée qu'ils n'ont pas vue (personne n'est
+  prévenu). Route `POST /v1/admin/requests/{id}/available`.
+- CI Android : l'APK admin signé part par Firebase App Distribution (secret
+  `FIREBASE_DISTRIBUTION_KEY`) au lieu d'un artefact téléchargeable par tous.
+
+### Corrigé
+
+- Déconnexions surprises : une réponse de renouvellement perdue (réseau coupé,
+  app fermée) ne coupe plus la session ; l'ancien jeton reste accepté 24 h.
+  Android écrit la session de façon synchrone.
+- Une série ne passe plus « disponible » au premier épisode arrivé sur Plex :
+  il faut toutes les saisons voulues, en entier. Une saison absente demandée
+  plus tard (nouvelle saison) remet la demande dans la file de l'administrateur.
+- L'APK admin de debug n'est plus publié en artefact (dépôt public).
+- Le Worker ne garde plus de journal d'appel par requête, qui contenait le
+  jeton secret des URL de webhook.
+
 ## [0.9.0] - 2026-11-27
 
 Passe de design sur Android, dans le style verre dépoli (pas de Material 3).

@@ -261,7 +261,7 @@ export async function receiveHook(
     console.warn("hook: media not recognised", source, sighting.kind);
     return json({ status: "unknown_media" });
   }
-  return json({ status: await processArrival(env, sender, arrival, now) });
+  return json({ status: await processArrival(env, fetcher, sender, arrival, now) });
 }
 
 async function requireAdmin(request: Request, env: Env, now: number): Promise<string> {
