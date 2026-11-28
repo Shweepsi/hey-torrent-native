@@ -41,7 +41,7 @@ class ServersViewModelTest {
     }
 
     @Test
-    fun `clé Anthropic vide : pas de clé ; sans adresse Plex : pas de connexion`() {
+    fun `clé Anthropic vide, pas de clé, et sans adresse Plex, pas de connexion`() {
         val settings = ServerForm(anthropicKey = "  ", plexUrl = " ", plexToken = "jeton").toSettings()
         assertNull(settings.anthropicApiKey)
         assertNull(settings.plex)

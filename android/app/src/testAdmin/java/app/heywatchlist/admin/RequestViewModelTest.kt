@@ -131,7 +131,7 @@ class RequestViewModelTest {
     }
 
     @Test
-    fun `catégories illisibles : pas d'envoi`() = runTest(main.dispatcher) {
+    fun `catégories illisibles, pas d'envoi`() = runTest(main.dispatcher) {
         val gateway = FakeAdminGateway().apply { categoriesResult = failure(AdminFailure.QbitUnreachable) }
         val model = RequestViewModel(gateway, request(status = RequestStatus.REFUSED))
         model.choose(release())
