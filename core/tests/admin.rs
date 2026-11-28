@@ -528,6 +528,14 @@ async fn a_request_is_processed_end_to_end() {
         .mount(&worker)
         .await;
 
+    // La catégorie choisie est retenue pour le prochain film.
+    Mock::given(method("PUT"))
+        .and(path("/v1/admin/settings"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "updated_at": 1 })))
+        .expect(1)
+        .mount(&worker)
+        .await;
+
     let settings = ServerSettings {
         sources: vec![source("a", "Maison", &indexers, "a")],
         qbittorrent: Some(qbit_settings(&qbit, password())),
@@ -552,6 +560,8 @@ async fn a_request_is_processed_end_to_end() {
         .unwrap();
     assert_eq!(updated.status, RequestStatus::InProgress);
     assert_eq!(updated.release_title.as_deref(), Some(best.title.as_str()));
+    assert_eq!(space.settings().await.movie_category, "Films 4K");
+    assert_eq!(space.settings().await.series_category, "series");
 
     // Une catégorie vide ou piégée est refusée avant tout envoi.
     assert!(matches!(
@@ -1290,4 +1300,21 @@ async fn a_release_found_automatically_comes_with_the_request() {
     );
     assert_eq!(requests[0].candidate_found_at, Some(50));
     assert_eq!(requests[1].candidate_title, None);
+}
+
+#[tokio::test]
+async fn the_queue_can_be_cleared() {
+    let worker = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/admin/requests/clear"))
+        .and(body_string_contains("\"confirm\":true"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({ "requests": 5, "people": 2 })),
+        )
+        .expect(1)
+        .mount(&worker)
+        .await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+    let cleared = space.clear_requests().await.unwrap();
+    assert_eq!((cleared.requests, cleared.people), (5, 2));
 }

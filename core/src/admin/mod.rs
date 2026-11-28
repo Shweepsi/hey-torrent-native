@@ -27,8 +27,8 @@ pub use search::{
 pub use settings::{PlexSettings, QbitAuth, QbitSettings, ServerSettings, TorznabSource};
 pub use space::AdminSpace;
 pub use worker::{
-    AdminRequest, AllowedEmail, AssistantStatus, AutoSourceReport, AutomationStatus, Member,
-    PlexStatus, Recommendation, RequestFilter, RequestFollower,
+    AdminRequest, AllowedEmail, AssistantStatus, AutoSourceReport, AutomationStatus,
+    ClearedRequests, Member, PlexStatus, Recommendation, RequestFilter, RequestFollower,
 };
 
 /// Erreur d'une opération d'administration. L'app traduit chaque cas en

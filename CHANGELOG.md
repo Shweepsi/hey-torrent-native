@@ -5,6 +5,24 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.13.0] - 2026-11-28
+
+Demandes de Loïc sur l'APK admin.
+
+### Ajouté
+
+- Serveurs, section Données : « Vider les demandes », après confirmation.
+  Efface toutes les demandes, les watchlists qui s'y rattachent et les traces
+  de notification (`POST /v1/admin/requests/clear`, `{"confirm": true}`). Les
+  comptes, les accès, les réglages et la bibliothèque Plex ne sont pas touchés.
+
+### Modifié
+
+- Envoi d'une release : la catégorie choisie devient celle présélectionnée au
+  prochain envoi du même type (retenue par le cœur dans les réglages).
+- Serveurs : « Catégories et filtres » disparaît. Les deux champs de catégorie
+  sont retirés ; « Termes exclus » passe dans la section Recherche.
+
 ## [0.12.0] - 2026-11-28
 
 Retours de Loïc sur l'APK admin.

@@ -183,8 +183,8 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
     }
 
     /**
-     * Lit les catégories de qBittorrent. Présélection : la catégorie par défaut
-     * du type (Serveurs) si elle existe, sinon la première ; si qBittorrent
+     * Lit les catégories de qBittorrent. Présélection : la dernière catégorie
+     * choisie pour ce type (retenue par le cœur) si elle existe, sinon la première ; si qBittorrent
      * n'en a aucune, la catégorie par défaut, créée à l'envoi.
      */
     fun loadCategories() {

@@ -120,6 +120,19 @@ sealed interface ConnectionTest {
     data class Failed(val failure: AdminFailure) : ConnectionTest
 }
 
+/** « Vider les demandes ». */
+sealed interface ClearState {
+    data object Idle : ClearState
+
+    data object Confirming : ClearState
+
+    data object Working : ClearState
+
+    data class Done(val requests: Int, val people: Int) : ClearState
+
+    data class Failed(val failure: AdminFailure) : ClearState
+}
+
 data class ServersUiState(
     /** Lecture des réglages locaux, puis du serveur. */
     val loading: Boolean = true,
@@ -131,6 +144,7 @@ data class ServersUiState(
     val plexTest: ConnectionTest? = null,
     /** Recherche automatique et lecture de Plex vues du serveur ; `null` tant qu'elles ne sont pas lues. */
     val automation: AutomationStatus? = null,
+    val clear: ClearState = ClearState.Idle,
     val saving: Boolean = false,
     val saveFailure: AdminFailure? = null,
     /** Modifications non enregistrées. */
@@ -202,6 +216,27 @@ class ServersViewModel(private val gateway: AdminGateway) : ViewModel() {
                 onFailure = { error -> ConnectionTest.Failed(error.adminFailure) },
             )
             _uiState.update { it.copy(plexTest = result) }
+        }
+    }
+
+    fun askClearRequests() {
+        if (_uiState.value.clear != ClearState.Working) _uiState.update { it.copy(clear = ClearState.Confirming) }
+    }
+
+    fun cancelClearRequests() {
+        _uiState.update { if (it.clear == ClearState.Confirming) it.copy(clear = ClearState.Idle) else it }
+    }
+
+    /** Après confirmation : vide la file (demandes et watchlists qui s'y rattachent). */
+    fun clearRequests() {
+        if (_uiState.value.clear != ClearState.Confirming) return
+        _uiState.update { it.copy(clear = ClearState.Working) }
+        viewModelScope.launch {
+            val result = attemptAdmin { gateway.clearRequests() }.fold(
+                onSuccess = { ClearState.Done(it.requests.toInt(), it.people.toInt()) },
+                onFailure = { ClearState.Failed(it.adminFailure) },
+            )
+            _uiState.update { it.copy(clear = result) }
         }
     }
 

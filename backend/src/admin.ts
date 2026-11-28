@@ -258,6 +258,28 @@ async function available(request: Request, env: Env, now: number, id: string): P
 }
 
 /**
+ * `POST /v1/admin/requests/clear` `{confirm: true}` : vide la file (essais de
+ * l'administrateur). Toutes les demandes partent, avec les entrées de
+ * watchlist qui s'y rattachent (celles de tout le monde) et les traces de
+ * notification. Comptes, accès, réglages et bibliothèque Plex restent.
+ * Rend `{requests, people}` : demandes supprimées, personnes concernées.
+ */
+async function clearRequests(request: Request, env: Env, now: number): Promise<Response> {
+  await requireAdmin(request, env, now);
+  if ((await readJson(request)).confirm !== true) throw new ApiError("invalid_request");
+  const counts = await env.DB.prepare(
+    `SELECT (SELECT COUNT(*) FROM requests) AS requests,
+            (SELECT COUNT(DISTINCT user_id) FROM watchlist_items WHERE deleted_at IS NULL) AS people`,
+  ).first<{ requests: number; people: number }>();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM watchlist_items"),
+    env.DB.prepare("DELETE FROM notified"),
+    env.DB.prepare("DELETE FROM requests"),
+  ]);
+  return json({ requests: counts?.requests ?? 0, people: counts?.people ?? 0 });
+}
+
+/**
  * `POST …/reopen` : retour à « demandée » (annuler un refus, un envoi ou un
  * « disponible » posé par erreur). Personne n'est prévenu.
  */
@@ -553,6 +575,7 @@ const MEMBER_ACTION = new RegExp(`^/v1/admin/members/${ID}/(approve|refuse)$`);
 /** Route `/v1/admin/…` ; `undefined` si la méthode ou le chemin n'existe pas. */
 export function adminHandler(method: string, pathname: string): AdminHandler | undefined {
   if (pathname === "/v1/admin/requests") return method === "GET" ? listRequests : undefined;
+  if (pathname === "/v1/admin/requests/clear") return method === "POST" ? clearRequests : undefined;
   if (pathname === "/v1/admin/settings") {
     if (method === "GET") return getSettings;
     if (method === "PUT") return putSettings;

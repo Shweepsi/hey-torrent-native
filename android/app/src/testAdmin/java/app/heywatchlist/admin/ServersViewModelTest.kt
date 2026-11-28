@@ -65,6 +65,37 @@ class ServersViewModelTest {
     }
 
     @Test
+    fun `vider les demandes demande une confirmation`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway()
+        val model = ServersViewModel(gateway)
+        advanceUntilIdle()
+        model.clearRequests()
+        model.askClearRequests()
+        model.cancelClearRequests()
+        advanceUntilIdle()
+        assertEquals(ClearState.Idle, model.uiState.value.clear)
+        assertTrue("clear" !in gateway.calls)
+
+        model.askClearRequests()
+        model.clearRequests()
+        advanceUntilIdle()
+        assertEquals(listOf("clear"), gateway.calls.filter { it == "clear" })
+        assertEquals(ClearState.Done(3, 2), model.uiState.value.clear)
+    }
+
+    @Test
+    fun `vider les demandes, échec affiché`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway()
+        gateway.clearResult = failure(AdminFailure.Server)
+        val model = ServersViewModel(gateway)
+        advanceUntilIdle()
+        model.askClearRequests()
+        model.clearRequests()
+        advanceUntilIdle()
+        assertEquals(ClearState.Failed(AdminFailure.Server), model.uiState.value.clear)
+    }
+
+    @Test
     fun `sans adresse, qBittorrent n'est pas configuré, les termes sont nettoyés`() {
         val form = ServerForm(qbitUrl = "  ", excludedTerms = " a, ,b ,", movieCategory = " ")
         val settings = form.toSettings()

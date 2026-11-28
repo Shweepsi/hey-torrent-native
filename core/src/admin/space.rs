@@ -15,10 +15,12 @@ use super::search::{
 use super::settings::{PlexSettings, QbitSettings, ServerSettings, TorznabSource};
 use super::torznab;
 use super::worker::{
-    self, AdminRequest, AllowedEmail, AutomationStatus, Member, Recommendation, RequestFilter,
+    self, AdminRequest, AllowedEmail, AutomationStatus, ClearedRequests, Member, Recommendation,
+    RequestFilter,
 };
 use crate::account::{Account, SessionStore};
 use crate::cache::unix_now;
+use crate::catalog::MediaType;
 
 /// Espace d'administration. Un par processus suffit ; ses méthodes peuvent
 /// être appelées en parallèle.
@@ -67,6 +69,21 @@ impl AdminSpace {
         *self.settings.lock().await = settings;
         *self.qbit.lock().await = None;
         Ok(())
+    }
+
+    /// La catégorie choisie devient celle proposée au prochain envoi du même
+    /// type. Simple préférence : un échec d'enregistrement ne change rien à l'envoi.
+    async fn remember_category(&self, media_type: MediaType, category: &str) {
+        let mut settings = self.settings().await;
+        let slot = match media_type {
+            MediaType::Movie => &mut settings.movie_category,
+            MediaType::Tv => &mut settings.series_category,
+        };
+        if slot == category {
+            return;
+        }
+        category.clone_into(slot);
+        let _ = self.save_settings(settings).await;
     }
 
     async fn categories(&self) -> (String, String) {
@@ -198,6 +215,12 @@ impl AdminSpace {
         worker::recommend(&self.account, &query, &releases).await
     }
 
+    /// Vide la file des demandes (essais) : demandes, watchlists de tout le
+    /// monde qui s'y rattachent, traces de notification. Irréversible.
+    pub async fn clear_requests(&self) -> Result<ClearedRequests, AdminError> {
+        worker::clear_requests(&self.account).await
+    }
+
     /// Où en sont la recherche automatique et la lecture de Plex, vues du Worker.
     pub async fn automation_status(&self) -> Result<AutomationStatus, AdminError> {
         worker::automation_status(&self.account).await
@@ -246,7 +269,9 @@ impl AdminSpace {
             request_id: Some(&request_id),
         })
         .await?;
-        self.confirm_release(request_id, release_id).await
+        let updated = self.confirm_release(request_id, release_id).await?;
+        self.remember_category(updated.media_type, category).await;
+        Ok(updated)
     }
 
     /// Enregistre « en cours » pour une release déjà envoyée.

@@ -210,6 +210,30 @@ describe("traitement", () => {
   });
 });
 
+describe("vider la file", () => {
+  it("supprime demandes, watchlists et traces de notification, sans toucher aux comptes", async () => {
+    await env.DB.prepare(
+      "INSERT INTO notified (event_key, media_type, tmdb_id, created_at) VALUES ('movie:603', 'movie', 603, ?)",
+    )
+      .bind(NOW)
+      .run();
+    const users = await env.DB.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+
+    expect((await call("POST", "/v1/admin/requests/clear", {}, admin.access_token)).status).toBe(400);
+    expect((await call("POST", "/v1/admin/requests/clear", { confirm: true }, member.access_token)).status).toBe(403);
+
+    const response = await call("POST", "/v1/admin/requests/clear", { confirm: true }, admin.access_token);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ requests: 2, people: 2 });
+    for (const table of ["requests", "watchlist_items", "notified"]) {
+      expect((await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>())?.n).toBe(0);
+    }
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>()).toEqual(users);
+    const list = await call("GET", "/v1/watchlist", undefined, member.access_token);
+    expect(((await list.json()) as { items: unknown[] }).items).toEqual([]);
+  });
+});
+
 describe("réglages chiffrés", () => {
   const settings = JSON.stringify({ sources: [{ id: "a", name: "Maison", url: "https://indexer.test/1/api", api_key: "secret-key" }] });
 
