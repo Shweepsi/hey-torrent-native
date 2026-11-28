@@ -277,7 +277,8 @@ describe("arrivée d'épisodes", () => {
     // L'identifiant tmdb:// d'un épisode Plex est celui de l'épisode : il est ignoré.
     const response = await plexHook(urls.plex_url, plexEpisode(2, 1, ["tmdb://5550001", "tvdb://9000201"]));
     expect(await statusOf(response)).toBe("notified");
-    expect(await requestStatus("tv", 95396)).toBe("available");
+    // Un épisode ne suffit pas : la série n'est pas encore « disponible ».
+    expect(await requestStatus("tv", 95396)).toBe("in_progress");
     expect(pushes.map((p) => p.token).sort()).toEqual([`${ANDROID_TOKEN}-s2`, `${ANDROID_TOKEN}-tout`]);
     expect(pushes[0]?.message).toMatchObject({ title: "Severance", bodyKey: "push_available_episode", bodyArgs: ["2", "1"] });
 
@@ -315,8 +316,97 @@ describe("arrivée d'épisodes", () => {
       imdb_id: "",
     };
     expect(await statusOf(await tautulliHook(urls.tautulli_url, body))).toBe("notified");
-    expect(fetchCalls).toHaveLength(0);
+    expect(fetchCalls.filter((c) => c.url.includes("/3/find/"))).toHaveLength(0);
     expect(pushes[0]?.message).toMatchObject({ title: "Game of Thrones", bodyArgs: ["1", "1"] });
+  });
+});
+
+describe("disponibilité d'une série", () => {
+  // Saison 1 : 2 épisodes ; saison 2 : 2 diffusés sur 3 ; saison 3 annoncée.
+  const SHOW = 4242;
+  const DETAIL = {
+    id: SHOW,
+    name: "La Série",
+    first_air_date: "2024-01-01",
+    seasons: [
+      { season_number: 0, episode_count: 4 },
+      { season_number: 1, episode_count: 2 },
+      { season_number: 2, episode_count: 3 },
+      { season_number: 3, episode_count: 8 },
+    ],
+    last_episode_to_air: { season_number: 2, episode_number: 2 },
+  };
+  const tmdb = (url: string) => (url.includes(`/3/tv/${SHOW}?`) ? Response.json(DETAIL) : new Response("{}", { status: 404 }));
+  const episode = (season: number, episode: number) => ({
+    event: "recently_added",
+    media_type: "episode",
+    show_name: "La Série",
+    season: String(season),
+    episode: String(episode),
+    tmdb_id: String(SHOW),
+  });
+
+  beforeEach(async () => {
+    await env.DB.prepare("DELETE FROM notified WHERE tmdb_id = ?").bind(SHOW).run();
+    await env.DB.prepare("DELETE FROM watchlist_items WHERE tmdb_id = ?").bind(SHOW).run();
+    await env.DB.prepare("DELETE FROM requests WHERE tmdb_id = ?").bind(SHOW).run();
+    await env.DB.prepare("DELETE FROM tmdb_cache WHERE cache_key LIKE ?").bind(`tv/${SHOW}?%`).run();
+    replyToFetch(tmdb);
+  });
+
+  it("attend chaque épisode diffusé des saisons voulues", async () => {
+    const urls = await webhookUrls();
+    await follow(await member(), "tv", SHOW, "La Série", [1]);
+    await tautulliHook(urls.tautulli_url, episode(1, 1));
+    expect(await requestStatus("tv", SHOW)).toBe("in_progress");
+    await tautulliHook(urls.tautulli_url, episode(1, 2));
+    expect(await requestStatus("tv", SHOW)).toBe("available");
+  });
+
+  it("série entière : toutes les saisons commencées, sans les spéciaux ni la saison à venir", async () => {
+    const urls = await webhookUrls();
+    await follow(await member(), "tv", SHOW, "La Série");
+    for (const [s, e] of [[1, 1], [1, 2], [2, 1]] as const) await tautulliHook(urls.tautulli_url, episode(s, e));
+    expect(await requestStatus("tv", SHOW)).toBe("in_progress");
+    await tautulliHook(urls.tautulli_url, episode(2, 2));
+    expect(await requestStatus("tv", SHOW)).toBe("available");
+  });
+
+  it("une saison annoncée en entier compte d'un coup", async () => {
+    const urls = await webhookUrls();
+    await follow(await member(), "tv", SHOW, "La Série", [2]);
+    const season = { event: "recently_added", media_type: "season", show_name: "La Série", season: "2", tmdb_id: String(SHOW) };
+    await tautulliHook(urls.tautulli_url, season);
+    expect(await requestStatus("tv", SHOW)).toBe("available");
+  });
+
+  it("TMDB injoignable : l'état ne change pas", async () => {
+    const urls = await webhookUrls();
+    await follow(await member(), "tv", SHOW, "La Série", [1]);
+    replyToFetch(() => new Response("{}", { status: 500 }));
+    await tautulliHook(urls.tautulli_url, episode(1, 1));
+    await tautulliHook(urls.tautulli_url, episode(1, 2));
+    expect(await requestStatus("tv", SHOW)).toBe("in_progress");
+  });
+
+  it("rouvre une série disponible quand quelqu'un veut une saison absente", async () => {
+    const urls = await webhookUrls();
+    const first = await member();
+    await follow(first, "tv", SHOW, "La Série", [1]);
+    await tautulliHook(urls.tautulli_url, episode(1, 1));
+    await tautulliHook(urls.tautulli_url, episode(1, 2));
+    expect(await requestStatus("tv", SHOW)).toBe("available");
+
+    // Vouloir la saison 1, déjà là : rien ne change.
+    const second = await member();
+    let response = await call("PUT", `/v1/watchlist/tv/${SHOW}`, { seasons: [1] }, second.access_token);
+    expect(response.status).toBe(200);
+    expect(await requestStatus("tv", SHOW)).toBe("available");
+
+    // Vouloir la saison 2, pas encore sur Plex : retour dans la file.
+    response = await call("PUT", `/v1/watchlist/tv/${SHOW}`, { seasons: [2] }, second.access_token);
+    expect(((await response.json()) as { item: { status: string } }).item.status).toBe("requested");
+    expect(await requestStatus("tv", SHOW)).toBe("requested");
   });
 });
 

@@ -23,7 +23,7 @@ quel ordre, et où lire les résultats**.
 | Fichier | Se lance | Machine | Sert à |
 |---|---|---|---|
 | `ci-core.yml` | PR et `main`, si le cœur, les outils, les scripts ou Cargo changent | Linux | `cargo fmt`, `clippy -D warnings`, tests (sans puis avec `admin`) ; génération des liaisons Kotlin et Swift et contrôle du contrat (`admin_ping` seulement dans l'édition admin) ; ShellCheck |
-| `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests du script d'envoi Google Play, tests de `buildSrc`, `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié), APK admin de debug ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé, APK public signé et AAB public ; sur un tag `v*` ou à la demande, **si la clé Google Play existe** : AAB envoyé sur le test fermé |
+| `ci-android.yml` | PR, `main`, tags `v*`, si Android, le cœur, `build-android-core.sh`, `generate-bindings.sh` ou Cargo changent | Linux | tests du script d'envoi Google Play, tests de `buildSrc`, `./gradlew testPublicDebugUnitTest testAdminDebugUnitTest assembleAdminDebug`, `assemblePublicRelease` (contrôle de R8, rien n'est publié) ; sur `main` ou un tag, **si les secrets Android existent** : APK admin signé (App Distribution, ou artefact sans sa clé), APK public signé et AAB public ; sur un tag `v*` ou à la demande, **si la clé Google Play existe** : AAB envoyé sur le test fermé |
 | `ci-ios.yml` | PR (hors brouillons), `main`, tags `v*`, si iOS, le cœur, `build-ios-xcframework.sh`, `generate-bindings.sh` ou Cargo changent (jamais pour un `.md`) | **macOS** | XCFramework du cœur, XcodeGen, tests sur simulateur iPhone ; sur `main`, un tag ou un lancement manuel, **si les secrets iOS existent** : signature et envoi TestFlight |
 | `ios-setup-signing.yml` | À la main seulement | **macOS** | Crée le certificat et le profil de distribution (fastlane match) |
 | `ci-backend.yml` | PR et `main`, si `backend/` change | Linux | TypeScript et tests du Worker (Vitest dans `workerd`, rien n'appelle Cloudflare) ; sur `main`, **si les réglages Cloudflare existent** : migrations D1 puis déploiement du Worker `heywatchlist-api` |
@@ -67,6 +67,22 @@ Dépôt GitHub > **Settings** > **Secrets and variables** > **Actions**. Les
 | `ANDROID_KEY_PASSWORD` | secret | Mot de passe de la clé (le même que celui du keystore) |
 | `PLAY_SERVICE_ACCOUNT_JSON` | secret | Clé JSON du compte de service Google Play (brute ou en base64), posée par hey-kit : envoi de l'AAB public sur le test fermé (`docs/PUBLICATION.md`, étape 7) |
 | `PLAY_TRACK` | variable, facultative | Piste Google Play : `alpha` (test fermé, par défaut), `internal`, `beta` |
+| `FIREBASE_DISTRIBUTION_KEY` | secret | Clé JSON (brute ou en base64) d'un compte de service au rôle « Firebase App Distribution Admin » : envoi privé de l'APK admin (voir « APK admin privé » ci-dessous), posée par hey-kit |
+| `FIREBASE_TESTERS` | secret | E-mail(s) qui reçoivent l'APK admin, séparés par des virgules, posé par hey-kit. Secret pour rester masqué dans les journaux, publics ici |
+
+### APK admin privé
+
+Le dépôt est public : n'importe quel compte GitHub peut télécharger les
+artefacts d'une exécution. L'APK admin n'y est donc plus publié ; il part par
+[Firebase App Distribution](https://firebase.google.com/docs/app-distribution/android/distribute-cli)
+vers les seules adresses de `FIREBASE_TESTERS`, qui le reçoivent par e-mail et
+l'installent depuis leur téléphone. Tout se règle dans hey-kit, onglet « Mes
+apps », guide « APK admin privé » : démarrer App Distribution pour l'app admin
+dans la console Firebase, créer le compte de service et sa clé, saisir son
+e-mail, puis « Envoyer ». Pas encore essayé en vrai (2026-11-28).
+
+Tant que ces secrets manquent, l'APK admin signé reste en artefact (7 jours) comme
+avant. L'APK admin de debug n'est plus jamais publié.
 
 Notifications (jalon 6) : `GOOGLE_SERVICES_JSON`, le contenu de
 `google-services.json` encodé en base64 (le JSON brut est aussi accepté). Lu par
@@ -222,8 +238,7 @@ de la page de résumé > télécharger le zip.
 
 | Artefact | Contenu | Conservé |
 |---|---|---|
-| `heywatchlist-admin-debug-apk` | APK admin de debug (chaque exécution Android) | 14 jours |
-| `heywatchlist-admin-release-apk` | APK admin signé (`main`, tag ou lancement manuel) | 30 jours |
+| `heywatchlist-admin-release-apk` | APK admin signé, **seulement sans App Distribution** (`main`, tag ou lancement manuel) | 7 jours |
 | `heywatchlist-public-release-apk` | APK public signé, à installer directement sur un téléphone | 30 jours |
 | `heywatchlist-public-release-aab` | AAB public signé, pour le Play Store | 30 jours |
 | `android-rapports-de-tests` | Rapports de tests, **en cas d'échec** | 7 jours |

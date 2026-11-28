@@ -3,9 +3,11 @@
  * passage de la demande en « disponible » et push vers chaque personne qui
  * l'attend (schéma des demandes : migration 0003).
  */
+import type { FetchLike } from "./apple";
 import type { Env } from "./env";
 import type { PushMessage, PushSender, Platform } from "./push";
-import type { MediaType } from "./watchlist";
+import { airedEpisodesOf, missingSeasons, wantedSeasons } from "./seasons";
+import type { MediaType, RequestStatus } from "./watchlist";
 
 /** Fenêtre pendant laquelle les arrivées d'une même saison ne font qu'une push. */
 export const GROUPING_WINDOW = 6 * 3600;
@@ -109,7 +111,37 @@ export function devicesOfUser(env: Env, userId: string, now: number): Promise<De
   return devicesOf(env, [userId], now);
 }
 
-export async function processArrival(env: Env, sender: PushSender, arrival: Arrival, now: number): Promise<ArrivalOutcome> {
+/**
+ * Passe la demande en « disponible » : un film dès son arrivée, une série
+ * quand chaque saison voulue est sur Plex en entier. Si TMDB ne répond pas,
+ * l'état ne change pas : la prochaine arrivée réessaiera.
+ */
+async function markAvailable(
+  env: Env,
+  fetcher: FetchLike,
+  arrival: Arrival,
+  request: { id: string; status: RequestStatus },
+  now: number,
+): Promise<void> {
+  if (request.status === "available") return;
+  if (arrival.mediaType === "tv") {
+    const aired = await airedEpisodesOf(env, fetcher, arrival.tmdbId, now);
+    if (!aired) return;
+    const missing = await missingSeasons(env, arrival.tmdbId, await wantedSeasons(env, request.id), aired);
+    if (missing.length > 0) return;
+  }
+  await env.DB.prepare("UPDATE requests SET status = 'available', updated_at = ? WHERE id = ? AND status <> 'available'")
+    .bind(now, request.id)
+    .run();
+}
+
+export async function processArrival(
+  env: Env,
+  fetcher: FetchLike,
+  sender: PushSender,
+  arrival: Arrival,
+  now: number,
+): Promise<ArrivalOutcome> {
   const key = eventKey(arrival);
   const [, inserted] = await env.DB.batch([
     env.DB.prepare(
@@ -122,15 +154,11 @@ export async function processArrival(env: Env, sender: PushSender, arrival: Arri
   ]);
   if (!inserted || inserted.meta.changes !== 1) return "duplicate";
 
-  const request = await env.DB.prepare("SELECT title FROM requests WHERE media_type = ? AND tmdb_id = ?")
+  const request = await env.DB.prepare("SELECT id, title, status FROM requests WHERE media_type = ? AND tmdb_id = ?")
     .bind(arrival.mediaType, arrival.tmdbId)
-    .first<{ title: string }>();
+    .first<{ id: string; title: string; status: RequestStatus }>();
   if (!request) return "no_request";
-  await env.DB.prepare(
-    "UPDATE requests SET status = 'available', updated_at = ? WHERE media_type = ? AND tmdb_id = ? AND status <> 'available'",
-  )
-    .bind(now, arrival.mediaType, arrival.tmdbId)
-    .run();
+  await markAvailable(env, fetcher, arrival, request, now);
 
   if (await recentlyPushed(env, arrival, key, now)) return "grouped";
   const devices = await devicesOf(env, await waitingUsers(env, arrival), now);

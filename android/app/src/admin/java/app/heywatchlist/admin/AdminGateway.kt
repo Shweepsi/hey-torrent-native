@@ -77,6 +77,9 @@ interface AdminGateway {
 
     suspend fun reopen(requestId: String): AdminRequest
 
+    /** Déjà sur Plex, sans que les webhooks l'aient vue arriver en entier. */
+    suspend fun markAvailable(requestId: String): AdminRequest
+
     suspend fun downloads(): List<Download>
 
     suspend fun pauseDownload(hash: String)

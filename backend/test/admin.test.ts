@@ -176,6 +176,20 @@ describe("traitement", () => {
     expect((await action(MOVIE_ID, "reopen")).status).toBe(409);
   });
 
+  it("marque disponible une demande déjà sur Plex, en gardant la release", async () => {
+    await action(MOVIE_ID, "start", { release_title: "Film.2020.1080p" });
+    setNow(NOW + 120);
+    const response = await action(MOVIE_ID, "available");
+    expect(response.status).toBe(200);
+    const { request } = (await response.json()) as { request: AdminRequest };
+    expect(request).toMatchObject({ status: "available", release_title: "Film.2020.1080p", handled_at: NOW + 120 });
+    expect((await action(MOVIE_ID, "available")).status).toBe(409);
+    expect((await action(UNKNOWN_ID, "available")).status).toBe(404);
+    // Réservé à l'administrateur.
+    const denied = await call("POST", `/v1/admin/requests/${SERIES_ID}/available`, {}, member.access_token);
+    expect(denied.status).toBe(403);
+  });
+
   it("une demande disparue : introuvable", async () => {
     expect((await action(UNKNOWN_ID, "refuse")).status).toBe(404);
   });

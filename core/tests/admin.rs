@@ -889,6 +889,29 @@ async fn worker_refusals_are_typed() {
     ));
 }
 
+#[tokio::test]
+async fn a_request_already_on_plex_is_marked_available() {
+    let worker = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path(format!("/v1/admin/requests/{REQUEST_ID}/available")))
+        .and(header("authorization", "Bearer acces-admin"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({ "request": worker_request("available") })),
+        )
+        .expect(1)
+        .mount(&worker)
+        .await;
+
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+    let request = space.mark_available(REQUEST_ID.into()).await.unwrap();
+    assert_eq!(request.status, RequestStatus::Available);
+    assert!(matches!(
+        space.mark_available("../settings".into()).await,
+        Err(AdminError::NotFound)
+    ));
+}
+
 const MEMBER_ID: &str = "33333333-3333-4333-8333-333333333333";
 
 #[tokio::test]

@@ -251,6 +251,12 @@ impl AdminSpace {
         worker::reopen(&self.account, &request_id).await
     }
 
+    /// Marque la demande « disponible » : déjà sur Plex sans que les webhooks
+    /// l'aient vue arriver en entier. Personne n'est prévenu.
+    pub async fn mark_available(&self, request_id: String) -> Result<AdminRequest, AdminError> {
+        worker::mark_available(&self.account, &request_id).await
+    }
+
     /// Téléchargements des catégories films et séries, les plus récents d'abord.
     pub async fn downloads(&self) -> Result<Vec<Download>, AdminError> {
         let (movies, series) = self.categories().await;

@@ -10,6 +10,12 @@ workers_dev = true
 [observability]
 enabled = true
 
+# Pas de journal d'appel par requête : il garderait l'URL complète, donc le
+# jeton secret des webhooks Plex et Tautulli (`/v1/hooks/<source>/<jeton>`).
+# Les `console.*` du Worker, qui ne journalisent jamais de secret, restent.
+[observability.logs]
+invocation_logs = false
+
 [vars]
 # Identifiant de l'app iPhone : public, c'est l'audience des jetons Apple.
 APPLE_CLIENT_ID = "io.github.shweepsi.heywatchlist"

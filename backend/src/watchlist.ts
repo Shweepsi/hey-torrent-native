@@ -11,6 +11,7 @@ import type { FetchLike } from "./apple";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
 import { authenticate } from "./sessions";
+import { airedEpisodes, missingSeasons, type AiredEpisodes } from "./seasons";
 import { cachedTmdb } from "./tmdb";
 
 export const WATCHLIST_PATH = "/v1/watchlist";
@@ -67,6 +68,8 @@ interface TmdbTitle {
   year: number | null;
   /** Numéros des saisons connues de TMDB (séries). */
   seasons: Set<number>;
+  /** Épisodes déjà diffusés par saison (séries). */
+  aired: AiredEpisodes;
 }
 
 function text(value: unknown): string | null {
@@ -100,6 +103,7 @@ function readTmdbTitle(body: string, mediaType: MediaType): TmdbTitle {
     posterPath: poster && /^\/[A-Za-z0-9._-]+$/.test(poster) && !poster.includes("..") ? poster : null,
     year: yearMatch?.[1] ? Number(yearMatch[1]) : null,
     seasons,
+    aired: airedEpisodes(root),
   };
 }
 
@@ -181,11 +185,38 @@ async function put(
     ).bind(claims.userId, mediaType, tmdbId, seasons ? JSON.stringify(seasons) : null, now),
   ]);
 
+  if (mediaType === "tv") await reopenIfMissing(env, tmdbId, seasons, tmdb.aired, now);
+
   const row = await env.DB.prepare(`${ITEM_SELECT} AND w.media_type = ? AND w.tmdb_id = ?`)
     .bind(claims.userId, mediaType, tmdbId)
     .first<ItemRow>();
   if (!row) throw new ApiError("internal");
   return json({ item: item(row) });
+}
+
+/**
+ * Série déjà « disponible » dont la personne veut une saison pas encore sur
+ * Plex (nouvelle saison, saison oubliée) : la demande revient dans la file de
+ * l'administrateur, comme après une réouverture.
+ */
+async function reopenIfMissing(
+  env: Env,
+  tmdbId: number,
+  seasons: number[] | null,
+  aired: AiredEpisodes,
+  now: number,
+): Promise<void> {
+  const request = await env.DB.prepare("SELECT status FROM requests WHERE media_type = 'tv' AND tmdb_id = ?")
+    .bind(tmdbId)
+    .first<{ status: RequestStatus }>();
+  if (request?.status !== "available") return;
+  if ((await missingSeasons(env, tmdbId, seasons, aired)).length === 0) return;
+  await env.DB.prepare(
+    `UPDATE requests SET status = 'requested', release_title = NULL, torrent_hash = NULL, updated_at = ?
+     WHERE media_type = 'tv' AND tmdb_id = ? AND status = 'available'`,
+  )
+    .bind(now, tmdbId)
+    .run();
 }
 
 /**

@@ -52,6 +52,8 @@ sealed interface RequestAction {
     data object Refused : RequestAction
 
     data object Reopened : RequestAction
+
+    data object MarkedAvailable : RequestAction
 }
 
 data class RequestUiState(
@@ -184,6 +186,11 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
     fun reopen() {
         val request = _uiState.value.request
         run { attemptAdmin { gateway.reopen(request.id) }.toAction(RequestAction.Reopened) }
+    }
+
+    fun markAvailable() {
+        val request = _uiState.value.request
+        run { attemptAdmin { gateway.markAvailable(request.id) }.toAction(RequestAction.MarkedAvailable) }
     }
 
     /** Lance une action ; [block] rend l'état suivant et, si elle a réussi, la demande à jour. */

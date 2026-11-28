@@ -51,6 +51,8 @@
     <string name="admin_sent">Envoyé à qBittorrent. La demande est passée « en cours ».</string>
     <string name="admin_refused">Demande refusée.</string>
     <string name="admin_reopened">Demande remise en attente.</string>
+    <string name="admin_mark_available">Déjà sur Plex</string>
+    <string name="admin_marked_available">Demande marquée disponible. Personne n’est prévenu.</string>
     <string name="admin_retry_status">Réessayer d’enregistrer</string>
     <string name="admin_search_title">Chercher une release</string>
     <string name="admin_search_label">Titre cherché</string>

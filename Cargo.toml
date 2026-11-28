@@ -6,7 +6,7 @@ resolver = "3"
 [workspace.package]
 # Source unique de la version de l'app : Android (versionName) et iOS
 # (MARKETING_VERSION) la lisent ici, ne jamais la dupliquer.
-version = "0.9.0"
+version = "0.10.0"
 edition = "2024"
 license = "UNLICENSED"
 publish = false
