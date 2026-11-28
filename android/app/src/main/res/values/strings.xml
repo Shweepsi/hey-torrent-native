@@ -182,6 +182,7 @@
     <string name="push_access_granted">Votre accès est validé. Bienvenue !</string>
     <string name="push_access_request">Nouvelle demande d’accès à valider.</string>
     <string name="push_access_request_named">%1$s demande l’accès à HeyWatchlist.</string>
+    <string name="push_requests_stale">Sans version convenable depuis 3 semaines : %1$s demande(s).</string>
 
     <string name="settings_push_title">Notifications</string>
     <string name="settings_push_body">Vous êtes prévenu dès qu’un titre de votre watchlist arrive sur Plex.</string>

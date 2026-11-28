@@ -9,10 +9,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use heywatchlist_core::{
-    AccessStatus, Account, AdminError, AdminSpace, AudioLanguage, DownloadState, IdentityProvider,
-    MediaType, QbitAuth, QbitSettings, Release, RequestFilter, RequestStatus, SearchObserver,
-    SearchQuery, ServerSettings, SessionStore, SignInRequest, SourceFailure, SourceReport,
-    TorznabSource,
+    AccessStatus, Account, AdminError, AdminSpace, AssistantStatus, AudioLanguage, DownloadState,
+    IdentityProvider, MediaType, PlexSettings, PlexStatus, QbitAuth, QbitSettings, Release,
+    RequestFilter, RequestStatus, SearchObserver, SearchQuery, ServerSettings, SessionStore,
+    SignInRequest, SourceFailure, SourceReport, TorznabSource,
 };
 use serde_json::json;
 use wiremock::matchers::{body_string_contains, header, method, path, query_param};
@@ -1053,4 +1053,241 @@ async fn emails_can_be_allowed_in_advance() {
         .remove_allowed_email("demo@example.com".into())
         .await
         .unwrap();
+}
+
+// ------------------------------------------------- Claude, recherche auto, Plex
+
+#[tokio::test]
+async fn claude_recommends_a_release_without_seeing_links() {
+    let worker = MockServer::start().await;
+    let indexers = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/a/api"))
+        .respond_with(feed(MOVIE_FEED))
+        .mount(&indexers)
+        .await;
+    let settings = ServerSettings {
+        sources: vec![source("a", "Maison", &indexers, "a")],
+        ..ServerSettings::default()
+    };
+    let (space, _) = space(admin_account(&worker).await, &settings);
+    let outcome = space.search(dune(), None).await.unwrap();
+    let best = outcome.releases[0].id.clone();
+    Mock::given(method("POST"))
+        .and(path("/v1/admin/recommend"))
+        .and(header("authorization", "Bearer acces-admin"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(
+                json!({ "release_id": best, "reason": " MULTi en 4K, sous 15 Go. " }),
+            ),
+        )
+        .expect(1)
+        .mount(&worker)
+        .await;
+
+    let advice = space
+        .recommend(dune(), outcome.releases.clone())
+        .await
+        .unwrap();
+    assert_eq!(advice.release_id.as_deref(), Some(best.as_str()));
+    assert_eq!(advice.reason, "MULTi en 4K, sous 15 Go.");
+
+    let sent = worker
+        .received_requests()
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|r| r.url.path() == "/v1/admin/recommend")
+        .unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&sent.body).unwrap();
+    assert_eq!(body["media_type"], "movie");
+    assert_eq!(body["original_title"], "Dune: Part Two");
+    assert_eq!(
+        body["releases"].as_array().unwrap().len(),
+        outcome.releases.len()
+    );
+    assert_eq!(
+        body["releases"][0]["title"],
+        outcome.releases[0].title.as_str()
+    );
+    // Ni lien ni clé de source ne partent vers le Worker.
+    let raw = String::from_utf8(sent.body).unwrap();
+    assert!(
+        !raw.contains("magnet:")
+            && !raw.contains("CLE-SECRETE")
+            && !raw.contains("indexer.invalid")
+    );
+
+    // Sans release, le Worker n'est pas appelé.
+    let empty = space.recommend(dune(), Vec::new()).await.unwrap();
+    assert_eq!(empty.release_id, None);
+}
+
+#[tokio::test]
+async fn claude_refusals_are_typed() {
+    let worker = MockServer::start().await;
+    let indexers = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/a/api"))
+        .respond_with(feed(MOVIE_FEED))
+        .mount(&indexers)
+        .await;
+    let settings = ServerSettings {
+        sources: vec![source("a", "Maison", &indexers, "a")],
+        ..ServerSettings::default()
+    };
+    let (space, _) = space(admin_account(&worker).await, &settings);
+    let releases = space.search(dune(), None).await.unwrap().releases;
+    for (status, code, expected) in [
+        (
+            409,
+            "assistant_not_configured",
+            AdminError::AssistantNotConfigured,
+        ),
+        (
+            502,
+            "assistant_auth_failed",
+            AdminError::AssistantAuthFailed,
+        ),
+        (
+            503,
+            "assistant_unavailable",
+            AdminError::AssistantUnavailable,
+        ),
+    ] {
+        worker.reset().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/admin/recommend"))
+            .respond_with(ResponseTemplate::new(status).set_body_json(json!({ "error": code })))
+            .mount(&worker)
+            .await;
+        let error = space.recommend(dune(), releases.clone()).await.unwrap_err();
+        assert_eq!(
+            std::mem::discriminant(&error),
+            std::mem::discriminant(&expected)
+        );
+    }
+    // Un identifiant qui n'est pas dans la liste ne met rien en avant.
+    worker.reset().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/admin/recommend"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({ "release_id": "inventee", "reason": "?" })),
+        )
+        .mount(&worker)
+        .await;
+    assert!(matches!(
+        space.recommend(dune(), releases).await,
+        Err(AdminError::Unexpected)
+    ));
+}
+
+#[tokio::test]
+async fn automation_status_is_read_tolerantly() {
+    let worker = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/admin/automation"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "searched_at": 100,
+            "sources": [
+                { "id": "a", "failure": null },
+                { "id": "b", "failure": "rate_limited" },
+                { "id": "c", "failure": "nouvelle-raison" },
+                { "pas": "lisible" },
+            ],
+            "assistant_status": "auth_failed",
+            "plex_synced_at": 90,
+            "plex_status": "ok",
+            "plex_items": 412,
+        })))
+        .mount(&worker)
+        .await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+    let status = space.automation_status().await.unwrap();
+    assert_eq!(status.searched_at, Some(100));
+    let failures: Vec<_> = status
+        .sources
+        .iter()
+        .map(|s| (s.source_id.as_str(), s.failure))
+        .collect();
+    assert_eq!(
+        failures,
+        [
+            ("a", None),
+            ("b", Some(SourceFailure::RateLimited)),
+            ("c", Some(SourceFailure::InvalidResponse)),
+        ]
+    );
+    assert_eq!(status.assistant, Some(AssistantStatus::AuthFailed));
+    assert_eq!(status.plex, Some(PlexStatus::Ok));
+    assert_eq!(status.plex_items, Some(412));
+}
+
+#[tokio::test]
+async fn plex_is_tested_from_the_worker() {
+    let worker = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/admin/plex/test"))
+        .and(body_string_contains("jeton-plex"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "sections": 2 })))
+        .up_to_n_times(1)
+        .mount(&worker)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/admin/plex/test"))
+        .respond_with(
+            ResponseTemplate::new(502).set_body_json(json!({ "error": "plex_auth_failed" })),
+        )
+        .mount(&worker)
+        .await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+    let plex = PlexSettings {
+        url: "https://plex.invalid".into(),
+        token: "jeton-plex".into(),
+    };
+    assert_eq!(space.test_plex(plex.clone()).await.unwrap(), 2);
+    assert!(matches!(
+        space.test_plex(plex.clone()).await,
+        Err(AdminError::PlexAuthFailed)
+    ));
+    // Adresse non HTTPS : refusée sans appel.
+    let insecure = PlexSettings {
+        url: "http://plex.invalid".into(),
+        ..plex
+    };
+    assert!(matches!(
+        space.test_plex(insecure).await,
+        Err(AdminError::InvalidSettings)
+    ));
+}
+
+#[tokio::test]
+async fn a_release_found_automatically_comes_with_the_request() {
+    let worker = MockServer::start().await;
+    let mut found = worker_request("requested");
+    found["candidate_title"] = json!("Dune.Part.Two.2024.MULTi.2160p");
+    found["candidate_reason"] = json!("MULTi en 4K.");
+    found["candidate_found_at"] = json!(50);
+    found["auto_checked_at"] = json!(50);
+    Mock::given(method("GET"))
+        .and(path("/v1/admin/requests"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({ "requests": [found, worker_request("requested")] })),
+        )
+        .mount(&worker)
+        .await;
+    let (space, _) = space(admin_account(&worker).await, &ServerSettings::default());
+    let requests = space.requests(RequestFilter::Open).await.unwrap();
+    assert_eq!(
+        requests[0].candidate_title.as_deref(),
+        Some("Dune.Part.Two.2024.MULTi.2160p")
+    );
+    assert_eq!(
+        requests[0].candidate_reason.as_deref(),
+        Some("MULTi en 4K.")
+    );
+    assert_eq!(requests[0].candidate_found_at, Some(50));
+    assert_eq!(requests[1].candidate_title, None);
 }

@@ -13,6 +13,11 @@ export type ErrorCode =
   | "not_found"
   | "conflict"
   | "provider_unavailable"
+  | "assistant_not_configured"
+  | "assistant_auth_failed"
+  | "assistant_unavailable"
+  | "plex_unreachable"
+  | "plex_auth_failed"
   | "internal";
 
 const STATUS: Record<ErrorCode, number> = {
@@ -26,6 +31,11 @@ const STATUS: Record<ErrorCode, number> = {
   not_found: 404,
   conflict: 409,
   provider_unavailable: 503,
+  assistant_not_configured: 409,
+  assistant_auth_failed: 502,
+  assistant_unavailable: 503,
+  plex_unreachable: 502,
+  plex_auth_failed: 502,
   internal: 500,
 };
 

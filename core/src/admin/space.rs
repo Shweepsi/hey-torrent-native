@@ -8,12 +8,15 @@ use tokio::sync::Mutex;
 
 use super::AdminError;
 use super::qbittorrent::{Download, NewTorrent, Qbit, valid_category};
+use super::search::Release;
 use super::search::{
     self, ReleaseLink, SearchObserver, SearchOutcome, SearchQuery, SourceFailure, year_of_unix,
 };
-use super::settings::{QbitSettings, ServerSettings, TorznabSource};
+use super::settings::{PlexSettings, QbitSettings, ServerSettings, TorznabSource};
 use super::torznab;
-use super::worker::{self, AdminRequest, AllowedEmail, Member, RequestFilter};
+use super::worker::{
+    self, AdminRequest, AllowedEmail, AutomationStatus, Member, Recommendation, RequestFilter,
+};
 use crate::account::{Account, SessionStore};
 use crate::cache::unix_now;
 
@@ -176,6 +179,35 @@ impl AdminSpace {
         .await;
         *self.links.lock().await = found.links;
         Ok(found.outcome)
+    }
+
+    /// Avis de Claude sur une recherche : la release la plus adaptée aux
+    /// règles de l'administrateur parmi `releases` (les 40 premières), et
+    /// pourquoi. Un seul appel ; à faire une fois la recherche finie.
+    pub async fn recommend(
+        &self,
+        query: SearchQuery,
+        releases: Vec<Release>,
+    ) -> Result<Recommendation, AdminError> {
+        if releases.is_empty() {
+            return Ok(Recommendation {
+                release_id: None,
+                reason: String::new(),
+            });
+        }
+        worker::recommend(&self.account, &query, &releases).await
+    }
+
+    /// Où en sont la recherche automatique et la lecture de Plex, vues du Worker.
+    pub async fn automation_status(&self) -> Result<AutomationStatus, AdminError> {
+        worker::automation_status(&self.account).await
+    }
+
+    /// Teste une connexion Plex depuis le Worker (c'est lui qui la lira) ;
+    /// rend le nombre de bibliothèques films et séries.
+    pub async fn test_plex(&self, settings: PlexSettings) -> Result<u32, AdminError> {
+        settings.validate()?;
+        worker::test_plex(&self.account, &settings).await
     }
 
     /// Catégories qui existent déjà dans qBittorrent, pour choisir celle de

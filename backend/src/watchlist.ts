@@ -11,6 +11,7 @@ import type { FetchLike } from "./apple";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
 import { authenticate } from "./sessions";
+import { RESET_SEARCH } from "./autosearch";
 import { airedEpisodes, missingSeasons, type AiredEpisodes } from "./seasons";
 import { cachedTmdb } from "./tmdb";
 
@@ -168,11 +169,11 @@ async function put(
   // l'entrée la désigne, même si quelqu'un retire le titre au même moment.
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO requests (id, media_type, tmdb_id, title, poster_path, year, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'requested', ?, ?)
+      `INSERT INTO requests (id, media_type, tmdb_id, title, poster_path, year, status, created_at, updated_at, waiting_since)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'requested', ?7, ?7, ?7)
        ON CONFLICT (media_type, tmdb_id) DO UPDATE SET
          title = excluded.title, poster_path = excluded.poster_path, year = excluded.year`,
-    ).bind(crypto.randomUUID(), mediaType, tmdbId, tmdb.title, tmdb.posterPath, tmdb.year, now, now),
+    ).bind(crypto.randomUUID(), mediaType, tmdbId, tmdb.title, tmdb.posterPath, tmdb.year, now),
     env.DB.prepare(
       `INSERT INTO watchlist_items (user_id, media_type, tmdb_id, request_id, seasons, added_at, updated_at, deleted_at)
        VALUES (?1, ?2, ?3, (SELECT id FROM requests WHERE media_type = ?2 AND tmdb_id = ?3), ?4, ?5, ?5, NULL)
@@ -212,8 +213,9 @@ async function reopenIfMissing(
   if (request?.status !== "available") return;
   if ((await missingSeasons(env, tmdbId, seasons, aired)).length === 0) return;
   await env.DB.prepare(
-    `UPDATE requests SET status = 'requested', release_title = NULL, torrent_hash = NULL, updated_at = ?
-     WHERE media_type = 'tv' AND tmdb_id = ? AND status = 'available'`,
+    `UPDATE requests SET status = 'requested', release_title = NULL, torrent_hash = NULL, updated_at = ?1,
+       ${RESET_SEARCH}
+     WHERE media_type = 'tv' AND tmdb_id = ?2 AND status = 'available'`,
   )
     .bind(now, tmdbId)
     .run();

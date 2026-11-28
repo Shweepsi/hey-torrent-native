@@ -65,6 +65,7 @@ class HeyMessagingService : FirebaseMessagingService() {
             "push_access_granted" -> R.string.push_access_granted
             "push_access_request" -> R.string.push_access_request
             "push_access_request_named" -> R.string.push_access_request_named
+            "push_requests_stale" -> R.string.push_requests_stale
             else -> return null
         }
         return getString(res, *args)

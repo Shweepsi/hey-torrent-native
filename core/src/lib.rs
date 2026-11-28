@@ -25,8 +25,9 @@ pub use account::{
 };
 #[cfg(feature = "admin")]
 pub use admin::{
-    AdminError, AdminRequest, AdminSpace, AllowedEmail, AudioLanguage, Download, DownloadState,
-    Member, QbitAuth, QbitSettings, Release, ReleaseInfo, ReleaseSource, RequestFilter,
+    AdminError, AdminRequest, AdminSpace, AllowedEmail, AssistantStatus, AudioLanguage,
+    AutoSourceReport, AutomationStatus, Download, DownloadState, Member, PlexSettings, PlexStatus,
+    QbitAuth, QbitSettings, Recommendation, Release, ReleaseInfo, ReleaseSource, RequestFilter,
     RequestFollower, Resolution, SearchObserver, SearchOutcome, SearchQuery, ServerSettings,
     SourceFailure, SourceReport, TorznabSource, VideoCodec,
 };

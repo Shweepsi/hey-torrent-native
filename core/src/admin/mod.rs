@@ -24,9 +24,12 @@ pub use release::{AudioLanguage, ReleaseInfo, ReleaseSource, Resolution, VideoCo
 pub use search::{
     Release, SearchObserver, SearchOutcome, SearchQuery, SourceFailure, SourceReport,
 };
-pub use settings::{QbitAuth, QbitSettings, ServerSettings, TorznabSource};
+pub use settings::{PlexSettings, QbitAuth, QbitSettings, ServerSettings, TorznabSource};
 pub use space::AdminSpace;
-pub use worker::{AdminRequest, AllowedEmail, Member, RequestFilter, RequestFollower};
+pub use worker::{
+    AdminRequest, AllowedEmail, AssistantStatus, AutoSourceReport, AutomationStatus, Member,
+    PlexStatus, Recommendation, RequestFilter, RequestFollower,
+};
 
 /// Erreur d'une opération d'administration. L'app traduit chaque cas en
 /// français ; le texte ci-dessous ne sert qu'aux journaux et ne contient
@@ -84,6 +87,21 @@ pub enum AdminError {
     /// enregistré l'état « en cours » : réessayer l'enregistrement.
     #[error("status not saved")]
     StatusNotSaved,
+    /// Pas de clé d'API Anthropic dans les réglages.
+    #[error("assistant not configured")]
+    AssistantNotConfigured,
+    /// L'API Anthropic refuse la clé.
+    #[error("assistant authentication failed")]
+    AssistantAuthFailed,
+    /// Claude n'a pas pu répondre (limite, panne, réponse illisible).
+    #[error("assistant unavailable")]
+    AssistantUnavailable,
+    /// Le Worker ne joint pas Plex (adresse, réseau, certificat).
+    #[error("plex unreachable")]
+    PlexUnreachable,
+    /// Plex refuse le jeton.
+    #[error("plex authentication failed")]
+    PlexAuthFailed,
     /// Réponse imprévue.
     #[error("unexpected response")]
     Unexpected,
