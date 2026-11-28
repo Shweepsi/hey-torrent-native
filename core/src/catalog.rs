@@ -13,10 +13,12 @@ use tokio::sync::OnceCell;
 use crate::account::Account;
 use crate::api::ApiFailure;
 use crate::cache::{Cache, unix_now};
-use crate::tmdb;
+use crate::tmdb::{self, Origin};
 
 /// Dernière page acceptée par le Worker (et par TMDB).
 const MAX_PAGE: u32 = 500;
+/// Pages vides (tri par langue d'origine) sautées d'affilée, au plus.
+const MAX_SKIPPED_PAGES: u32 = 3;
 /// Longueur maximale d'une recherche acceptée par le Worker, en caractères.
 const MAX_QUERY_CHARS: usize = 100;
 /// Plus grand identifiant accepté par le Worker (10 chiffres).
@@ -277,7 +279,8 @@ impl Catalog {
     /// Une page d'une liste du catalogue.
     pub async fn shelf(&self, shelf: Shelf, page: u32) -> Result<TitlePage, CatalogError> {
         let (path, context) = shelf.route();
-        self.titles(path, context, &[], page, true).await
+        self.titles(path, context, &[], page, true, Origin::European)
+            .await
     }
 
     /// Genres de films ou de séries, en français.
@@ -319,6 +322,7 @@ impl Catalog {
             &params,
             page,
             true,
+            Origin::European,
         )
         .await
     }
@@ -331,8 +335,15 @@ impl Catalog {
         if query.is_empty() {
             return Ok(empty_page(page.max(1), 1));
         }
-        self.titles("search/multi", None, &[("query", query)], page, false)
-            .await
+        self.titles(
+            "search/multi",
+            None,
+            &[("query", query)],
+            page,
+            false,
+            Origin::Any,
+        )
+        .await
     }
 
     /// Fiche complète : casting, vidéos, plateformes en France, similaires.
@@ -387,6 +398,11 @@ impl Catalog {
 
     /// Page de titres : `page` est ramenée à 1 au moins ; au-delà de la
     /// dernière page du Worker, page vide sans appel réseau.
+    ///
+    /// Une page que le tri par langue d'origine vide entièrement est sautée
+    /// (jusqu'à [`MAX_SKIPPED_PAGES`] fois) : la page rendue porte alors son
+    /// vrai numéro, et les interfaces enchaînent depuis celui-ci. Sans cela,
+    /// le défilement infini s'arrêterait sur une page vide.
     async fn titles(
         &self,
         path: &str,
@@ -394,21 +410,30 @@ impl Catalog {
         params: &[(&str, &str)],
         page: u32,
         cacheable: bool,
+        origin: Origin,
     ) -> Result<TitlePage, CatalogError> {
-        let page = page.max(1);
-        if page > MAX_PAGE {
-            return Ok(empty_page(page, MAX_PAGE));
+        let mut page = page.max(1);
+        let mut skipped = 0;
+        loop {
+            if page > MAX_PAGE {
+                return Ok(empty_page(page, MAX_PAGE));
+            }
+            let page_text = page.to_string();
+            let mut query = vec![("page", page_text.as_str())];
+            query.extend_from_slice(params);
+            let (mut titles, stale) = self
+                .fetch(target(path, &query), cacheable, |body| {
+                    tmdb::decode_page(body, context, page, origin)
+                })
+                .await?;
+            titles.stale = stale;
+            let last = titles.page >= titles.total_pages;
+            if !titles.items.is_empty() || last || skipped >= MAX_SKIPPED_PAGES {
+                return Ok(titles);
+            }
+            skipped += 1;
+            page = titles.page.saturating_add(1);
         }
-        let page_text = page.to_string();
-        let mut query = vec![("page", page_text.as_str())];
-        query.extend_from_slice(params);
-        let (mut titles, stale) = self
-            .fetch(target(path, &query), cacheable, |body| {
-                tmdb::decode_page(body, context, page)
-            })
-            .await?;
-        titles.stale = stale;
-        Ok(titles)
     }
 
     /// Lit `target` et le décode. Rend aussi `true` si la valeur vient du cache

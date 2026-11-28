@@ -53,6 +53,24 @@ struct TitlePagerTests {
         #expect(!pager.hasMore)
     }
 
+    @Test func pagingResumesAfterThePageTheCoreReallyReturned() async {
+        let pager = TitlePager()
+        let asked = Recorder()
+        await pager.begin { page in
+            await asked.add(page)
+            if page == 1 { return TitleList.sample([1, 2], totalPages: 9) }
+            // Le cœur a sauté les pages 2 et 3, vidées par le tri par langue.
+            var list = TitleList.sample([3], totalPages: 9)
+            if page == 2 { list.page = 4 }
+            return list
+        }
+        pager.loadMoreIfNeeded(after: pager.items[1])
+        await pager.nextPage?.value
+        pager.loadMoreIfNeeded(after: pager.items[2])
+        await pager.nextPage?.value
+        #expect(await asked.pages == [1, 2, 5])
+    }
+
     @Test func aTitleRepeatedOnTheNextPageAppearsOnce() async {
         let pager = TitlePager()
         await pager.begin { page in
@@ -188,4 +206,10 @@ actor Counter {
         value += 1
         return value
     }
+}
+
+/// Pages demandées, dans l'ordre.
+private actor Recorder {
+    private(set) var pages: [Int] = []
+    func add(_ page: Int) { pages.append(page) }
 }

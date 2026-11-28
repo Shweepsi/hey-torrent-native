@@ -50,6 +50,9 @@ struct TitleList: Equatable, Sendable {
     let items: [Title]
     let totalPages: Int
     let stale: Bool
+    /// Page vraiment rendue : le cœur saute les pages que le tri par langue
+    /// vide. `nil` : celle demandée.
+    var page: Int? = nil
 }
 
 struct TitleGenre: Identifiable, Hashable, Sendable {

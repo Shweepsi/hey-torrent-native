@@ -23,6 +23,51 @@ const MAX_CAST: usize = 20;
 /// Région des plateformes, imposée par le Worker (`watch_region`).
 const PROVIDER_REGION: &str = "FR";
 
+/// Langues d'origine (ISO 639-1) gardées dans Découvrir : les langues
+/// d'Europe, anglais compris. Choix du propriétaire : un titre d'une autre
+/// langue (Asie notamment) n'a presque jamais de version française sur ses
+/// sources. TMDB n'a pas de popularité par pays : la langue d'origine est le
+/// seul critère fiable.
+const EUROPEAN_LANGUAGES: &[&str] = &[
+    "bg", "bs", "ca", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fr", "ga", "gl",
+    "hr", "hu", "is", "it", "lb", "lt", "lv", "mk", "mt", "nb", "nl", "nn", "no", "pl", "pt", "ro",
+    "ru", "sk", "sl", "sq", "sr", "sv", "uk",
+];
+/// Exception voulue par le propriétaire : l'animation japonaise (animés),
+/// presque toujours disponible en français.
+const JAPANESE: &str = "ja";
+/// Genre Animation, identique pour les films et les séries TMDB.
+const ANIMATION_GENRE: u32 = 16;
+
+/// Titres gardés dans une liste.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Origin {
+    /// Tous (recherche).
+    Any,
+    /// Langue d'origine européenne, ou animation japonaise (Découvrir,
+    /// genres, similaires). Un titre sans langue d'origine lisible est
+    /// gardé : le cœur reste tolérant.
+    European,
+}
+
+impl Origin {
+    fn keeps(self, language: Option<&str>, genre_ids: Option<&[u32]>) -> bool {
+        let code = match (
+            self,
+            language.map(str::trim).filter(|code| !code.is_empty()),
+        ) {
+            (Origin::Any, _) | (Origin::European, None) => return true,
+            (Origin::European, Some(code)) => code,
+        };
+        let european = EUROPEAN_LANGUAGES
+            .iter()
+            .any(|known| known.eq_ignore_ascii_case(code));
+        let anime = code.eq_ignore_ascii_case(JAPANESE)
+            && genre_ids.is_some_and(|ids| ids.contains(&ANIMATION_GENRE));
+        european || anime
+    }
+}
+
 /// Tailles d'affiche et de fond selon l'écran.
 #[derive(Clone, Copy)]
 struct Sizes {
@@ -128,6 +173,7 @@ struct WireTitle {
     vote_average: Option<f64>,
     vote_count: Option<u32>,
     genre_ids: Option<Vec<u32>>,
+    original_language: Option<String>,
 }
 
 impl WireTitle {
@@ -172,10 +218,16 @@ impl WireTitle {
     }
 }
 
-/// Titres lisibles d'un tableau `results`.
-fn titles(items: &[Value], context: Option<MediaType>, sizes: Sizes) -> Vec<TitleSummary> {
+/// Titres lisibles d'un tableau `results`, ceux que `origin` garde.
+fn titles(
+    items: &[Value],
+    context: Option<MediaType>,
+    sizes: Sizes,
+    origin: Origin,
+) -> Vec<TitleSummary> {
     lenient::<WireTitle>(items)
         .into_iter()
+        .filter(|wire| origin.keeps(wire.original_language.as_deref(), wire.genre_ids.as_deref()))
         .filter_map(|wire| wire.into_summary(context, sizes))
         .collect()
 }
@@ -186,6 +238,7 @@ pub(crate) fn decode_page(
     body: &[u8],
     context: Option<MediaType>,
     requested: u32,
+    origin: Origin,
 ) -> Option<TitlePage> {
     #[derive(Deserialize)]
     struct Envelope {
@@ -196,7 +249,7 @@ pub(crate) fn decode_page(
     let envelope: Envelope = serde_json::from_slice(body).ok()?;
     let page = envelope.page.filter(|p| *p > 0).unwrap_or(requested);
     Some(TitlePage {
-        items: titles(&envelope.results, context, LIST),
+        items: titles(&envelope.results, context, LIST, origin),
         page,
         total_pages: envelope.total_pages.unwrap_or(page),
         stale: false,
@@ -425,7 +478,12 @@ pub(crate) fn decode_detail(body: &[u8], media_type: MediaType) -> Option<TitleD
             rent: providers_in(&root, "rent"),
             buy: providers_in(&root, "buy"),
         },
-        similar: titles(array(&root, "/similar/results"), Some(media_type), LIST),
+        similar: titles(
+            array(&root, "/similar/results"),
+            Some(media_type),
+            LIST,
+            Origin::European,
+        ),
         stale: false,
     })
 }
@@ -535,7 +593,7 @@ mod tests {
             },
             { "id": 12, "title": "Autre film", "vote_average": 6 }
         ]));
-        let page = decode_page(&body, Some(MediaType::Movie), 1).unwrap();
+        let page = decode_page(&body, Some(MediaType::Movie), 1, Origin::Any).unwrap();
         assert_eq!((page.page, page.total_pages, page.stale), (3, 9, false));
         let first = page.items.first().unwrap();
         assert_eq!(first.id, 11);
@@ -567,7 +625,7 @@ mod tests {
         let body = page_of(json!([
             { "id": 5, "name": "Une série", "first_air_date": "2024-09-01", "title": "ignoré" }
         ]));
-        let page = decode_page(&body, Some(MediaType::Tv), 1).unwrap();
+        let page = decode_page(&body, Some(MediaType::Tv), 1, Origin::Any).unwrap();
         let item = page.items.first().unwrap();
         assert_eq!(item.media_type, MediaType::Tv);
         assert_eq!(item.title, "Une série");
@@ -579,7 +637,7 @@ mod tests {
         let body = page_of(json!([
             { "id": 5, "name": "Seulement name", "release_date": "2020-01-01" }
         ]));
-        let page = decode_page(&body, Some(MediaType::Movie), 1).unwrap();
+        let page = decode_page(&body, Some(MediaType::Movie), 1, Origin::Any).unwrap();
         let item = page.items.first().unwrap();
         assert_eq!(item.title, "Seulement name");
         assert_eq!(item.release_date.as_deref(), Some("2020-01-01"));
@@ -601,7 +659,7 @@ mod tests {
             null,
             { "id": 8, "title": "Autre bon" }
         ]));
-        let page = decode_page(&body, Some(MediaType::Movie), 1).unwrap();
+        let page = decode_page(&body, Some(MediaType::Movie), 1, Origin::Any).unwrap();
         let ids: Vec<u64> = page.items.iter().map(|item| item.id).collect();
         assert_eq!(ids, vec![1, 8]);
     }
@@ -615,7 +673,7 @@ mod tests {
             { "id": 4, "title": "Sans type" },
             { "id": 5, "title": "Type inconnu", "media_type": "collection" }
         ]));
-        let page = decode_page(&body, None, 1).unwrap();
+        let page = decode_page(&body, None, 1, Origin::Any).unwrap();
         let kinds: Vec<(u64, MediaType)> = page
             .items
             .iter()
@@ -627,7 +685,7 @@ mod tests {
     #[test]
     fn page_numbers_default_to_the_requested_page() {
         let body = bytes(&json!({ "results": [] }));
-        let page = decode_page(&body, Some(MediaType::Movie), 4).unwrap();
+        let page = decode_page(&body, Some(MediaType::Movie), 4, Origin::Any).unwrap();
         assert_eq!((page.page, page.total_pages), (4, 4));
         assert!(page.items.is_empty());
     }
@@ -644,7 +702,7 @@ mod tests {
             b"{\"page\": \"1\", \"results\": []}",
         ] {
             assert!(
-                decode_page(body, None, 1).is_none(),
+                decode_page(body, None, 1, Origin::Any).is_none(),
                 "corps accepté : {}",
                 String::from_utf8_lossy(body)
             );

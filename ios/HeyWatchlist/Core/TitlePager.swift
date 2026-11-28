@@ -108,7 +108,7 @@ final class TitlePager {
             guard token == generation else { return }
             // La première page remplace les titres que `reset` avait gardés.
             clearItems()
-            append(list, page: 1)
+            append(list, page: list.page ?? 1)
             phase = .loaded
         } catch {
             guard token == generation else { return }
@@ -121,7 +121,7 @@ final class TitlePager {
         do {
             let list = try await fetch(number)
             guard token == generation else { return }
-            append(list, page: number)
+            append(list, page: list.page ?? number)
             isLoadingMore = false
         } catch {
             guard token == generation else { return }

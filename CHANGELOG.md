@@ -5,6 +5,17 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.14.0] - 2026-11-28
+
+### Modifié
+
+- Découvrir (rangées, grandes images, genres) et les titres similaires d'une
+  fiche ne montrent plus que les titres en langue d'origine européenne
+  (anglais compris) et l'animation japonaise : ce qui vient d'Asie hors
+  animés, presque jamais disponible en français, n'y est plus proposé. La
+  recherche reste complète. Une page entièrement écartée est sautée, le
+  défilement continue.
+
 ## [0.13.1] - 2026-11-28
 
 Corrections de l'audit du cœur du 2026-11-28 (points 1 à 9).
