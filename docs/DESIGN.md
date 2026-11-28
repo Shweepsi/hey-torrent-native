@@ -14,8 +14,8 @@ voit pas.
 
 - Coins très arrondis, fines bordures claires, ombres légères.
 - Typographie nette ; grands titres.
-- **Clair sur Android** (choix du propriétaire, v0.11.0) ; les jetons sombres
-  restent définis et servent encore à l'iPhone.
+- **Clair ou sombre selon le réglage du téléphone** (choix du propriétaire,
+  v0.11.0) : les deux thèmes sont soignés au même niveau, sur tous les écrans.
 - Les couleurs ne portent jamais seules une information (état d'une demande :
   texte et icône en plus de la teinte).
 
@@ -36,10 +36,9 @@ Compléments aujourd'hui dans le code Android (`HeyTheme.kt`) : texte
 (cartes) et 20 dp (boutons).
 
 **Thème clair** : décliné côté Android (fond `#f3f5fa`, `primary` `#1a66cc`,
-verre blanc à 55 %, filet foncé à 12 %). Depuis la v0.11.0, l'app Android est
-**claire partout**, fiche d'un titre comprise, quel que soit le réglage du
-téléphone (choix du propriétaire) ; barres système transparentes (bord à
-bord). Côté iPhone, l'app est pour l'instant forcée en sombre (voir
+verre blanc à 55 %, filet foncé à 12 %). Depuis la v0.11.0, l'app Android suit le
+réglage du téléphone sur tous les écrans, fiche d'un titre comprise ; barres
+système transparentes (bord à bord). Côté iPhone, l'app est pour l'instant forcée en sombre (voir
 `docs/TODO.md`).
 
 **Hiérarchie des boutons** : une seule action pleine (`primary`) par écran ou

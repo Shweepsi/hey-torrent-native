@@ -169,13 +169,14 @@ object HeyTheme {
 }
 
 /**
- * Barres système transparentes à icônes foncées : l'app est claire et son
- * décor passe dessous (bord à bord). Un style « clair » explicite (et non
- * automatique) coupe aussi le voile qu'Android pose sous la barre à trois
- * boutons.
+ * Barres système transparentes (bord à bord), icônes accordées au thème
+ * [dark]. Un style explicite, et non automatique, coupe aussi le voile
+ * qu'Android pose sous la barre à trois boutons.
  */
-val TransparentBars: SystemBarStyle =
-    SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+fun transparentBars(dark: Boolean): SystemBarStyle {
+    val clear = android.graphics.Color.TRANSPARENT
+    return if (dark) SystemBarStyle.dark(clear) else SystemBarStyle.light(clear, clear)
+}
 
 /** Thème d'HeyWatchlist, sombre ou clair selon le réglage du système. */
 @Composable

@@ -60,12 +60,22 @@ class PublicScreenshots {
     )
 
     @Test
-    fun accueil() = Screenshots.capture(rule, "01-accueil") { WelcomeContent(AccountUiState.SignedOut(), onGoogle = {}) }
+    fun accueil() = Screenshots.capture(rule, "01-accueil") {
+        WelcomeContent(AccountUiState.SignedOut(), onGoogle = {}, posters = posters)
+    }
 
     @Test
     fun accueilSombre() = Screenshots.capture(rule, "02-accueil-sombre", dark = true) {
+        WelcomeContent(AccountUiState.SignedOut(), onGoogle = {}, posters = posters)
+    }
+
+    /** Sans affiches (pas de réseau) : le mur dessiné. */
+    @Test
+    fun accueilSansReseau() = Screenshots.capture(rule, "02b-accueil-sans-reseau") {
         WelcomeContent(AccountUiState.SignedOut(), onGoogle = {})
     }
+
+    private val posters = SampleData.titles(16).mapNotNull { it.posterUrl }
 
     @Test
     fun attente() = Screenshots.capture(rule, "03-attente") {

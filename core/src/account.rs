@@ -15,7 +15,8 @@ use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
 use crate::api::{
-    self, ApiFailure, BaseUrl, ConfigResponse, MeResponse, SignInResponse, TokenPair, WireUser,
+    self, ApiFailure, BaseUrl, ConfigResponse, MeResponse, PostersResponse, SignInResponse,
+    TokenPair, WireUser,
 };
 
 /// Erreur d'une opération de compte. L'interface traduit chaque cas en
@@ -184,6 +185,8 @@ struct Session {
 
 /// Marge avant expiration à partir de laquelle le jeton d'accès est renouvelé.
 const RENEW_MARGIN: Duration = Duration::from_secs(60);
+/// Taille des affiches du décor de connexion.
+const WELCOME_POSTER_SIZE: &str = "w342";
 
 /// Compte de l'app. Un seul par processus suffit ; ses méthodes peuvent être
 /// appelées en parallèle (le rafraîchissement est sérialisé).
@@ -244,6 +247,23 @@ impl Account {
             web: config.google_web_client_id.filter(|id| !id.is_empty()),
             ios: config.google_ios_client_id.filter(|id| !id.is_empty()),
         })
+    }
+
+    /// Affiches en tendance (adresses d'images TMDB), pour le décor de l'écran
+    /// de connexion. Sans compte ; une entrée illisible est ignorée.
+    pub async fn welcome_posters(&self) -> Result<Vec<String>, AccountError> {
+        let response = self
+            .http
+            .get(self.base.join("/v1/posters"))
+            .send()
+            .await
+            .map_err(api::transport_error)?;
+        let body: PostersResponse = api::read(response).await?;
+        Ok(body
+            .posters
+            .iter()
+            .filter_map(|path| crate::tmdb::image_url(path.as_str(), WELCOME_POSTER_SIZE))
+            .collect())
     }
 
     /// Connexion avec le jeton d'Apple ou de Google. Une personne inconnue du

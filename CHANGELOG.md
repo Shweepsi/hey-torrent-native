@@ -11,8 +11,8 @@ Deuxième passe sur le design Android, d'après les captures de l'APK admin.
 
 ### Modifié
 
-- Android : l'app est claire partout, fiche d'un titre comprise (elle était
-  forcée en sombre), quel que soit le réglage du téléphone.
+- Android : clair ou sombre selon le réglage du téléphone, sur tous les écrans,
+  fiche d'un titre comprise (elle était toujours sombre).
 - Android : affichage bord à bord. Les barres système sont transparentes, sans
   le voile gris ou blanc de la barre à trois boutons.
 - Serveurs : une ligne par service avec son état (testé seul à l'ouverture),
@@ -29,7 +29,9 @@ Deuxième passe sur le design Android, d'après les captures de l'APK admin.
 - Confirmations admin : feuille en verre qui monte du bas. L'envoi d'une
   release montre la qualité en pastilles, la taille et les sources, puis le nom
   brut, qui se coupe aux points et plus au milieu des mots.
-- Écran de connexion : voile plus sombre sous le titre.
+- Écran de connexion : vraies affiches en tendance (route publique
+  `GET /v1/posters` du Worker), voile plus marqué sous le titre. Sans réseau,
+  le mur dessiné reste.
 
 ## [0.10.0] - 2026-11-28
 

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -13,6 +15,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.auth.requestGoogleCredential
 import app.heywatchlist.ui.account.AccountUiState
@@ -31,8 +34,11 @@ import app.heywatchlist.ui.theme.HeyTheme
 @Composable
 fun WelcomeScreen(state: AccountUiState.SignedOut, viewModel: AccountViewModel) {
     val context = LocalContext.current
+    val posters by viewModel.welcomePosters.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.loadWelcomePosters() }
     WelcomeContent(
         state = state,
+        posters = posters,
         onGoogle = {
             viewModel.signInWithGoogle { clientId, nonce -> requestGoogleCredential(context, clientId, nonce) }
         },
@@ -43,8 +49,9 @@ fun WelcomeScreen(state: AccountUiState.SignedOut, viewModel: AccountViewModel) 
 internal fun WelcomeContent(
     state: AccountUiState.SignedOut,
     onGoogle: () -> Unit,
+    posters: List<String> = emptyList(),
 ) {
-    WelcomeLayout {
+    WelcomeLayout(posters = posters) {
         LogoMark()
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             HeyText(
