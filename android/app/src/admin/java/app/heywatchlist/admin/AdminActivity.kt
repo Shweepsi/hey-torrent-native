@@ -36,16 +36,17 @@ import app.heywatchlist.ui.components.GlassTabBar
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.theme.HeyTheme
+import app.heywatchlist.ui.theme.TransparentBars
 import uniffi.heywatchlist_core.AdminRequest
 
 /** Espace admin, ouvert depuis Réglages : une activité à part, absente de l'app publique. */
 class AdminActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        enableEdgeToEdge(statusBarStyle = TransparentBars, navigationBarStyle = TransparentBars)
         super.onCreate(savedInstanceState)
         val gateway = adminGateway(this)
         setContent {
-            HeyTheme {
+            HeyTheme(darkTheme = true) {
                 AdminRoot(gateway = gateway, onClose = ::finish)
             }
         }

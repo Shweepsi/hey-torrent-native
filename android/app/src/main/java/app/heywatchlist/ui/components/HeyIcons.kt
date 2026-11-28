@@ -75,6 +75,19 @@ object HeyIcons {
         }
     }
 
+    /** Cercle et point d'exclamation : un échec, une alerte. */
+    val Alert: ImageVector by lazy {
+        stroked("Alert") {
+            moveTo(21f, 12f)
+            arcTo(9f, 9f, 0f, true, true, 3f, 12f)
+            arcTo(9f, 9f, 0f, true, true, 21f, 12f)
+            moveTo(12f, 7.5f)
+            lineTo(12f, 13f)
+            moveTo(12f, 16.5f)
+            lineTo(12f, 16.6f)
+        }
+    }
+
     val Play: ImageVector by lazy {
         filled("Play") {
             moveTo(8f, 5f)

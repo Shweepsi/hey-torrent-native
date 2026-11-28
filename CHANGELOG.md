@@ -5,6 +5,27 @@ numérotation [sémantique](https://semver.org/lang/fr/). La version de l'app es
 `[workspace.package] version` du `Cargo.toml` racine. Les entrées les plus
 récentes sont en tête.
 
+## [0.11.0] - 2026-11-28
+
+Deuxième passe sur le design Android, d'après les captures de l'APK admin.
+
+### Modifié
+
+- Android : l'app est sombre partout, comme la fiche d'un titre, quel que soit
+  le réglage du téléphone.
+- Android : affichage bord à bord. Les barres système sont transparentes, sans
+  le voile gris ou blanc de la barre à trois boutons.
+- Boutons : « Retirer » et « Annuler » deviennent des liens discrets ; le bleu
+  plein reste à l'action principale. Le choix segmenté (Identifiant / Jeton,
+  À traiter / Toutes) est une pastille de verre, plus compacte.
+- Champs de saisie plus fins (texte courant au lieu de titre).
+- Résultats des tests de connexion et enregistrement : vert franc avec une
+  coche, rouge avec une icône d'alerte (au lieu d'un lilas pâle).
+- Confirmations admin : feuille en verre qui monte du bas. L'envoi d'une
+  release montre la qualité en pastilles, la taille et les sources, puis le nom
+  brut, qui se coupe aux points et plus au milieu des mots.
+- Écran de connexion : voile plus sombre sous le titre.
+
 ## [0.10.0] - 2026-11-28
 
 Corrections de la relecture du code du 2026-11-27.

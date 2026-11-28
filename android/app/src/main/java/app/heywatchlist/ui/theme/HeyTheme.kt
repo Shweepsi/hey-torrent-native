@@ -1,5 +1,6 @@
 package app.heywatchlist.ui.theme
 
+import androidx.activity.SystemBarStyle
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -166,6 +167,13 @@ object HeyTheme {
         @Composable @ReadOnlyComposable
         get() = LocalHeyShapes.current
 }
+
+/**
+ * Barres système transparentes à icônes claires : l'app est sombre et son décor
+ * passe dessous (bord à bord). « Sombre » coupe aussi le voile qu'Android pose
+ * sous la barre à trois boutons.
+ */
+val TransparentBars: SystemBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
 
 /** Thème d'HeyWatchlist, sombre ou clair selon le réglage du système. */
 @Composable

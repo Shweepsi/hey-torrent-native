@@ -20,9 +20,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeySegmented
+import app.heywatchlist.ui.components.HeyStatusLine
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.components.HeyTextField
+import app.heywatchlist.ui.components.StatusKind
 import app.heywatchlist.ui.theme.HeyTheme
 
 /**
@@ -66,7 +69,8 @@ fun ServersScreen(viewModel: ServersViewModel) {
                 HeyButton(
                     text = stringResource(R.string.admin_source_add),
                     onClick = viewModel::addSource,
-                    kind = HeyButtonKind.Secondary,
+                    kind = HeyButtonKind.Link,
+                    icon = HeyIcons.Plus,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -108,7 +112,7 @@ fun ServersScreen(viewModel: ServersViewModel) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     state.saveFailure?.let { FailureText(it) }
-                    if (state.saved) HeyText(text = stringResource(R.string.admin_servers_saved))
+                    if (state.saved) HeyStatusLine(text = stringResource(R.string.admin_servers_saved), kind = StatusKind.Success)
                     HeyButton(
                         text = stringResource(if (state.saving) R.string.admin_servers_saving else R.string.admin_servers_save),
                         onClick = viewModel::save,
@@ -202,7 +206,7 @@ private fun SourceCard(
             HeyButton(
                 text = stringResource(R.string.admin_remove),
                 onClick = onRemove,
-                kind = HeyButtonKind.Danger,
+                kind = HeyButtonKind.DangerLink,
                 modifier = cell,
             )
         }
@@ -268,15 +272,15 @@ private fun QbitCard(
 private fun TestResult(test: ConnectionTest?) {
     when (test) {
         null, ConnectionTest.Running -> Unit
-        is ConnectionTest.Passed -> HeyText(
+        is ConnectionTest.Passed -> HeyStatusLine(
             text = if (test.detail.isEmpty()) {
                 stringResource(R.string.admin_test_passed)
             } else {
                 stringResource(R.string.admin_test_passed_version, test.detail)
             },
-            color = HeyTheme.colors.accent,
+            kind = StatusKind.Success,
         )
-        is ConnectionTest.SourceFailed -> HeyText(text = stringResource(test.failure.labelRes()), color = HeyTheme.colors.error)
+        is ConnectionTest.SourceFailed -> HeyStatusLine(text = stringResource(test.failure.labelRes()), kind = StatusKind.Failure)
         is ConnectionTest.Failed -> FailureText(test.failure)
     }
 }

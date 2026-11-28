@@ -102,10 +102,12 @@ fun PosterWall(modifier: Modifier = Modifier) {
                     radius = longest * 0.55f,
                 ),
             )
+            // Le voile s'épaissit avant le titre (vers 40 % de la hauteur) : le texte ne
+            // se pose jamais directement sur les affiches.
             val fade = Brush.verticalGradient(
-                0f to colors.background.copy(alpha = 0.15f),
-                0.35f to colors.background.copy(alpha = 0.45f),
-                0.62f to colors.background.copy(alpha = 0.9f),
+                0f to colors.background.copy(alpha = 0.2f),
+                0.3f to colors.background.copy(alpha = 0.55f),
+                0.48f to colors.background.copy(alpha = 0.88f),
                 1f to colors.background,
             )
             onDrawBehind {
