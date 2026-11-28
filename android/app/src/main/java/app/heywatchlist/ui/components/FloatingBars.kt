@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
@@ -38,6 +36,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.heywatchlist.ui.theme.HeyTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -152,7 +151,7 @@ fun GlassBar(
 /**
  * Barre du haut flottante d'un onglet. Au repos, seuls [navigation] et
  * [actions] s'y voient : le grand titre de l'écran est dans le contenu. Dès que
- * le contenu passe dessous, le verre apparaît avec [title] en petit.
+ * le contenu passe dessous, le verre apparaît avec [title] en petit, centré.
  */
 @Composable
 fun FloatingTopBar(
@@ -164,25 +163,26 @@ fun FloatingTopBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     GlassBar(revealed = revealed, modifier = modifier, hazeState = hazeState) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(TopBarHeight).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (navigation != null) navigation() else Spacer(Modifier.width(12.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(TopBarHeight).padding(horizontal = 8.dp)) {
             // Le grand titre du contenu est déjà lu par TalkBack : celui-ci est décoratif.
             HeyText(
                 text = title,
-                style = HeyTheme.typography.label,
+                style = HeyTheme.typography.title.copy(fontSize = 17.sp, lineHeight = 22.sp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
+                    .align(Alignment.Center)
+                    .padding(horizontal = 56.dp)
                     .graphicsLayer { alpha = revealed() }
                     .clearAndSetSemantics { },
             )
-            actions()
+            Box(modifier = Modifier.align(Alignment.CenterStart)) { navigation?.invoke() }
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                content = actions,
+            )
         }
     }
 }

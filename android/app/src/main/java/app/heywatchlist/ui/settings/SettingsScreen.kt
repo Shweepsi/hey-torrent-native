@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -45,6 +44,7 @@ import app.heywatchlist.ui.components.HeyButtonKind
 import app.heywatchlist.ui.components.HeyIcon
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LargeTitle
 import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.components.barsPadding
 import app.heywatchlist.ui.components.scrolledFraction
@@ -106,14 +106,10 @@ private fun SettingsPage(
             .fillMaxSize()
             .underBars(LocalHazeState.current)
             .verticalScroll(scroll)
-            .padding(barsPadding(horizontal = 24.dp, top = 8.dp, bottom = 24.dp)),
+            .padding(barsPadding(horizontal = 16.dp, top = 8.dp, bottom = 24.dp)),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        HeyText(
-            text = stringResource(R.string.tab_settings),
-            style = HeyTheme.typography.display,
-            modifier = Modifier.semantics { heading() },
-        )
+        LargeTitle(title = stringResource(R.string.tab_settings))
         GlassSurface(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.padding(20.dp),

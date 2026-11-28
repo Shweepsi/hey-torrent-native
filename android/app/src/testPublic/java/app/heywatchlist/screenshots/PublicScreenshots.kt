@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import app.heywatchlist.core.Access
 import app.heywatchlist.core.Profile
+import app.heywatchlist.core.WatchlistEntry
 import app.heywatchlist.ui.account.AccountUiState
 import app.heywatchlist.ui.discover.DetailContent
 import app.heywatchlist.ui.discover.DetailUiState
@@ -113,11 +114,20 @@ class PublicScreenshots {
     @Test
     fun ficheDefilee() = Screenshots.capture(rule, "06c-fiche-defilee", act = { scrollDown() }) { DetailScene() }
 
+    // Titre pas encore dans la watchlist : le bouton principal « Ajouter à ma watchlist ».
+    @Test
+    fun ficheAAjouter() = Screenshots.capture(rule, "06d-fiche-a-ajouter") { DetailScene(entries = emptyList()) }
+
+    @Test
+    fun ficheAAjouterSombre() = Screenshots.capture(rule, "06e-fiche-a-ajouter-sombre", dark = true) {
+        DetailScene(entries = emptyList())
+    }
+
     @Composable
-    private fun DetailScene() {
+    private fun DetailScene(entries: List<WatchlistEntry> = SampleData.watchlist) {
         DetailContent(
             state = DetailUiState.Loaded(SampleData.seriesDetail),
-            watchlist = WatchlistUiState(entries = SampleData.watchlist, loaded = true),
+            watchlist = WatchlistUiState(entries = entries, loaded = true),
             onBack = {},
             onOpenTitle = {},
             onRetry = {},

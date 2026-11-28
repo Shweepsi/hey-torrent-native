@@ -71,6 +71,7 @@ import app.heywatchlist.core.Video
 import app.heywatchlist.ui.components.ErrorPanel
 import app.heywatchlist.ui.components.FloatingTopBar
 import app.heywatchlist.ui.components.HeyButton
+import app.heywatchlist.ui.components.HeyButtonKind
 import app.heywatchlist.ui.components.HeyIcon
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
@@ -474,6 +475,8 @@ private fun TrailerButton(video: Video, modifier: Modifier = Modifier) {
     HeyButton(
         text = stringResource(R.string.detail_trailer),
         icon = HeyIcons.Play,
+        // L'action principale de la fiche est l'ajout à la watchlist : la bande-annonce reste en retrait.
+        kind = HeyButtonKind.Tinted,
         modifier = modifier.fillMaxWidth(),
         onClick = {
             // YouTube s'ouvre dans l'app ou le navigateur du système.
