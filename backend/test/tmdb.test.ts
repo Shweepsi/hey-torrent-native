@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { PURGE_BATCH } from "../src/tmdb";
+import { MAX_POSTERS, PURGE_BATCH } from "../src/tmdb";
 import { NOW, bootstrapAdmin, call, fetchCalls, replyToFetch, setNow, signIn, type SessionBody } from "./fakes";
 
 // TMDB est simulé : `deps.fetch` répond avec ce que chaque test décide.
@@ -718,5 +718,47 @@ describe("cache D1", () => {
       replyToFetch(() => new Response("{}", { status: 429 }));
       expect(await errorOf(await relay("movie/popular", { ...env, DB: readFails }))).toBe("provider_unavailable");
     });
+  });
+});
+
+describe("affiches de l'écran de connexion (/v1/posters)", () => {
+  const trending = JSON.stringify({
+    page: 1,
+    results: [
+      { id: 1, media_type: "movie", poster_path: "/a1.jpg", title: "Un" },
+      { id: 2, media_type: "person", profile_path: "/p.jpg", name: "Personne" },
+      { id: 3, media_type: "tv", poster_path: "/b-2_c.png", name: "Deux" },
+      { id: 4, media_type: "movie", poster_path: null },
+      { id: 5, media_type: "movie", poster_path: "../x.jpg" },
+      "illisible",
+    ],
+  });
+
+  it("rend seulement les chemins des affiches, sans compte", async () => {
+    replyToFetch(() => new Response(trending, { status: 200 }));
+    const response = await call("GET", "/v1/posters");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ posters: ["/a1.jpg", "/b-2_c.png"] });
+    expect(upstream().path).toBe("/3/trending/all/week");
+  });
+
+  it("garde la réponse une heure : un seul appel à TMDB", async () => {
+    replyToFetch(() => new Response(trending, { status: 200 }));
+    await call("GET", "/v1/posters");
+    await call("GET", "/v1/posters");
+    expect(fetchCalls).toHaveLength(1);
+  });
+
+  it("plafonne le nombre d'affiches", async () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ id: i, media_type: "movie", poster_path: `/p${i}.jpg` }));
+    replyToFetch(() => new Response(JSON.stringify({ results: many }), { status: 200 }));
+    const body = (await (await call("GET", "/v1/posters")).json()) as { posters: string[] };
+    expect(body.posters).toHaveLength(MAX_POSTERS);
+  });
+
+  it("TMDB indisponible : provider_unavailable", async () => {
+    replyToFetch(() => new Response("oups", { status: 503 }));
+    const response = await call("GET", "/v1/posters");
+    expect(await errorOf(response)).toBe("provider_unavailable");
   });
 });

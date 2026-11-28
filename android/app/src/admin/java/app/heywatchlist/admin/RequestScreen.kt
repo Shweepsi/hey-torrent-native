@@ -2,7 +2,6 @@ package app.heywatchlist.admin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
@@ -100,9 +100,9 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
     state.confirming?.let { release ->
         AdminDialog(
             title = stringResource(R.string.admin_send_title),
-            body = release.title,
             onDismiss = viewModel::cancelChoice,
         ) {
+            ReleaseSummary(release)
             CategoryPicker(
                 choice = state.categories,
                 onSelect = viewModel::selectCategory,
@@ -117,7 +117,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
             HeyButton(
                 text = stringResource(R.string.admin_cancel),
                 onClick = viewModel::cancelChoice,
-                kind = HeyButtonKind.Secondary,
+                kind = HeyButtonKind.Link,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -164,7 +164,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
             HeyButton(
                 text = stringResource(R.string.admin_cancel),
                 onClick = viewModel::closeRefusal,
-                kind = HeyButtonKind.Secondary,
+                kind = HeyButtonKind.Link,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -388,22 +388,50 @@ private fun SearchStatus(reports: List<SourceReport>, pending: Int?, count: Int)
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReleaseRow(release: Release, enabled: Boolean, onClick: () -> Unit) {
-    AdminCard(modifier = Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)) {
-        HeyText(text = release.title, style = HeyTheme.typography.body, maxLines = 3)
-        val tags = release.info.tags()
-        if (tags.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                tags.forEach { HeyTag(text = stringResource(it)) }
-            }
-        }
-        HeyText(
-            text = releaseDetails(release),
-            style = HeyTheme.typography.caption,
-            color = HeyTheme.colors.onBackgroundMuted,
-        )
+    AdminCard(onClick = onClick.takeIf { enabled }) {
+        ReleaseSummary(release)
+    }
+}
+
+/**
+ * Une release, dans la liste comme dans la feuille d'envoi : la qualité en
+ * pastilles, les chiffres, puis le nom brut en petit (sans pastille, il passe
+ * en tête pour rester repérable).
+ */
+@Composable
+private fun ReleaseSummary(release: Release) {
+    val hasTags = release.info.tags().isNotEmpty()
+    ReleaseTags(release)
+    HeyText(text = releaseDetails(release), style = HeyTheme.typography.label)
+    HeyText(
+        text = softBreaks(release.title),
+        style = if (hasTags) HeyTheme.typography.caption else HeyTheme.typography.body,
+        color = HeyTheme.colors.onBackgroundMuted,
+        maxLines = 3,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReleaseTags(release: Release) {
+    val tags = release.info.tags()
+    if (tags.isEmpty()) return
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        tags.forEach { HeyTag(text = stringResource(it)) }
+    }
+}
+
+/**
+ * Nom brut d'une release, coupable en fin de ligne après chaque point, tiret
+ * ou soulignement (espace sans largeur) : sinon il se coupe au milieu d'un mot.
+ */
+internal fun softBreaks(name: String): String = buildString(name.length + name.length / 4) {
+    name.forEach { char ->
+        append(char)
+        if (char == '.' || char == '-' || char == '_') append('\u200B')
     }
 }
 

@@ -25,15 +25,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import app.heywatchlist.R
-import app.heywatchlist.ui.components.GlassSurface
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
+import app.heywatchlist.ui.components.HeySheet
 import app.heywatchlist.ui.components.HeySpinner
+import app.heywatchlist.ui.components.HeyStatusLine
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.StatusKind
 import app.heywatchlist.ui.components.glassEdge
 import app.heywatchlist.ui.components.pressScale
 import app.heywatchlist.ui.components.rememberPress
@@ -116,10 +117,10 @@ fun AdminHeader(title: String, onBack: (() -> Unit)? = null) {
     }
 }
 
-/** Message d'échec en rouge. */
+/** Message d'échec, en rouge avec son icône. */
 @Composable
 fun FailureText(failure: AdminFailure, modifier: Modifier = Modifier) {
-    HeyText(text = stringResource(failure.messageRes), color = HeyTheme.colors.error, modifier = modifier)
+    HeyStatusLine(text = stringResource(failure.messageRes), kind = StatusKind.Failure, modifier = modifier)
 }
 
 /** Échec d'une lecture, avec « Réessayer ». */
@@ -155,7 +156,7 @@ fun LoadingRow(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Fenêtre de confirmation : verre sans flou, rien derrière à flouter. */
+/** Confirmation ou petite saisie, dans une feuille qui monte du bas ([HeySheet]). */
 @Composable
 fun AdminDialog(
     title: String,
@@ -163,15 +164,7 @@ fun AdminDialog(
     body: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(modifier = Modifier.fillMaxWidth(), hazeState = null) {
-            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                HeyText(text = title, style = HeyTheme.typography.title)
-                body?.let { HeyText(text = it, color = HeyTheme.colors.onBackgroundMuted) }
-                content()
-            }
-        }
-    }
+    HeySheet(title = title, onDismiss = onDismiss, body = body, content = content)
 }
 
 /** Deux boutons côte à côte, de même largeur. */

@@ -38,6 +38,12 @@ class AccountViewModel(
     private val _uiState = MutableStateFlow<AccountUiState>(AccountUiState.Starting)
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
 
+    private val _welcomePosters = MutableStateFlow<List<String>>(emptyList())
+
+    /** Affiches du décor de l'accueil et de l'attente ; vide tant qu'elles ne sont pas lues. */
+    val welcomePosters: StateFlow<List<String>> = _welcomePosters.asStateFlow()
+    private var postersRequested = false
+
     init {
         viewModelScope.launch { start() }
         viewModelScope.launch { sessionExpired.collect { returnToWelcome() } }
@@ -131,6 +137,22 @@ class AccountViewModel(
     fun confirmDeletion() = runSignedIn {
         gateway.deleteAccount()
         _uiState.value = AccountUiState.SignedOut()
+    }
+
+    /**
+     * Lit une fois les affiches du décor. Un échec est sans conséquence : le mur
+     * dessiné reste, et la lecture sera retentée au prochain affichage.
+     */
+    fun loadWelcomePosters() {
+        if (postersRequested || _welcomePosters.value.isNotEmpty()) return
+        postersRequested = true
+        viewModelScope.launch {
+            try {
+                _welcomePosters.value = gateway.welcomePosters()
+            } catch (_: AccountFailureException) {
+                postersRequested = false
+            }
+        }
     }
 
     private suspend fun coreVersionOrEmpty(): String = try {

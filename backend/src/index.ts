@@ -25,7 +25,7 @@ import { runAutomation } from "./autosearch";
 import { DEVICES_PATH, registerDevice, unregisterDevice } from "./devices";
 import { LivePushSender, type PushSender } from "./push";
 import { authenticate, authenticateSession, openSession, refreshSession, revokeSession } from "./sessions";
-import { TMDB_PREFIX, relayTmdb } from "./tmdb";
+import { POSTERS_PATH, TMDB_PREFIX, relayTmdb, welcomePosters } from "./tmdb";
 import { HOOKS_PREFIX, WEBHOOK_SETTINGS_PATH, receiveHook, regenerateWebhook, webhookStatus } from "./webhooks";
 import { WATCHLIST_PATH, deleteOrphanRequests, watchlistHandler } from "./watchlist";
 
@@ -157,6 +157,7 @@ const ROUTES: Record<string, Partial<Record<string, Handler>>> = {
   [PRIVACY_PATH]: { GET: (_request, env) => privacyPolicy(env) },
   [ACCOUNT_DELETION_PATH]: { GET: (_request, env) => accountDeletion(env) },
   "/v1/config": { GET: (_request, env) => config(env) },
+  [POSTERS_PATH]: { GET: (_request, env, deps) => welcomePosters(env, deps.fetch, deps.now()) },
   "/v1/auth/sign-in": { POST: signIn },
   "/v1/auth/refresh": { POST: refresh },
   "/v1/auth/sign-out": { POST: signOut },

@@ -55,6 +55,11 @@ class UniffiAccountGateway(
         return call { current.googleClientIds().web }
     }
 
+    override suspend fun welcomePosters(): List<String> {
+        val current = account()
+        return call { current.welcomePosters() }
+    }
+
     override suspend fun newNonce(): String = call { newSignInNonce().raw }
 
     override suspend fun signIn(credential: IdentityCredential): Profile {

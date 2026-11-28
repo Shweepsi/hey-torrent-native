@@ -66,6 +66,7 @@ Le nom `heywatchlist-api` est fixé : le Worker porte déjà le secret
 | `GET /confidentialite` | libre | Politique de confidentialité (HTML), liée depuis les Réglages et les fiches des stores |
 | `GET /suppression-du-compte` | libre | Comment supprimer son compte (HTML), demandé par Google Play |
 | `GET /v1/config` | libre | Identifiants publics des clients Google (`google_web_client_id`, `google_ios_client_id`, ou `null`) |
+| `GET /v1/posters` | libre | Chemins des affiches en tendance de la semaine (`{"posters": ["/abc.jpg", …]}`, 24 au plus), pour le décor de l’écran de connexion ; même cache d’une heure que le relais TMDB |
 | `POST /v1/auth/sign-in` | libre | `{provider, id_token, nonce, given_name?}` → jetons et profil (nouveau compte : `status: "pending"`) |
 | `POST /v1/auth/bootstrap` | jeton d'accès, tout état | `{code}` : premier administrateur, tant qu'il n'y en a aucun → `{user}` ; sinon `403 forbidden` |
 | `POST /v1/auth/refresh` | jeton de rafraîchissement | Nouveaux jetons |

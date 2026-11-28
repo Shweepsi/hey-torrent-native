@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -26,6 +28,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.EditionContent
 import app.heywatchlist.R
 import app.heywatchlist.core.Access
@@ -52,8 +55,11 @@ fun WaitingScreen(state: AccountUiState.SignedIn, viewModel: AccountViewModel) {
         viewModel.checkAccess()
         onPauseOrDispose { }
     }
+    val posters by viewModel.welcomePosters.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.loadWelcomePosters() }
     WaitingContent(
         state = state,
+        posters = posters,
         onCheck = viewModel::checkAccess,
         onSignOut = viewModel::signOut,
         onDelete = viewModel::requestDeletion,
@@ -72,9 +78,10 @@ internal fun WaitingContent(
     onConfirmDelete: () -> Unit,
     onCancelDelete: () -> Unit,
     extras: @Composable () -> Unit = {},
+    posters: List<String> = emptyList(),
 ) {
     val refused = state.profile.access == Access.Refused
-    WelcomeLayout {
+    WelcomeLayout(posters = posters) {
         StatusOrb(refused = refused)
         HeyText(
             text = stringResource(R.string.app_name),

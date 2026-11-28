@@ -126,7 +126,6 @@
     <!-- Serveurs -->
     <string name="admin_servers_syncing">Lecture des réglages enregistrés…</string>
     <string name="admin_servers_local_copy">Affichage de la copie gardée sur ce téléphone.</string>
-    <string name="admin_sources_title">Sources Torznab</string>
     <string name="admin_sources_body">Ton Prowlarr (une adresse par indexeur) ou toute autre source Torznab. HTTPS obligatoire.</string>
     <string name="admin_source_add">Ajouter une source</string>
     <string name="admin_source_name">Nom</string>
@@ -141,7 +140,6 @@
     <string name="admin_testing">Test…</string>
     <string name="admin_test_passed">Connexion réussie.</string>
     <string name="admin_test_passed_version">Connexion réussie (qBittorrent %1$s).</string>
-    <string name="admin_remove">Retirer</string>
     <string name="admin_qbit_title">qBittorrent</string>
     <string name="admin_qbit_body">Interface web, en HTTPS. À chaque envoi, vous choisissez la catégorie parmi celles de qBittorrent.</string>
     <string name="admin_qbit_url">Adresse de l’interface web</string>
@@ -161,6 +159,17 @@
     <string name="admin_excluded_terms_placeholder">Séparés par des virgules</string>
     <string name="admin_servers_save">Enregistrer</string>
     <string name="admin_servers_saving">Enregistrement…</string>
+    <string name="admin_servers_section_search">Recherche</string>
+    <string name="admin_servers_section_download">Téléchargement</string>
+    <string name="admin_source_unnamed">Source sans nom</string>
+    <string name="admin_source_remove">Retirer cette source</string>
+    <string name="admin_not_configured">Pas encore réglé</string>
+    <string name="admin_status_ok">Connecté</string>
+    <string name="admin_status_failed">Erreur</string>
+    <plurals name="admin_excluded_count">
+        <item quantity="one">%d terme exclu</item>
+        <item quantity="other">%d termes exclus</item>
+    </plurals>
     <string name="admin_servers_saved">Réglages enregistrés, chiffrés sur le serveur.</string>
 
     <!-- Accès des comptes -->

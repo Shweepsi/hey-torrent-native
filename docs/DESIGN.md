@@ -14,8 +14,8 @@ voit pas.
 
 - Coins très arrondis, fines bordures claires, ombres légères.
 - Typographie nette ; grands titres.
-- **Sombre d'abord** : le thème sombre est la référence, le clair en est la
-  déclinaison.
+- **Clair ou sombre selon le réglage du téléphone** (choix du propriétaire,
+  v0.11.0) : les deux thèmes sont soignés au même niveau, sur tous les écrans.
 - Les couleurs ne portent jamais seules une information (état d'une demande :
   texte et icône en plus de la teinte).
 
@@ -35,9 +35,17 @@ Compléments aujourd'hui dans le code Android (`HeyTheme.kt`) : texte
 `#0c0c0f`, erreur `#ff8a80`, accent décoratif `#7c5cff`, formes à 28 dp
 (cartes) et 20 dp (boutons).
 
-**Thème clair** : décliné côté Android seulement (fond `#f3f5fa`, `primary`
-`#1a66cc`, verre blanc à 55 %, filet foncé à 12 %). Côté iPhone, l'app est
-pour l'instant forcée en sombre (voir `docs/TODO.md`).
+**Thème clair** : décliné côté Android (fond `#f3f5fa`, `primary` `#1a66cc`,
+verre blanc à 55 %, filet foncé à 12 %). Depuis la v0.11.0, l'app Android suit le
+réglage du téléphone sur tous les écrans, fiche d'un titre comprise ; barres
+système transparentes (bord à bord). Côté iPhone, l'app est pour l'instant forcée en sombre (voir
+`docs/TODO.md`).
+
+**Hiérarchie des boutons** : une seule action pleine (`primary`) par écran ou
+par feuille ; les autres en verre (`Secondary`) ou en lien (`Link`,
+`DangerLink` pour retirer). Les résultats d'une action s'affichent en
+`success` ou `error` avec une icône (`HeyStatusLine`), jamais en couleur
+décorative. Les confirmations sont des feuilles qui montent du bas (`HeySheet`).
 
 ## Les trois onglets
 

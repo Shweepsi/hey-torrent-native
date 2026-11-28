@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,7 @@ fun RequestsScreen(viewModel: RequestsViewModel, onOpen: (AdminRequest) -> Unit)
             options = listOf(stringResource(R.string.admin_requests_open), stringResource(R.string.admin_requests_all)),
             selectedIndex = state.filter.ordinal,
             onSelect = { viewModel.setFilter(RequestsFilter.entries[it]) },
-            modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+            modifier = Modifier.padding(horizontal = 16.dp).widthIn(max = 280.dp),
         )
         HeyPullToRefresh(
             refreshing = state.loading && state.requests.isNotEmpty(),

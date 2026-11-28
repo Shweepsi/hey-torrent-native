@@ -41,13 +41,19 @@ class AccountViewModelTest {
         var signInAnswer: () -> Profile = { Profile(firstName = "Camille", isAdmin = false, access = Access.Pending) },
         var deleteAnswer: () -> Unit = {},
         var clientId: String? = "web.apps.googleusercontent.com",
+        var posters: () -> List<String> = { emptyList() },
     ) : AccountGateway {
         var signedOut = false
+        var posterCalls = 0
 
         override suspend fun coreVersion() = "0.2.0"
         override suspend fun currentUser() = stored
         override suspend fun refreshProfile() = refreshed()
         override suspend fun googleWebClientId() = clientId
+        override suspend fun welcomePosters(): List<String> {
+            posterCalls++
+            return posters()
+        }
         override suspend fun newNonce() = "nonce"
         override suspend fun signIn(credential: IdentityCredential): Profile = signInAnswer()
         override suspend fun signOut() {
@@ -62,6 +68,26 @@ class AccountViewModelTest {
         assertEquals(AccountUiState.Starting, viewModel.uiState.value)
         advanceUntilIdle()
         assertEquals(AccountUiState.SignedOut(), viewModel.uiState.value)
+    }
+
+    @Test
+    fun welcomePostersAreReadOnceAndAFailureIsRetried() = runTest(dispatcher) {
+        var fail = true
+        val gateway = FakeGateway(posters = {
+            if (fail) throw AccountFailureException(AccountFailure.Network) else listOf("https://image.invalid/a.jpg")
+        })
+        val viewModel = AccountViewModel(gateway)
+        viewModel.loadWelcomePosters()
+        advanceUntilIdle()
+        assertEquals(emptyList<String>(), viewModel.welcomePosters.value)
+
+        fail = false
+        viewModel.loadWelcomePosters()
+        advanceUntilIdle()
+        viewModel.loadWelcomePosters()
+        advanceUntilIdle()
+        assertEquals(listOf("https://image.invalid/a.jpg"), viewModel.welcomePosters.value)
+        assertEquals(2, gateway.posterCalls)
     }
 
     @Test
