@@ -1,7 +1,7 @@
 import Foundation
 
 // Types de domaine du catalogue. Les types exportés par le cœur (TitleSummary,
-// Genre, Provider…) sont compilés dans le même module que l'app : les nôtres
+// Genre, Episode…) sont compilés dans le même module que l'app : les nôtres
 // portent d'autres noms, et seul `LiveCatalogClient` connaît les premiers.
 
 /// Film ou série.
@@ -63,22 +63,6 @@ struct CastPerson: Equatable, Sendable {
     let profileURL: URL?
 }
 
-struct WatchProvider: Identifiable, Equatable, Sendable {
-    let id: Int
-    let name: String
-    let logoURL: URL?
-}
-
-/// Où regarder le titre en France.
-struct WatchProviders: Equatable, Sendable {
-    /// Inclus dans un abonnement.
-    let flatrate: [WatchProvider]
-    let rent: [WatchProvider]
-    let buy: [WatchProvider]
-
-    var isEmpty: Bool { flatrate.isEmpty && rent.isEmpty && buy.isEmpty }
-}
-
 struct SeasonEntry: Identifiable, Equatable, Sendable {
     let number: Int
     let name: String
@@ -106,7 +90,6 @@ struct TitleSheet: Equatable, Sendable {
     /// Bande-annonce à ouvrir dans YouTube ou le navigateur : à défaut, un
     /// teaser ; jamais un extrait ni un making-of. `nil` : pas de bouton.
     let trailerURL: URL?
-    let providers: WatchProviders
     let similar: [Title]
     let stale: Bool
 }

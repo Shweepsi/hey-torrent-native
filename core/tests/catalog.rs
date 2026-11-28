@@ -638,28 +638,6 @@ async fn a_movie_detail_is_complete() {
         "Bande-annonce officielle"
     );
 
-    // Plateformes : la France seulement.
-    let flatrate: Vec<&str> = detail
-        .providers
-        .flatrate
-        .iter()
-        .map(|p| p.name.as_str())
-        .collect();
-    assert_eq!(flatrate, vec!["Service A", "Service B"]);
-    assert_eq!(
-        detail
-            .providers
-            .flatrate
-            .first()
-            .unwrap()
-            .logo_url
-            .as_deref(),
-        Some("https://image.tmdb.org/t/p/w92/logoAbo1.jpg")
-    );
-    assert_eq!(detail.providers.flatrate.get(1).unwrap().logo_url, None);
-    assert_eq!(detail.providers.rent.len(), 1);
-    assert_eq!(detail.providers.buy.len(), 2);
-
     // Similaires : de petites affiches, du même type ; sans titre : écarté.
     assert_eq!(detail.similar.len(), 1);
     let similar = detail.similar.first().unwrap();
@@ -692,8 +670,9 @@ async fn a_series_detail_has_seasons_and_creators() {
     assert_eq!(detail.tagline, None);
     assert_eq!(detail.directors, vec!["Inès Créatrice"]);
     let numbers: Vec<u32> = detail.seasons.iter().map(|season| season.number).collect();
-    assert_eq!(numbers, vec![0, 1]);
-    let season = detail.seasons.get(1).unwrap();
+    // Les épisodes spéciaux (saison 0) ne sont pas proposés.
+    assert_eq!(numbers, vec![1]);
+    let season = detail.seasons.first().unwrap();
     assert_eq!(
         (season.name.as_str(), season.episode_count),
         ("Saison 1", 6)
@@ -704,7 +683,6 @@ async fn a_series_detail_has_seasons_and_creators() {
         Some("https://image.tmdb.org/t/p/w342/afficheSaison1.jpg")
     );
     assert!(detail.videos.is_empty());
-    assert_eq!(detail.providers.flatrate.len(), 1);
     assert_eq!(detail.similar.first().unwrap().media_type, MediaType::Tv);
 }
 

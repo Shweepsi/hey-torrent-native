@@ -6,10 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,11 +21,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import app.heywatchlist.ui.theme.HeyTheme
 import coil3.compose.AsyncImage
+import coil3.decode.DataSource
+import kotlinx.coroutines.launch
 
 /**
  * Affiche, fond, vignette ou logo chargé par Coil : un fond uni tant que l'image
- * n'est pas là, puis l'image apparaît en fondu. Si elle manque ou échoue, le
- * fond porte [placeholderIcon]. Le contenu est décoratif : l'appelant porte le libellé.
+ * n'est pas là, puis l'image. Si elle manque ou échoue, le fond porte
+ * [placeholderIcon]. Le contenu est décoratif : l'appelant porte le libellé.
+ *
+ * Seule une image qui arrive du réseau ou du disque apparaît en fondu ; une
+ * image déjà en mémoire (affiche qui revient à l'écran au défilement, au
+ * changement d'onglet ou au retour d'une fiche) est là tout de suite. Sans
+ * cela, chaque retour refaisait le passage fond uni puis fondu : un
+ * clignotement.
  *
  * Quand [url] change (l'aperçu d'une liste, puis la même image en plus grand sur
  * la fiche), la dernière image affichée reste dessous jusqu'à la fin du fondu de
@@ -41,16 +49,11 @@ fun HeyPoster(
     val colors = HeyTheme.colors
     // Dernière adresse dont l'image est entièrement affichée.
     var shown by remember { mutableStateOf<String?>(null) }
-    var loaded by remember(url) { mutableStateOf(false) }
     var failed by remember(url) { mutableStateOf(false) }
-    val fadeMillis = if (rememberAnimationsEnabled()) FADE_MILLIS else 0
+    val animations = rememberAnimationsEnabled()
+    // Opacité de l'image : lue au dessin seulement, le fondu ne recompose rien.
     val fade = remember(url) { Animatable(0f) }
-    LaunchedEffect(url, loaded) {
-        if (loaded) {
-            fade.animateTo(1f, tween(durationMillis = fadeMillis))
-            shown = url
-        }
-    }
+    val scope = rememberCoroutineScope()
     val previous = if (url != null) shown?.takeIf { it != url } else null
     Box(
         modifier = modifier.clip(shape).background(colors.glassFillFallback),
@@ -72,7 +75,17 @@ fun HeyPoster(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize().graphicsLayer { alpha = fade.value },
                 contentScale = ContentScale.Crop,
-                onSuccess = { loaded = true },
+                onSuccess = { success ->
+                    val fromMemory = success.result.dataSource == DataSource.MEMORY_CACHE
+                    scope.launch {
+                        if (fromMemory || !animations) {
+                            fade.snapTo(1f)
+                        } else {
+                            fade.animateTo(1f, tween(durationMillis = FADE_MILLIS))
+                        }
+                        shown = url
+                    }
+                },
                 onError = { failed = true },
             )
         }

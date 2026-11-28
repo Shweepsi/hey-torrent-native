@@ -38,7 +38,7 @@ import app.heywatchlist.ui.theme.HeyTheme
 class GlassTab(val label: String, val icon: ImageVector)
 
 /**
- * Barre d'onglets flottante en verre : icône et libellé, et une pastille qui
+ * Barre d'onglets flottante en verre, posée sur le contenu qui défile dessous : icône et libellé, et une pastille qui
  * glisse vers l'onglet choisi (ressort). Chaque onglet fait au moins 56 dp de
  * haut. Sans animations système, la pastille saute directement.
  */
@@ -51,7 +51,8 @@ fun GlassTabBar(
 ) {
     val colors = HeyTheme.colors
     val animations = rememberAnimationsEnabled()
-    GlassSurface(modifier = modifier, shape = HeyTheme.shapes.pill) {
+    // Teinte couvrante : la barre flotte au-dessus du contenu qui défile, pas seulement du décor.
+    GlassSurface(modifier = modifier, shape = HeyTheme.shapes.pill, tint = colors.chromeFill) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(TabHeight + 12.dp).padding(6.dp)) {
             val tabWidth = maxWidth / tabs.size.coerceAtLeast(1)
             val indicatorX by animateDpAsState(

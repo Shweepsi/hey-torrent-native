@@ -5,8 +5,6 @@ import uniffi.heywatchlist_core.CatalogException
 import uniffi.heywatchlist_core.Episode as CoreEpisode
 import uniffi.heywatchlist_core.Genre as CoreGenre
 import uniffi.heywatchlist_core.MediaType as CoreMediaType
-import uniffi.heywatchlist_core.Provider as CoreProvider
-import uniffi.heywatchlist_core.Providers as CoreProviders
 import uniffi.heywatchlist_core.SeasonDetail as CoreSeasonDetail
 import uniffi.heywatchlist_core.SeasonSummary as CoreSeasonSummary
 import uniffi.heywatchlist_core.Shelf as CoreShelf
@@ -92,14 +90,6 @@ private fun CoreCastMember.toCast() = CastMember(name = name, character = charac
 
 private fun CoreVideo.toVideo() = Video(youtubeKey = youtubeKey, kind = kind.toKind())
 
-private fun CoreProvider.toProvider() = Provider(name = name, logoUrl = logoUrl)
-
-private fun CoreProviders.toProviders() = Providers(
-    flatrate = flatrate.map { it.toProvider() },
-    rent = rent.map { it.toProvider() },
-    buy = buy.map { it.toProvider() },
-)
-
 private fun CoreSeasonSummary.toSeason() = SeasonSummary(
     number = number.toInt(),
     name = name,
@@ -118,7 +108,6 @@ internal fun CoreTitleDetail.toDetail() = TitleDetail(
     cast = cast.map { it.toCast() },
     directors = directors,
     videos = videos.map { it.toVideo() },
-    providers = providers.toProviders(),
     similar = similar.map { it.toTitle() },
     stale = stale,
 )

@@ -89,8 +89,7 @@ construction.
    et en streaming, populaires, prochaines sorties, recommandations
    personnalisées à partir de la watchlist, parcours par genre, recherche
    instantanée, fiches riches (affiche et fond en grand, résumé, casting,
-   bandes-annonces, saisons et épisodes, plateformes de diffusion en France,
-   films similaires). Badge « Sur Plex » sur les médias déjà disponibles.
+   bandes-annonces, saisons et épisodes, films similaires). Badge « Sur Plex » sur les médias déjà disponibles.
    C'est l'écran le plus soigné, celui qui donne envie.
 2. **Watchlist** : ce que je veux voir, avec l'état de chaque demande
    (demandée, en cours, disponible, refusée). Ajout en un geste depuis

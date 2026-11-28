@@ -11,11 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -38,16 +37,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.core.Title
 import app.heywatchlist.ui.components.ErrorPanel
+import app.heywatchlist.ui.components.FloatingHeaderLayout
+import app.heywatchlist.ui.components.GlassBar
 import app.heywatchlist.ui.components.HeyIconButton
 import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeySearchField
 import app.heywatchlist.ui.components.HeySpinner
 import app.heywatchlist.ui.components.HeyText
+import app.heywatchlist.ui.components.LocalHazeState
 import app.heywatchlist.ui.components.LocalSkeletonPulse
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
 import app.heywatchlist.ui.components.Skeleton
 import app.heywatchlist.ui.components.rememberSkeletonPulse
+import app.heywatchlist.ui.components.scrolledFraction
+import app.heywatchlist.ui.components.underBars
+import app.heywatchlist.ui.components.underHeaderPadding
 import app.heywatchlist.ui.theme.HeyTheme
 
 private val RowPosterWidth = 72.dp
@@ -95,42 +100,52 @@ internal fun SearchContent(
         }
     }
     val pulse = rememberSkeletonPulse(active = state.state is SearchState.Loading)
+    // Une nouvelle requête repart du haut de la liste.
+    val listState = rememberSaveable(state.query, saver = LazyListState.Saver) { LazyListState() }
+    val haze = LocalHazeState.current
     CompositionLocalProvider(LocalSkeletonPulse provides pulse) {
-        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                HeyIconButton(
-                    icon = HeyIcons.Back,
-                    contentDescription = stringResource(R.string.action_back),
-                    onClick = onBack,
-                )
-                HeySearchField(
-                    value = text,
-                    onValueChange = onTextChange,
-                    placeholder = stringResource(R.string.search_placeholder),
-                    label = stringResource(R.string.search_label),
-                    clearLabel = stringResource(R.string.search_clear),
-                    modifier = Modifier.weight(1f),
-                    focusRequester = focusRequester,
-                )
-            }
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        // En-tête flottant : les résultats défilent dessous, il les floute.
+        FloatingHeaderLayout(
+            header = {
+                GlassBar(revealed = { if (state.state is SearchState.Results) listState.scrolledFraction() else 0f }) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        HeyIconButton(
+                            icon = HeyIcons.Back,
+                            contentDescription = stringResource(R.string.action_back),
+                            onClick = onBack,
+                        )
+                        HeySearchField(
+                            value = text,
+                            onValueChange = onTextChange,
+                            placeholder = stringResource(R.string.search_placeholder),
+                            label = stringResource(R.string.search_label),
+                            clearLabel = stringResource(R.string.search_clear),
+                            modifier = Modifier.weight(1f),
+                            focusRequester = focusRequester,
+                        )
+                    }
+                }
+            },
+        ) { headerHeight ->
+            val padding = underHeaderPadding(headerHeight)
+            Box(modifier = Modifier.fillMaxSize()) {
                 when (val current = state.state) {
-                    SearchState.Idle -> Message(text = stringResource(R.string.search_hint))
-                    SearchState.Loading -> SkeletonResults()
+                    SearchState.Idle -> Message(text = stringResource(R.string.search_hint), padding = padding)
+                    SearchState.Loading -> SkeletonResults(padding)
                     is SearchState.Failed -> ErrorPanel(
                         failure = current.failure,
                         onRetry = onRetry,
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(padding).padding(top = 8.dp),
                     )
 
                     is SearchState.Results -> if (current.titles.isEmpty()) {
-                        Message(text = stringResource(R.string.search_no_results, state.query.trim()))
+                        Message(text = stringResource(R.string.search_no_results, state.query.trim()), padding = padding)
                     } else {
-                        Results(current, onLoadMore, onOpenTitle)
+                        Results(current, listState, padding, onLoadMore, onOpenTitle, Modifier.underBars(haze))
                     }
                 }
             }
@@ -139,23 +154,29 @@ internal fun SearchContent(
 }
 
 @Composable
-private fun Message(text: String) {
+private fun Message(text: String, padding: PaddingValues) {
     HeyText(
         text = text,
         color = HeyTheme.colors.onBackgroundMuted,
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
+        modifier = Modifier.fillMaxWidth().padding(padding).padding(horizontal = 16.dp, vertical = 40.dp),
     )
 }
 
 @Composable
-private fun Results(results: SearchState.Results, onLoadMore: () -> Unit, onOpenTitle: (Title) -> Unit) {
-    val listState = rememberLazyListState()
+private fun Results(
+    results: SearchState.Results,
+    listState: LazyListState,
+    padding: PaddingValues,
+    onLoadMore: () -> Unit,
+    onOpenTitle: (Title) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     NearEndEffect(listState = listState, key = results.titles.size, onNearEnd = onLoadMore)
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxSize(),
+        contentPadding = padding,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(results.titles, key = { it.key }) { title -> ResultRow(title, onClick = { onOpenTitle(title) }) }
@@ -207,12 +228,12 @@ private fun ResultRow(title: Title, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SkeletonResults() {
+private fun SkeletonResults(padding: PaddingValues) {
     val loading = stringResource(R.string.status_loading)
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(padding)
             .semantics { contentDescription = loading },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

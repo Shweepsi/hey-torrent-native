@@ -51,11 +51,6 @@ extension TitleSheet {
             cast: [CastPerson(name: "Camille Martin", character: "Léa", profileURL: nil)],
             directors: ["Sam Durand"],
             trailerURL: URL(string: "https://www.youtube.com/watch?v=abc"),
-            providers: WatchProviders(
-                flatrate: [WatchProvider(id: 1, name: "Plateforme", logoURL: nil)],
-                rent: [],
-                buy: []
-            ),
             similar: [.sample(ref.id + 1000, kind: ref.kind)],
             stale: stale
         )

@@ -149,9 +149,8 @@ iPhone ne se compilent que sur la CI. Rien n'a encore été reçu sur un télép
       profil régénéré (premier envoi TestFlight).
 - [ ] Coller les URL dans Plex (Réglages, Webhooks) et dans Tautulli (agent
       Webhook, « Recently Added », corps JSON fourni par la carte).
-- [ ] Bouton « Envoyer une notification d'essai » de Réglages sur iPhone et
-      Android, puis fini quand : le film arrive sur Plex et Camille reçoit la
-      notification.
+- [ ] Fini quand : le film arrive sur Plex et Camille reçoit la notification
+      (le bouton de notification d'essai a été retiré en 0.13.2).
 - [ ] Ouvrir la fiche du titre à l'appui sur la notification (les données
       `media_type` et `tmdb_id` voyagent déjà avec elle).
 - [ ] Supprimer les projets Google Cloud vides `heywatchlist` et

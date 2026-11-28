@@ -32,12 +32,12 @@ pub use admin::{
     SearchQuery, ServerSettings, SourceFailure, SourceReport, TorznabSource, VideoCodec,
 };
 pub use catalog::{
-    CastMember, Catalog, CatalogError, Episode, Genre, MediaType, Provider, Providers,
-    SeasonDetail, SeasonSummary, Shelf, TitleDetail, TitlePage, TitleSummary, Video, VideoKind,
+    CastMember, Catalog, CatalogError, Episode, Genre, MediaType, SeasonDetail, SeasonSummary,
+    Shelf, TitleDetail, TitlePage, TitleSummary, Video, VideoKind,
 };
 pub use error::CoreError;
 pub use google::{GoogleAuthorization, begin_google_sign_in, complete_google_sign_in};
-pub use push::{PushPlatform, TestPushResult};
+pub use push::PushPlatform;
 pub use watchlist::{RequestStatus, Watchlist, WatchlistError, WatchlistItem, WatchlistSnapshot};
 #[cfg(feature = "admin")]
 pub use webhook::{WebhookStatus, WebhookUrls};

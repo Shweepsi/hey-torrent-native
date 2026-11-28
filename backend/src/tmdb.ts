@@ -119,7 +119,7 @@ function resolve(path: string): Route | null {
     }
     if (parts.length === 2 && NUMBER.test(second)) {
       return route(`${first}/${Number(second)}`, DAY, {}, {
-        append_to_response: "credits,videos,watch/providers,similar",
+        append_to_response: "credits,videos,similar",
         include_video_language: "fr,en,null",
       });
     }
