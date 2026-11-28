@@ -70,8 +70,8 @@ class ServersViewModelTest {
         val gateway = FakeAdminGateway()
         val model = ServersViewModel(gateway)
         advanceUntilIdle()
-        model.addSource()
-        val id = model.form.sources.single().id
+        val id = model.addSource()
+        assertEquals(id, model.form.sources.single().id)
         model.editSource(id) { it.copy(name = "Prowlarr", url = " https://indexeur.invalid/2/ ", apiKey = "k") }
         model.testSource(id)
         advanceUntilIdle()
@@ -83,5 +83,25 @@ class ServersViewModelTest {
         assertEquals("https://indexeur.invalid/2/", gateway.saved?.sources?.single()?.url)
         assertTrue(model.uiState.value.saved)
         assertEquals(false, model.uiState.value.dirty)
+    }
+
+    @Test
+    fun `à l'ouverture, seuls les services réglés et pas encore testés sont testés`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway().apply {
+            localSettings = remote.copy(
+                sources = remote.sources + TorznabSource("s2", "Éteinte", "https://indexeur.invalid/2/", "cle", false),
+            )
+            remoteSettings = Result.success(localSettings)
+        }
+        val model = ServersViewModel(gateway)
+        advanceUntilIdle()
+
+        model.testUntested()
+        advanceUntilIdle()
+        model.testUntested()
+        advanceUntilIdle()
+
+        assertEquals(listOf("testSource:s1", "testQbit"), gateway.calls)
+        assertEquals(ConnectionTest.Passed("v5.0.2"), model.uiState.value.qbitTest)
     }
 }

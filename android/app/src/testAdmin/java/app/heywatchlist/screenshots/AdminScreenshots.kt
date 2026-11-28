@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import app.heywatchlist.admin.AccessScreen
@@ -114,10 +113,6 @@ class AdminScreenshots {
         gateway.remoteSettings = Result.success(gateway.localSettings)
         val model = ServersViewModel(gateway)
         Screenshots.capture(rule, "22-admin-serveurs") {
-            LaunchedEffect(Unit) {
-                model.testQbittorrent()
-                model.testSource("s1")
-            }
             AdminTabs(AdminTab.Servers) { ServersScreen(viewModel = model) }
         }
     }

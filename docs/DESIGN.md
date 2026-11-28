@@ -14,8 +14,8 @@ voit pas.
 
 - Coins très arrondis, fines bordures claires, ombres légères.
 - Typographie nette ; grands titres.
-- **Sombre d'abord** : le thème sombre est la référence, le clair en est la
-  déclinaison.
+- **Clair sur Android** (choix du propriétaire, v0.11.0) ; les jetons sombres
+  restent définis et servent encore à l'iPhone.
 - Les couleurs ne portent jamais seules une information (état d'une demande :
   texte et icône en plus de la teinte).
 

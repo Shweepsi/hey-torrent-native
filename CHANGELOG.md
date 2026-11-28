@@ -15,6 +15,9 @@ Deuxième passe sur le design Android, d'après les captures de l'APK admin.
   forcée en sombre), quel que soit le réglage du téléphone.
 - Android : affichage bord à bord. Les barres système sont transparentes, sans
   le voile gris ou blanc de la barre à trois boutons.
+- Serveurs : une ligne par service avec son état (testé seul à l'ouverture),
+  et une feuille qui monte du bas pour modifier ses champs, le tester et
+  enregistrer. Fini le long formulaire.
 - Releases : la qualité en pastilles et les chiffres d'abord, le nom brut en
   petit dessous.
 - Boutons : « Retirer » et « Annuler » deviennent des liens discrets ; le bleu

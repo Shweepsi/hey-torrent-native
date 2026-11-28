@@ -146,8 +146,19 @@ class ServersViewModel(private val gateway: AdminGateway) : ViewModel() {
         _uiState.update { it.copy(sourceTests = it.sourceTests - id) }
     }
 
-    fun addSource() {
-        edit { it.copy(sources = it.sources + SourceForm(id = UUID.randomUUID().toString())) }
+    /** Ajoute une source vide et rend son identifiant, pour ouvrir sa feuille. */
+    fun addSource(): String {
+        val id = UUID.randomUUID().toString()
+        edit { it.copy(sources = it.sources + SourceForm(id = id)) }
+        return id
+    }
+
+    /** Teste les services réglés qui n'ont pas encore de résultat (à l'ouverture de l'écran). */
+    fun testUntested() {
+        form.sources
+            .filter { it.enabled && it.url.isNotBlank() && it.id !in _uiState.value.sourceTests }
+            .forEach { testSource(it.id) }
+        if (_uiState.value.qbitTest == null) testQbittorrent()
     }
 
     fun removeSource(id: String) {
