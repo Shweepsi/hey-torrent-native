@@ -3,6 +3,7 @@ package app.heywatchlist.admin
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AudioLanguage
 import uniffi.heywatchlist_core.AutomationStatus
+import uniffi.heywatchlist_core.ClearedRequests
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.DownloadState
 import uniffi.heywatchlist_core.AllowedEmail
@@ -75,6 +76,13 @@ class FakeAdminGateway : AdminGateway {
     override suspend fun recommend(query: SearchQuery, releases: List<Release>): Recommendation {
         calls += "recommend:${releases.size}"
         return recommendResult.getOrThrow()
+    }
+
+    var clearResult: Result<ClearedRequests> = Result.success(ClearedRequests(3u, 2u))
+
+    override suspend fun clearRequests(): ClearedRequests {
+        calls += "clear"
+        return clearResult.getOrThrow()
     }
 
     /** Lecture d'état : pas notée dans [calls]. */

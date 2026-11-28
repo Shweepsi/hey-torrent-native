@@ -485,6 +485,43 @@ pub(crate) async fn remove_allowed_email(account: &Account, email: &str) -> Resu
     .map(|_| ())
 }
 
+/// Ce qu'a supprimé « Vider les demandes ».
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct ClearedRequests {
+    pub requests: u32,
+    /// Personnes dont la watchlist a été vidée.
+    pub people: u32,
+}
+
+#[derive(Deserialize)]
+struct WireCleared {
+    #[serde(default)]
+    requests: u32,
+    #[serde(default)]
+    people: u32,
+}
+
+/// Vide la file : demandes, watchlists qui s'y rattachent, traces de notification.
+pub(crate) async fn clear_requests(account: &Account) -> Result<ClearedRequests, AdminError> {
+    let body = serde_json::json!({ "confirm": true });
+    let bytes = call(
+        account,
+        reqwest::Method::POST,
+        "/v1/admin/requests/clear",
+        Some(&body),
+    )
+    .await?;
+    // Réponse illisible : la file est quand même vidée.
+    let wire = serde_json::from_slice::<WireCleared>(&bytes).unwrap_or(WireCleared {
+        requests: 0,
+        people: 0,
+    });
+    Ok(ClearedRequests {
+        requests: wire.requests,
+        people: wire.people,
+    })
+}
+
 /// Avis de Claude sur une recherche.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct Recommendation {

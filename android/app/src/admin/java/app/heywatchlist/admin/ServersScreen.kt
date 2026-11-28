@@ -156,6 +156,14 @@ fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit 
                         icon = HeyIcons.Plus,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    RowDivider()
+                    ServiceRow(
+                        title = stringResource(R.string.admin_excluded_terms),
+                        subtitle = excludedSummary(form),
+                        badge = { IconBadge(HeyIcons.Sliders) },
+                        status = {},
+                        onClick = { editingKey = Editing.Sorting.key },
+                    )
                 }
             }
 
@@ -169,14 +177,6 @@ fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit 
                         badge = { IconBadge(HeyIcons.Download) },
                         status = { ConnectionPill(state.qbitTest) },
                         onClick = { editingKey = Editing.Qbit.key },
-                    )
-                    RowDivider()
-                    ServiceRow(
-                        title = stringResource(R.string.admin_sorting_title),
-                        subtitle = sortingSummary(form),
-                        badge = { IconBadge(HeyIcons.Sliders) },
-                        status = {},
-                        onClick = { editingKey = Editing.Sorting.key },
                     )
                 }
             }
@@ -204,12 +204,18 @@ fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit 
             }
             // Hors du formulaire : l'adresse des webhooks s'enregistre seule.
             item { plexCard() }
+
+            item { SectionLabel(stringResource(R.string.admin_servers_section_data)) }
+            item { ClearRequestsCard(state.clear, onAsk = viewModel::askClearRequests) }
         }
     }
 
     val save = {
         viewModel.save()
         close()
+    }
+    if (state.clear == ClearState.Confirming) {
+        ClearRequestsSheet(onConfirm = viewModel::clearRequests, onDismiss = viewModel::cancelClearRequests)
     }
     when (val editing = Editing.from(editingKey)) {
         null -> Unit
@@ -367,15 +373,61 @@ private fun ConnectionPill(test: ConnectionTest?) {
 /** L'hôte d'une adresse, pour la ligne : « qbit.example.com ». */
 private fun hostOf(url: String): String = Uri.parse(url.trim()).host?.takeIf { it.isNotEmpty() } ?: url.trim()
 
-/** « films · series · 2 termes exclus ». */
+/** « 2 termes exclus » ou « Aucun ». */
 @Composable
-private fun sortingSummary(form: ServerForm): String {
+private fun excludedSummary(form: ServerForm): String {
     val excluded = form.excludedTerms.split(',').count { it.isNotBlank() }
-    val parts = listOf(
-        form.movieCategory.ifBlank { ServerForm.DEFAULT_MOVIE_CATEGORY },
-        form.seriesCategory.ifBlank { ServerForm.DEFAULT_SERIES_CATEGORY },
-    ) + listOfNotNull(excluded.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.admin_excluded_count, it, it) })
-    return parts.joinToString(" · ")
+    return if (excluded == 0) {
+        stringResource(R.string.admin_excluded_none)
+    } else {
+        pluralStringResource(R.plurals.admin_excluded_count, excluded, excluded)
+    }
+}
+
+/** « Vider les demandes » : le bouton, puis le résultat ; la confirmation est une feuille. */
+@Composable
+private fun ClearRequestsCard(clear: ClearState, onAsk: () -> Unit) {
+    AdminCard {
+        HeyText(text = stringResource(R.string.admin_clear_body), style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
+        when (clear) {
+            is ClearState.Done -> HeyStatusLine(
+                text = pluralStringResource(R.plurals.admin_clear_done, clear.requests, clear.requests),
+                kind = StatusKind.Success,
+            )
+            is ClearState.Failed -> FailureText(clear.failure)
+            ClearState.Working -> LoadingRow(stringResource(R.string.admin_working))
+            ClearState.Idle, ClearState.Confirming -> Unit
+        }
+        HeyButton(
+            text = stringResource(R.string.admin_clear_requests),
+            onClick = onAsk,
+            kind = HeyButtonKind.DangerLink,
+            enabled = clear != ClearState.Working,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun ClearRequestsSheet(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AdminDialog(
+        title = stringResource(R.string.admin_clear_title),
+        body = stringResource(R.string.admin_clear_confirm_body),
+        onDismiss = onDismiss,
+    ) {
+        HeyButton(
+            text = stringResource(R.string.admin_clear_confirm),
+            onClick = onConfirm,
+            kind = HeyButtonKind.Danger,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        HeyButton(
+            text = stringResource(R.string.admin_cancel),
+            onClick = onDismiss,
+            kind = HeyButtonKind.Link,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 /** Champ précédé de son libellé, toujours visible (le texte d'exemple disparaît à la saisie). */
@@ -542,19 +594,11 @@ private fun SortingSheet(
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AdminDialog(title = stringResource(R.string.admin_sorting_title), onDismiss = onDismiss) {
-        LabeledField(
-            label = stringResource(R.string.admin_movie_category),
-            value = form.movieCategory,
-            onValueChange = { value -> onChange { it.copy(movieCategory = value) } },
-            placeholder = ServerForm.DEFAULT_MOVIE_CATEGORY,
-        )
-        LabeledField(
-            label = stringResource(R.string.admin_series_category),
-            value = form.seriesCategory,
-            onValueChange = { value -> onChange { it.copy(seriesCategory = value) } },
-            placeholder = ServerForm.DEFAULT_SERIES_CATEGORY,
-        )
+    AdminDialog(
+        title = stringResource(R.string.admin_excluded_terms),
+        body = stringResource(R.string.admin_excluded_terms_body),
+        onDismiss = onDismiss,
+    ) {
         LabeledField(
             label = stringResource(R.string.admin_excluded_terms),
             value = form.excludedTerms,

@@ -5,6 +5,7 @@ import app.heywatchlist.R
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.AutomationStatus
+import uniffi.heywatchlist_core.ClearedRequests
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.PlexSettings
@@ -77,6 +78,9 @@ interface AdminGateway {
 
     /** Avis de Claude sur une recherche finie : la release la plus adaptée aux règles, et pourquoi. */
     suspend fun recommend(query: SearchQuery, releases: List<Release>): Recommendation
+
+    /** Vide la file des demandes et les watchlists qui s'y rattachent (irréversible). */
+    suspend fun clearRequests(): ClearedRequests
 
     /** Recherche automatique et lecture de Plex, vues du serveur. */
     suspend fun automationStatus(): AutomationStatus

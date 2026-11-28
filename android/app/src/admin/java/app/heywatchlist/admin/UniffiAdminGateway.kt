@@ -14,6 +14,7 @@ import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AdminSpace
 import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.AutomationStatus
+import uniffi.heywatchlist_core.ClearedRequests
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.InternalException
 import uniffi.heywatchlist_core.Member
@@ -76,6 +77,8 @@ class UniffiAdminGateway(
 
     override suspend fun recommend(query: SearchQuery, releases: List<Release>): Recommendation =
         space().let { call { it.recommend(query, releases) } }
+
+    override suspend fun clearRequests(): ClearedRequests = space().let { call { it.clearRequests() } }
 
     override suspend fun automationStatus(): AutomationStatus = space().let { call { it.automationStatus() } }
 

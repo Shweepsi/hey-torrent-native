@@ -152,15 +152,24 @@
     <string name="admin_qbit_password_placeholder">Mot de passe de l’interface web</string>
     <string name="admin_qbit_token">Jeton d’accès</string>
     <string name="admin_qbit_token_placeholder">Jeton envoyé dans l’en-tête Authorization</string>
-    <string name="admin_sorting_title">Catégories et filtres</string>
-    <string name="admin_movie_category">Catégorie proposée pour les films</string>
-    <string name="admin_series_category">Catégorie proposée pour les séries</string>
     <string name="admin_excluded_terms">Termes exclus</string>
+    <string name="admin_excluded_terms_body">Les releases dont le nom contient l’un de ces mots ne sont jamais proposées.</string>
+    <string name="admin_excluded_none">Aucun</string>
     <string name="admin_excluded_terms_placeholder">Séparés par des virgules</string>
     <string name="admin_servers_save">Enregistrer</string>
     <string name="admin_servers_saving">Enregistrement…</string>
     <string name="admin_servers_section_search">Recherche</string>
     <string name="admin_servers_section_download">Téléchargement</string>
+    <string name="admin_servers_section_data">Données</string>
+    <string name="admin_clear_requests">Vider les demandes</string>
+    <string name="admin_clear_body">Efface toutes les demandes et les watchlists qui s’y rattachent. Les comptes, les accès, les réglages et Plex ne sont pas touchés.</string>
+    <string name="admin_clear_title">Vider les demandes ?</string>
+    <string name="admin_clear_confirm_body">Toutes les demandes sont effacées, et la watchlist de chaque membre est vidée. C’est définitif.</string>
+    <string name="admin_clear_confirm">Tout effacer</string>
+    <plurals name="admin_clear_done">
+        <item quantity="one">%d demande effacée.</item>
+        <item quantity="other">%d demandes effacées.</item>
+    </plurals>
     <string name="admin_source_unnamed">Source sans nom</string>
     <string name="admin_source_remove">Retirer cette source</string>
     <string name="admin_not_configured">Pas encore réglé</string>
