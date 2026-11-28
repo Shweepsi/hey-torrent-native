@@ -9,6 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import uniffi.heywatchlist_core.PlexSettings
 import uniffi.heywatchlist_core.QbitAuth
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.ServerSettings
@@ -31,6 +32,36 @@ class ServersViewModelTest {
     @Test
     fun `le formulaire rend les réglages tels quels`() {
         assertEquals(remote, ServerForm.from(remote).toSettings())
+        val full = remote.copy(
+            anthropicApiKey = "cle-anthropic",
+            releaseRules = "MULTi VFF, 15 Go maximum",
+            plex = PlexSettings("https://plex.invalid", "jeton-plex"),
+        )
+        assertEquals(full, ServerForm.from(full).toSettings())
+    }
+
+    @Test
+    fun `clé Anthropic vide : pas de clé ; sans adresse Plex : pas de connexion`() {
+        val settings = ServerForm(anthropicKey = "  ", plexUrl = " ", plexToken = "jeton").toSettings()
+        assertNull(settings.anthropicApiKey)
+        assertNull(settings.plex)
+    }
+
+    @Test
+    fun `tester Plex, puis un changement d'adresse efface le résultat`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway()
+        val model = ServersViewModel(gateway)
+        advanceUntilIdle()
+        model.edit { it.copy(plexUrl = "https://plex.invalid", plexToken = "jeton") }
+        model.testPlex()
+        advanceUntilIdle()
+        assertEquals(listOf("testPlex:https://plex.invalid"), gateway.calls)
+        assertEquals(ConnectionTest.Passed(), model.uiState.value.plexTest)
+
+        model.edit { it.copy(releaseRules = "4K") }
+        assertEquals(ConnectionTest.Passed(), model.uiState.value.plexTest)
+        model.edit { it.copy(plexUrl = "https://autre.invalid") }
+        assertNull(model.uiState.value.plexTest)
     }
 
     @Test

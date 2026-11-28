@@ -55,6 +55,9 @@ import app.heywatchlist.ui.components.StatusPill
 import app.heywatchlist.ui.components.StatusTone
 import app.heywatchlist.ui.components.glassEdge
 import app.heywatchlist.ui.theme.HeyTheme
+import uniffi.heywatchlist_core.AssistantStatus
+import uniffi.heywatchlist_core.AutomationStatus
+import uniffi.heywatchlist_core.PlexStatus
 
 /** Ce que montre la feuille d'édition ouverte. */
 private sealed interface Editing {
@@ -72,11 +75,21 @@ private sealed interface Editing {
         override val key = "sorting"
     }
 
+    data object Assistant : Editing {
+        override val key = "assistant"
+    }
+
+    data object Plex : Editing {
+        override val key = "plex"
+    }
+
     companion object {
         fun from(key: String?): Editing? = when {
             key == null -> null
             key == Qbit.key -> Qbit
             key == Sorting.key -> Sorting
+            key == Assistant.key -> Assistant
+            key == Plex.key -> Plex
             key.startsWith("source:") -> Source(key.removePrefix("source:"))
             else -> null
         }
@@ -167,6 +180,30 @@ fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit 
                     )
                 }
             }
+
+            item { SectionLabel(stringResource(R.string.admin_servers_section_auto)) }
+            item {
+                ServiceGroup {
+                    ServiceRow(
+                        title = stringResource(R.string.admin_assistant_title),
+                        subtitle = assistantSummary(form, state.automation),
+                        badge = { IconBadge(HeyIcons.Star) },
+                        status = { AssistantPill(form, state.automation) },
+                        onClick = { editingKey = Editing.Assistant.key },
+                    )
+                    RowDivider()
+                    ServiceRow(
+                        title = stringResource(R.string.admin_plex_title),
+                        subtitle = form.plexUrl.takeIf { it.isNotBlank() }?.let(::hostOf)
+                            ?: stringResource(R.string.admin_plex_webhooks_only),
+                        badge = { IconBadge(HeyIcons.Play) },
+                        status = { ConnectionPill(state.plexTest) },
+                        onClick = { editingKey = Editing.Plex.key },
+                    )
+                }
+            }
+            // Hors du formulaire : l'adresse des webhooks s'enregistre seule.
+            item { plexCard() }
         }
     }
 
@@ -195,10 +232,6 @@ fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit 
                     onDismiss = close,
                 )
             }
-
-            // Hors du formulaire : l'adresse des webhooks s'enregistre seule.
-            item { SectionLabel(stringResource(R.string.admin_plex_title)) }
-            item { plexCard() }
         }
         Editing.Qbit -> QbitSheet(
             form = form,
@@ -210,6 +243,24 @@ fun ServersScreen(viewModel: ServersViewModel, plexCard: @Composable () -> Unit 
             onDismiss = close,
         )
         Editing.Sorting -> SortingSheet(form = form, saving = state.saving, onChange = viewModel::edit, onSave = save, onDismiss = close)
+        Editing.Assistant -> AssistantSheet(
+            form = form,
+            automation = state.automation,
+            saving = state.saving,
+            onChange = viewModel::edit,
+            onSave = save,
+            onDismiss = close,
+        )
+        Editing.Plex -> PlexSheet(
+            form = form,
+            test = state.plexTest,
+            automation = state.automation,
+            saving = state.saving,
+            onChange = viewModel::edit,
+            onTest = viewModel::testPlex,
+            onSave = save,
+            onDismiss = close,
+        )
     }
 }
 
@@ -511,6 +562,152 @@ private fun SortingSheet(
             placeholder = stringResource(R.string.admin_excluded_terms_placeholder),
         )
         SheetActions(test = null, canTest = false, saving = saving, onTest = null, onSave = onSave)
+    }
+}
+
+/** « Règles : 4K léger… » ou l'état qui manque. */
+@Composable
+private fun assistantSummary(form: ServerForm, automation: AutomationStatus?): String = when {
+    form.anthropicKey.isBlank() -> stringResource(R.string.admin_not_configured)
+    !form.automationReady -> stringResource(R.string.admin_assistant_needs_source)
+    else -> automation?.searchedAt?.let { stringResource(R.string.admin_assistant_last_run, formatDateTime(it)) }
+        ?: form.releaseRules.ifBlank { stringResource(R.string.admin_assistant_no_rules) }
+}
+
+/** État de Claude au dernier passage : rien tant qu'il n'a pas tourné. */
+@Composable
+private fun AssistantPill(form: ServerForm, automation: AutomationStatus?) {
+    if (!form.automationReady) return
+    when (automation?.assistant) {
+        null -> Unit
+        AssistantStatus.OK -> StatusPill(text = stringResource(R.string.admin_status_active), tone = StatusTone.Success, icon = HeyIcons.Check)
+        AssistantStatus.AUTH_FAILED, AssistantStatus.UNAVAILABLE -> StatusPill(
+            text = stringResource(R.string.admin_status_failed),
+            tone = StatusTone.Danger,
+            icon = HeyIcons.Alert,
+        )
+    }
+}
+
+/**
+ * Claude : clé d'API et règles de choix, puis ce qu'a donné le dernier passage
+ * de la recherche automatique (état de Claude, sources refusées depuis
+ * Cloudflare, qui restent cherchables depuis le téléphone).
+ */
+@Composable
+private fun AssistantSheet(
+    form: ServerForm,
+    automation: AutomationStatus?,
+    saving: Boolean,
+    onChange: ((ServerForm) -> ServerForm) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AdminDialog(
+        title = stringResource(R.string.admin_assistant_title),
+        body = stringResource(R.string.admin_assistant_body),
+        onDismiss = onDismiss,
+    ) {
+        LabeledField(
+            label = stringResource(R.string.admin_assistant_key),
+            value = form.anthropicKey,
+            onValueChange = { value -> onChange { it.copy(anthropicKey = value) } },
+            placeholder = stringResource(R.string.admin_assistant_key_placeholder),
+            secret = true,
+        )
+        LabeledField(
+            label = stringResource(R.string.admin_assistant_rules),
+            value = form.releaseRules,
+            onValueChange = { value -> onChange { it.copy(releaseRules = value.take(ServerForm.MAX_RULES)) } },
+            placeholder = stringResource(R.string.admin_assistant_rules_placeholder),
+        )
+        if (form.anthropicKey.isNotBlank() && !form.automationReady) {
+            HeyText(text = stringResource(R.string.admin_assistant_needs_source), style = HeyTheme.typography.caption)
+        }
+        automation?.let { AutomationReport(form, it) }
+        SheetActions(test = null, canTest = false, saving = saving, onTest = null, onSave = onSave)
+    }
+}
+
+@Composable
+private fun AutomationReport(form: ServerForm, automation: AutomationStatus) {
+    val searchedAt = automation.searchedAt ?: return
+    HeyText(
+        text = stringResource(R.string.admin_assistant_last_run, formatDateTime(searchedAt)),
+        style = HeyTheme.typography.caption,
+        color = HeyTheme.colors.onBackgroundMuted,
+    )
+    when (automation.assistant) {
+        AssistantStatus.AUTH_FAILED -> FailureText(AdminFailure.AssistantAuthFailed)
+        AssistantStatus.UNAVAILABLE -> FailureText(AdminFailure.AssistantUnavailable)
+        AssistantStatus.OK, null -> Unit
+    }
+    automation.sources.forEach { report ->
+        val failure = report.failure ?: return@forEach
+        val name = form.sources.firstOrNull { it.id == report.sourceId }?.name?.ifBlank { null } ?: return@forEach
+        HeyStatusLine(
+            text = stringResource(R.string.admin_assistant_source_blocked, name, stringResource(failure.labelRes())),
+            kind = StatusKind.Failure,
+        )
+    }
+}
+
+/**
+ * Connexion directe à Plex (facultative) : le serveur lit la bibliothèque
+ * toutes les 6 h et passe « disponible » ce qui y est déjà. Les webhooks,
+ * en dessous, restent la voie rapide.
+ */
+@Composable
+private fun PlexSheet(
+    form: ServerForm,
+    test: ConnectionTest?,
+    automation: AutomationStatus?,
+    saving: Boolean,
+    onChange: ((ServerForm) -> ServerForm) -> Unit,
+    onTest: () -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AdminDialog(
+        title = stringResource(R.string.admin_plex_title),
+        body = stringResource(R.string.admin_plex_body),
+        onDismiss = onDismiss,
+    ) {
+        LabeledField(
+            label = stringResource(R.string.admin_plex_url),
+            value = form.plexUrl,
+            onValueChange = { value -> onChange { it.copy(plexUrl = value) } },
+            placeholder = stringResource(R.string.admin_plex_url_placeholder),
+            keyboardType = KeyboardType.Uri,
+        )
+        LabeledField(
+            label = stringResource(R.string.admin_plex_token),
+            value = form.plexToken,
+            onValueChange = { value -> onChange { it.copy(plexToken = value) } },
+            placeholder = stringResource(R.string.admin_plex_token_placeholder),
+            secret = true,
+        )
+        val syncedAt = automation?.plexSyncedAt
+        if (automation != null && syncedAt != null) {
+            val items = (automation.plexItems ?: 0u).toInt()
+            when (automation.plex) {
+                PlexStatus.OK -> HeyText(
+                    text = pluralStringResource(R.plurals.admin_plex_synced, items, items, formatDateTime(syncedAt)),
+                    style = HeyTheme.typography.caption,
+                    color = HeyTheme.colors.onBackgroundMuted,
+                )
+                PlexStatus.AUTH_FAILED -> FailureText(AdminFailure.PlexAuthFailed)
+                PlexStatus.UNREACHABLE, PlexStatus.INVALID_RESPONSE -> FailureText(AdminFailure.PlexUnreachable)
+                null -> Unit
+            }
+        }
+        SheetActions(
+            test = test,
+            canTest = form.plexUrl.isNotBlank() && form.plexToken.isNotBlank(),
+            saving = saving,
+            onTest = onTest,
+            onSave = onSave,
+        )
     }
 }
 

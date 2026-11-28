@@ -13,10 +13,13 @@ import uniffi.heywatchlist_core.AdminException
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AdminSpace
 import uniffi.heywatchlist_core.AllowedEmail
+import uniffi.heywatchlist_core.AutomationStatus
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.InternalException
 import uniffi.heywatchlist_core.Member
+import uniffi.heywatchlist_core.PlexSettings
 import uniffi.heywatchlist_core.QbitSettings
+import uniffi.heywatchlist_core.Recommendation
 import uniffi.heywatchlist_core.Release
 import uniffi.heywatchlist_core.RequestFilter
 import uniffi.heywatchlist_core.SearchObserver
@@ -70,6 +73,13 @@ class UniffiAdminGateway(
         }
         return space().let { call { it.search(query, observer) } }
     }
+
+    override suspend fun recommend(query: SearchQuery, releases: List<Release>): Recommendation =
+        space().let { call { it.recommend(query, releases) } }
+
+    override suspend fun automationStatus(): AutomationStatus = space().let { call { it.automationStatus() } }
+
+    override suspend fun testPlex(settings: PlexSettings): Int = space().let { call { it.testPlex(settings).toInt() } }
 
     override suspend fun qbitCategories(): List<String> = space().let { call { it.qbitCategories() } }
 
@@ -150,6 +160,11 @@ private fun AdminException.toFailure(): AdminFailure = when (this) {
     is AdminException.TorrentNotFound -> AdminFailure.TorrentNotFound
     is AdminException.ReleaseExpired -> AdminFailure.ReleaseExpired
     is AdminException.StatusNotSaved -> AdminFailure.StatusNotSaved
+    is AdminException.AssistantNotConfigured -> AdminFailure.AssistantNotConfigured
+    is AdminException.AssistantAuthFailed -> AdminFailure.AssistantAuthFailed
+    is AdminException.AssistantUnavailable -> AdminFailure.AssistantUnavailable
+    is AdminException.PlexUnreachable -> AdminFailure.PlexUnreachable
+    is AdminException.PlexAuthFailed -> AdminFailure.PlexAuthFailed
     is AdminException.Unexpected, is AdminException.Internal -> AdminFailure.Unknown
 }
 

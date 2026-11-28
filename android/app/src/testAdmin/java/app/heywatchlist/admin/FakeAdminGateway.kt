@@ -2,12 +2,15 @@ package app.heywatchlist.admin
 
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.AudioLanguage
+import uniffi.heywatchlist_core.AutomationStatus
 import uniffi.heywatchlist_core.Download
 import uniffi.heywatchlist_core.DownloadState
 import uniffi.heywatchlist_core.AllowedEmail
 import uniffi.heywatchlist_core.Member
 import uniffi.heywatchlist_core.MediaType
+import uniffi.heywatchlist_core.PlexSettings
 import uniffi.heywatchlist_core.QbitSettings
+import uniffi.heywatchlist_core.Recommendation
 import uniffi.heywatchlist_core.Release
 import uniffi.heywatchlist_core.ReleaseInfo
 import uniffi.heywatchlist_core.ReleaseSource
@@ -65,6 +68,25 @@ class FakeAdminGateway : AdminGateway {
         calls += "search:${query.title}:${query.season}"
         searchProgress.forEach(onUpdate)
         return searchResult.getOrThrow()
+    }
+
+    var recommendResult: Result<Recommendation> = failure(AdminFailure.AssistantNotConfigured)
+
+    override suspend fun recommend(query: SearchQuery, releases: List<Release>): Recommendation {
+        calls += "recommend:${releases.size}"
+        return recommendResult.getOrThrow()
+    }
+
+    /** Lecture d'état : pas notée dans [calls]. */
+    var automationResult: Result<AutomationStatus> = failure(AdminFailure.Server)
+
+    override suspend fun automationStatus(): AutomationStatus = automationResult.getOrThrow()
+
+    var plexResult: Result<Int> = Result.success(2)
+
+    override suspend fun testPlex(settings: PlexSettings): Int {
+        calls += "testPlex:${settings.url}"
+        return plexResult.getOrThrow()
     }
 
     var categoriesResult: Result<List<String>> = Result.success(listOf("Animation", "films", "series"))
@@ -149,6 +171,8 @@ fun request(
     status: RequestStatus = RequestStatus.REQUESTED,
     mediaType: MediaType = MediaType.MOVIE,
     seasons: List<UInt>? = null,
+    candidateTitle: String? = null,
+    candidateReason: String? = null,
 ) = AdminRequest(
     id = id,
     mediaType = mediaType,
@@ -163,6 +187,10 @@ fun request(
     updatedAt = 1_700_000_000L,
     followers = listOf(RequestFollower(displayName = "Léa", seasons = seasons, addedAt = 1_700_000_000L)),
     seasons = seasons,
+    candidateTitle = candidateTitle,
+    candidateReason = candidateReason,
+    candidateFoundAt = candidateTitle?.let { 1_700_000_100L },
+    autoCheckedAt = candidateTitle?.let { 1_700_000_100L },
 )
 
 fun release(id: String = "x1", title: String = "Le.Voyage.de.Chihiro.2001.MULTi.VFF.1080p.BluRay.x265-GROUPE") = Release(

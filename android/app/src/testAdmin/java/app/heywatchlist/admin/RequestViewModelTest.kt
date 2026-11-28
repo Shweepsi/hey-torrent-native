@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uniffi.heywatchlist_core.MediaType
+import uniffi.heywatchlist_core.Recommendation
 import uniffi.heywatchlist_core.RequestStatus
 import uniffi.heywatchlist_core.SearchOutcome
 import uniffi.heywatchlist_core.SourceReport
@@ -29,7 +30,9 @@ class RequestViewModelTest {
         val model = RequestViewModel(gateway, request())
         advanceUntilIdle()
 
-        assertEquals(listOf("search:Le Voyage de Chihiro:null"), gateway.calls)
+        // Sans clé Anthropic, pas d'avis : la liste reste telle quelle.
+        assertEquals(listOf("search:Le Voyage de Chihiro:null", "recommend:2"), gateway.calls)
+        assertEquals(Advice.None, model.uiState.value.advice)
         val search = model.uiState.value.search as ReleaseSearch.Done
         assertEquals(listOf("x1", "x2"), search.releases.map { it.id })
     }
@@ -170,5 +173,41 @@ class RequestViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ReleaseSearch.Failed(AdminFailure.NotConfigured), model.uiState.value.search)
+    }
+
+    @Test
+    fun `Claude conseille une release après la recherche`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway().apply {
+            searchResult = Result.success(SearchOutcome(listOf(release(), release("x2", "Autre.2001.VOSTFR")), emptyList()))
+            recommendResult = Result.success(Recommendation("x2", "Seule version complète."))
+        }
+        val model = RequestViewModel(gateway, request())
+        advanceUntilIdle()
+
+        assertEquals(Advice.Ready("x2", "Seule version complète."), model.uiState.value.advice)
+    }
+
+    @Test
+    fun `la release trouvée par la recherche automatique est reprise sans rappeler Claude`() = runTest(main.dispatcher) {
+        val found = release("x2", "Le.Voyage.de.Chihiro.2001.MULTi.2160p")
+        val gateway = FakeAdminGateway().apply { searchResult = Result.success(SearchOutcome(listOf(release(), found), emptyList())) }
+        val model = RequestViewModel(gateway, request(candidateTitle = found.title, candidateReason = "4K MULTi."))
+        advanceUntilIdle()
+
+        assertEquals(listOf("search:Le Voyage de Chihiro:null"), gateway.calls)
+        assertEquals(Advice.Ready("x2", "4K MULTi.", automatic = true), model.uiState.value.advice)
+    }
+
+    @Test
+    fun `un avis impossible s'affiche, sans bloquer la liste`() = runTest(main.dispatcher) {
+        val gateway = FakeAdminGateway().apply {
+            searchResult = Result.success(SearchOutcome(listOf(release()), emptyList()))
+            recommendResult = failure(AdminFailure.AssistantAuthFailed)
+        }
+        val model = RequestViewModel(gateway, request())
+        advanceUntilIdle()
+
+        assertEquals(Advice.Failed(AdminFailure.AssistantAuthFailed), model.uiState.value.advice)
+        assertTrue(model.uiState.value.search is ReleaseSearch.Done)
     }
 }

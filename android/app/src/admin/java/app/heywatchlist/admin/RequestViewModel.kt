@@ -56,6 +56,22 @@ sealed interface RequestAction {
     data object MarkedAvailable : RequestAction
 }
 
+/** Avis de Claude sur les releases trouvées. */
+sealed interface Advice {
+    /** Pas d'avis : pas de résultat, ou pas de clé Anthropic dans Serveurs. */
+    data object None : Advice
+
+    data object Thinking : Advice
+
+    /**
+     * [releaseId] : la release conseillée, `null` si aucune ne convient ;
+     * [automatic] : trouvée par la recherche automatique (sans nouvel appel).
+     */
+    data class Ready(val releaseId: String?, val reason: String, val automatic: Boolean = false) : Advice
+
+    data class Failed(val failure: AdminFailure) : Advice
+}
+
 /** Catégories qBittorrent proposées à l'envoi. */
 sealed interface CategoryChoice {
     data object Loading : CategoryChoice
@@ -69,6 +85,7 @@ sealed interface CategoryChoice {
 data class RequestUiState(
     val request: AdminRequest,
     val search: ReleaseSearch = ReleaseSearch.Idle,
+    val advice: Advice = Advice.None,
     /** Release choisie, en attente de confirmation de l'envoi. */
     val confirming: Release? = null,
     val categories: CategoryChoice = CategoryChoice.Loading,
@@ -114,7 +131,7 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
             season = if (request.mediaType == MediaType.TV) season.trim().toUIntOrNull() else null,
         )
         searchJob?.cancel()
-        _uiState.update { it.copy(search = ReleaseSearch.Running(emptyList(), emptyList(), pending = 0)) }
+        _uiState.update { it.copy(search = ReleaseSearch.Running(emptyList(), emptyList(), pending = 0), advice = Advice.None) }
         searchJob = viewModelScope.launch {
             attemptAdmin {
                 gateway.search(query) { progress ->
@@ -127,9 +144,36 @@ class RequestViewModel(private val gateway: AdminGateway, request: AdminRequest)
                     }
                 }
             }
-                .onSuccess { outcome -> _uiState.update { it.copy(search = ReleaseSearch.Done(outcome.releases, outcome.reports)) } }
+                .onSuccess { outcome ->
+                    _uiState.update { it.copy(search = ReleaseSearch.Done(outcome.releases, outcome.reports)) }
+                    advise(query, outcome.releases)
+                }
                 .onFailure { error -> _uiState.update { it.copy(search = ReleaseSearch.Failed(error.adminFailure)) } }
         }
+    }
+
+    /**
+     * Avis de Claude sur une recherche finie. La release déjà trouvée par la
+     * recherche automatique est reprise telle quelle si elle est dans la
+     * liste : pas de second appel.
+     */
+    private suspend fun advise(query: SearchQuery, releases: List<Release>) {
+        if (releases.isEmpty()) return
+        val request = _uiState.value.request
+        val known = request.candidateTitle?.let { title -> releases.firstOrNull { it.title == title } }
+        if (known != null) {
+            _uiState.update { it.copy(advice = Advice.Ready(known.id, request.candidateReason.orEmpty(), automatic = true)) }
+            return
+        }
+        _uiState.update { it.copy(advice = Advice.Thinking) }
+        val advice = attemptAdmin { gateway.recommend(query, releases) }.fold(
+            onSuccess = { Advice.Ready(it.releaseId, it.reason) },
+            onFailure = { error ->
+                // Sans clé Anthropic, l'app marche comme avant, sans avis.
+                if (error.adminFailure == AdminFailure.AssistantNotConfigured) Advice.None else Advice.Failed(error.adminFailure)
+            },
+        )
+        _uiState.update { it.copy(advice = advice) }
     }
 
     fun choose(release: Release) {

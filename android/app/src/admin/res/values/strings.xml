@@ -257,7 +257,7 @@
     <string name="admin_tag_hdr" translatable="false">HDR</string>
 
     <string name="admin_plex_title">Plex</string>
-    <string name="admin_plex_body">Plex prévient HeyWatchlist de chaque arrivée par webhook (Tautulli en secours). Pas besoin d’adresse ni de jeton Plex ici.</string>
+    <string name="admin_plex_body">Avec l’adresse et le jeton, le serveur lit votre bibliothèque toutes les 6 h et passe « Disponible » ce qui y est déjà. Les webhooks, plus bas, préviennent dès qu’un titre arrive.</string>
     <string name="admin_webhook_title">Notifications Plex</string>
     <string name="admin_webhook_body">Collez l’adresse Plex dans Plex (Réglages, Webhooks) et l’adresse Tautulli dans un agent « Webhook » de Tautulli (déclencheur « Recently Added », méthode POST, avec le corps JSON). Chaque arrivée prévient les personnes qui l’attendent.</string>
     <string name="admin_webhook_none">Pas encore d’adresse : créez-la pour activer les notifications.</string>
@@ -271,4 +271,38 @@
     <string name="admin_webhook_create">Créer l’adresse</string>
     <string name="admin_webhook_regenerate">Créer une nouvelle adresse (coupe l’ancienne)</string>
     <string name="admin_webhook_creating">Création…</string>
+    <!-- Claude et recherche automatique -->
+    <string name="admin_error_assistant_not_configured">Ajoutez la clé d’API Anthropic dans Serveurs.</string>
+    <string name="admin_error_assistant_auth">Anthropic refuse la clé d’API : vérifiez-la dans Serveurs.</string>
+    <string name="admin_error_assistant_unavailable">Claude n’a pas pu répondre. Réessayez plus tard.</string>
+    <string name="admin_error_plex_unreachable">Le serveur ne joint pas Plex : vérifiez l’adresse (HTTPS, joignable depuis Internet).</string>
+    <string name="admin_error_plex_auth">Plex refuse le jeton.</string>
+    <string name="admin_servers_section_auto">Automatique</string>
+    <string name="admin_status_active">Actif</string>
+    <string name="admin_assistant_title">Claude</string>
+    <string name="admin_assistant_body">Claude compare les versions trouvées et conseille la meilleure selon vos règles. Toutes les 6 h, le serveur cherche aussi seul les demandes en attente : une demande passe « À traiter » quand une version convient. Rien ne part vers qBittorrent sans vous.</string>
+    <string name="admin_assistant_key">Clé d’API Anthropic</string>
+    <string name="admin_assistant_key_placeholder">sk-ant-…</string>
+    <string name="admin_assistant_rules">Vos règles</string>
+    <string name="admin_assistant_rules_placeholder">4K léger en MULTi VFF, 15 Go maximum</string>
+    <string name="admin_assistant_needs_source">Ajoutez une source active pour la recherche automatique.</string>
+    <string name="admin_assistant_no_rules">Sans règle particulière</string>
+    <string name="admin_assistant_last_run">Dernier passage : %1$s</string>
+    <string name="admin_assistant_source_blocked">%1$s, vue du serveur : %2$s. Elle reste cherchable depuis le téléphone.</string>
+    <string name="admin_plex_webhooks_only">Webhooks seulement</string>
+    <string name="admin_plex_url">Adresse de Plex (HTTPS)</string>
+    <string name="admin_plex_url_placeholder">https://plex.exemple.fr</string>
+    <string name="admin_plex_token">Jeton Plex (X-Plex-Token)</string>
+    <string name="admin_plex_token_placeholder">Jeton</string>
+    <plurals name="admin_plex_synced">
+        <item quantity="one">%1$d titre lu le %2$s</item>
+        <item quantity="other">%1$d titres lus le %2$s</item>
+    </plurals>
+    <string name="admin_advice_thinking">Claude compare les versions…</string>
+    <string name="admin_advice_none_title">Claude ne conseille aucune version</string>
+    <string name="admin_advice_badge">Conseillée par Claude</string>
+    <string name="admin_advice_found">Trouvée par Claude</string>
+    <string name="admin_candidate_found">Version trouvée automatiquement : %1$s</string>
+    <string name="admin_candidate_badge">Version trouvée</string>
+    <string name="admin_candidate_waiting">En attente d’une version</string>
 </resources>

@@ -39,11 +39,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
 import app.heywatchlist.ui.components.HeyButton
 import app.heywatchlist.ui.components.HeyButtonKind
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyTag
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.components.HeyTextField
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
+import app.heywatchlist.ui.components.StatusPill
+import app.heywatchlist.ui.components.StatusTone
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.MediaType
@@ -92,7 +95,7 @@ fun RequestScreen(viewModel: RequestViewModel, onBack: () -> Unit, onChanged: (A
                         onSearch = viewModel::search,
                     )
                 }
-                searchResults(state.search, enabled = !working, onChoose = viewModel::choose)
+                searchResults(state.search, state.advice, enabled = !working, onChoose = viewModel::choose)
             }
         }
     }
@@ -186,6 +189,9 @@ private fun RequestSummary(request: AdminRequest) {
                     color = HeyTheme.colors.onBackgroundMuted,
                 )
             }
+        }
+        request.candidateTitle?.takeIf { request.status == RequestStatus.REQUESTED }?.let {
+            HeyText(text = stringResource(R.string.admin_candidate_found, softBreaks(it)), style = HeyTheme.typography.caption)
         }
         request.releaseTitle?.takeIf { request.status == RequestStatus.IN_PROGRESS }?.let {
             HeyText(text = stringResource(R.string.admin_release_sent, it), style = HeyTheme.typography.caption)
@@ -334,6 +340,7 @@ private fun CategoryPicker(choice: CategoryChoice, onSelect: (String) -> Unit, o
 
 private fun LazyListScope.searchResults(
     search: ReleaseSearch,
+    advice: Advice,
     enabled: Boolean,
     onChoose: (Release) -> Unit,
 ) {
@@ -353,8 +360,30 @@ private fun LazyListScope.searchResults(
             count = releases.size,
         )
     }
-    items(releases, key = { it.id }) { release ->
+    // La release conseillée par Claude passe en tête, avec sa raison.
+    val ready = advice as? Advice.Ready
+    val advised = ready?.releaseId?.let { id -> releases.firstOrNull { it.id == id } }
+    when {
+        advice == Advice.Thinking -> item { LoadingRow(stringResource(R.string.admin_advice_thinking)) }
+        advice is Advice.Failed -> item { FailureText(advice.failure) }
+        ready != null && advised == null && ready.reason.isNotBlank() -> item { AdviceNone(ready.reason) }
+    }
+    if (advised != null && ready != null) {
+        item(key = "advised:${advised.id}") {
+            ReleaseRow(release = advised, enabled = enabled, onClick = { onChoose(advised) }, advice = ready)
+        }
+    }
+    items(releases.filter { it.id != advised?.id }, key = { it.id }) { release ->
         ReleaseRow(release = release, enabled = enabled, onClick = { onChoose(release) })
+    }
+}
+
+/** Claude n'a rien retenu : sa raison, en clair. */
+@Composable
+private fun AdviceNone(reason: String) {
+    AdminCard {
+        HeyText(text = stringResource(R.string.admin_advice_none_title), style = HeyTheme.typography.label)
+        HeyText(text = reason, style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
     }
 }
 
@@ -389,8 +418,16 @@ private fun SearchStatus(reports: List<SourceReport>, pending: Int?, count: Int)
 }
 
 @Composable
-private fun ReleaseRow(release: Release, enabled: Boolean, onClick: () -> Unit) {
+private fun ReleaseRow(release: Release, enabled: Boolean, onClick: () -> Unit, advice: Advice.Ready? = null) {
     AdminCard(onClick = onClick.takeIf { enabled }) {
+        if (advice != null) {
+            StatusPill(
+                text = stringResource(if (advice.automatic) R.string.admin_advice_found else R.string.admin_advice_badge),
+                tone = StatusTone.Success,
+                icon = HeyIcons.Star,
+            )
+            if (advice.reason.isNotBlank()) HeyText(text = advice.reason, style = HeyTheme.typography.label)
+        }
         ReleaseSummary(release)
     }
 }

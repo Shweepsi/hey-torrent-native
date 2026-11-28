@@ -17,6 +17,25 @@ Retours de Loïc sur l'APK admin.
   elle est créée à l'envoi.
 - Serveurs : section Plex, avec l'état du lien (dernier appel reçu) et
   l'adresse des webhooks, déplacée depuis Réglages.
+- Claude (API Anthropic, modèle `claude-opus-5-5`) : après une recherche,
+  la release qui respecte le mieux les règles de l'administrateur passe en
+  tête avec une raison courte. Un appel par recherche ; l'envoi reste manuel.
+  Clé d'API et règles (une phrase libre) dans Serveurs, chiffrées avec les
+  autres réglages.
+- Recherche automatique par le Worker (déclencheur horaire) : chaque demande
+  en attente est cherchée au plus toutes les 6 h (8 par passage), les films
+  pas encore sortis attendent leur date. Une demande n'est « À traiter »
+  qu'une fois qu'une release convient ; les invités voient toujours
+  « Demandé ». Sans changement des résultats, Claude n'est pas rappelé.
+- Une notification à l'administrateur quand une demande reste 3 semaines
+  sans release convenable (une fois par demande).
+- Serveurs : les sources qui échouent depuis Cloudflare sont signalées ;
+  elles restent cherchables depuis le téléphone.
+- Plex : connexion directe facultative (adresse HTTPS + jeton). Le Worker lit
+  la bibliothèque toutes les 6 h et passe « disponible » ce qui y est déjà
+  (séries : saisons complètes), avec les push habituelles.
+- Migration `0007_recherche_auto.sql`. Dépendance `@anthropic-ai/sdk` 1.14.0
+  (backend).
 
 ### Modifié
 

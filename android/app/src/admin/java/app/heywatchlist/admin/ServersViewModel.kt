@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uniffi.heywatchlist_core.AutomationStatus
+import uniffi.heywatchlist_core.PlexSettings
 import uniffi.heywatchlist_core.QbitAuth
 import uniffi.heywatchlist_core.QbitSettings
 import uniffi.heywatchlist_core.ServerSettings
@@ -42,7 +44,19 @@ data class ServerForm(
     val seriesCategory: String = DEFAULT_SERIES_CATEGORY,
     /** Termes exclus, séparés par des virgules. */
     val excludedTerms: String = "",
+    /** Clé d'API Anthropic de l'administrateur (secret). */
+    val anthropicKey: String = "",
+    /** Règles de choix d'une release, en une phrase libre. */
+    val releaseRules: String = "",
+    val plexUrl: String = "",
+    val plexToken: String = "",
 ) {
+    fun plexSettings(): PlexSettings? = plexUrl.trim().takeIf { it.isNotEmpty() }?.let { PlexSettings(it, plexToken.trim()) }
+
+    /** Clé Anthropic et une source active : la recherche automatique tourne. */
+    val automationReady: Boolean
+        get() = anthropicKey.isNotBlank() && sources.any { it.enabled }
+
     fun qbitSettings(): QbitSettings? = qbitUrl.trim().takeIf { it.isNotEmpty() }?.let { url ->
         val auth = if (qbitUsesToken) {
             QbitAuth.Bearer(qbitToken.trim())
@@ -58,11 +72,17 @@ data class ServerForm(
         movieCategory = movieCategory.trim().ifEmpty { DEFAULT_MOVIE_CATEGORY },
         seriesCategory = seriesCategory.trim().ifEmpty { DEFAULT_SERIES_CATEGORY },
         excludedTerms = excludedTerms.split(',').map { it.trim() }.filter { it.isNotEmpty() },
+        anthropicApiKey = anthropicKey.trim().ifEmpty { null },
+        releaseRules = releaseRules.trim().take(MAX_RULES),
+        plex = plexSettings(),
     )
 
     companion object {
         const val DEFAULT_MOVIE_CATEGORY = "films"
         const val DEFAULT_SERIES_CATEGORY = "series"
+
+        /** Longueur maximale des règles (comme le cœur). */
+        const val MAX_RULES = 500
 
         fun from(settings: ServerSettings): ServerForm {
             val qbit = settings.qbittorrent
@@ -77,6 +97,10 @@ data class ServerForm(
                 movieCategory = settings.movieCategory,
                 seriesCategory = settings.seriesCategory,
                 excludedTerms = settings.excludedTerms.joinToString(", "),
+                anthropicKey = settings.anthropicApiKey.orEmpty(),
+                releaseRules = settings.releaseRules,
+                plexUrl = settings.plex?.url.orEmpty(),
+                plexToken = settings.plex?.token.orEmpty(),
             )
         }
     }
@@ -104,6 +128,9 @@ data class ServersUiState(
     /** Essais des sources, par identifiant. */
     val sourceTests: Map<String, ConnectionTest> = emptyMap(),
     val qbitTest: ConnectionTest? = null,
+    val plexTest: ConnectionTest? = null,
+    /** Recherche automatique et lecture de Plex vues du serveur ; `null` tant qu'elles ne sont pas lues. */
+    val automation: AutomationStatus? = null,
     val saving: Boolean = false,
     val saveFailure: AdminFailure? = null,
     /** Modifications non enregistrées. */
@@ -134,11 +161,14 @@ class ServersViewModel(private val gateway: AdminGateway) : ViewModel() {
                 }
                 .onFailure { error -> _uiState.update { it.copy(loading = false, syncFailure = error.adminFailure) } }
         }
+        loadAutomation()
     }
 
     fun edit(change: (ServerForm) -> ServerForm) {
+        val before = form.plexSettings()
         form = change(form)
-        _uiState.update { it.copy(dirty = true, saved = false, saveFailure = null) }
+        val plexChanged = form.plexSettings() != before
+        _uiState.update { it.copy(dirty = true, saved = false, saveFailure = null, plexTest = if (plexChanged) null else it.plexTest) }
     }
 
     fun editSource(id: String, change: (SourceForm) -> SourceForm) {
@@ -159,6 +189,27 @@ class ServersViewModel(private val gateway: AdminGateway) : ViewModel() {
             .filter { it.enabled && it.url.isNotBlank() && it.id !in _uiState.value.sourceTests }
             .forEach { testSource(it.id) }
         if (_uiState.value.qbitTest == null) testQbittorrent()
+        if (_uiState.value.plexTest == null) testPlex()
+    }
+
+    fun testPlex() {
+        val settings = form.plexSettings() ?: return
+        if (_uiState.value.plexTest == ConnectionTest.Running) return
+        _uiState.update { it.copy(plexTest = ConnectionTest.Running) }
+        viewModelScope.launch {
+            val result = attemptAdmin { gateway.testPlex(settings) }.fold(
+                onSuccess = { ConnectionTest.Passed() },
+                onFailure = { error -> ConnectionTest.Failed(error.adminFailure) },
+            )
+            _uiState.update { it.copy(plexTest = result) }
+        }
+    }
+
+    /** Relit l'état de la recherche automatique ; un échec la laisse inconnue, sans gêner le reste. */
+    fun loadAutomation() {
+        viewModelScope.launch {
+            attemptAdmin { gateway.automationStatus() }.onSuccess { status -> _uiState.update { it.copy(automation = status) } }
+        }
     }
 
     fun removeSource(id: String) {

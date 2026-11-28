@@ -24,14 +24,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.heywatchlist.R
+import app.heywatchlist.ui.components.HeyIcons
 import app.heywatchlist.ui.components.HeyPoster
 import app.heywatchlist.ui.components.HeyPullToRefresh
 import app.heywatchlist.ui.components.HeySegmented
 import app.heywatchlist.ui.components.HeyText
 import app.heywatchlist.ui.components.POSTER_ASPECT_RATIO
+import app.heywatchlist.ui.components.StatusPill
+import app.heywatchlist.ui.components.StatusTone
 import app.heywatchlist.ui.theme.HeyTheme
 import uniffi.heywatchlist_core.AdminRequest
 import uniffi.heywatchlist_core.MediaType
+import uniffi.heywatchlist_core.RequestStatus
 
 /** Demandes de tous les comptes, les plus anciennes d'abord. */
 @Composable
@@ -108,9 +112,32 @@ private fun RequestRow(request: AdminRequest, onClick: () -> Unit) {
                         modifier = Modifier.weight(1f),
                     )
                 }
-                RequestStatusPill(request.status)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RequestStatusPill(request.status)
+                    AutoSearchHint(request)
+                }
             }
         }
+    }
+}
+
+/** Recherche automatique : release trouvée, ou toujours rien. */
+@Composable
+private fun AutoSearchHint(request: AdminRequest) {
+    if (request.status != RequestStatus.REQUESTED) return
+    when {
+        request.candidateTitle != null -> StatusPill(
+            text = stringResource(R.string.admin_candidate_badge),
+            tone = StatusTone.Success,
+            icon = HeyIcons.Star,
+        )
+        request.autoCheckedAt != null -> HeyText(
+            text = stringResource(R.string.admin_candidate_waiting),
+            style = HeyTheme.typography.caption,
+            color = HeyTheme.colors.onBackgroundMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
