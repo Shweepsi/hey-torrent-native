@@ -130,17 +130,28 @@ async function markAvailable(
     const missing = await missingSeasons(env, arrival.tmdbId, await wantedSeasons(env, request.id), aired);
     if (missing.length > 0) return;
   }
-  await env.DB.prepare("UPDATE requests SET status = 'available', updated_at = ? WHERE id = ? AND status <> 'available'")
+  await env.DB.prepare(
+    "UPDATE requests SET status = 'available', reopened_at = NULL, updated_at = ? WHERE id = ? AND status <> 'available'",
+  )
     .bind(now, request.id)
     .run();
 }
 
+/**
+ * `origin` : `"hook"` pour une arrivée annoncée par un webhook, `"library"`
+ * pour un titre lu dans la bibliothèque Plex. Une arrivée déjà notée ne
+ * prévient personne une seconde fois, mais l'état de la demande est quand
+ * même mis à jour : un titre arrivé avant d'être demandé est « disponible ».
+ * La lecture de la bibliothèque laisse en attente une demande que
+ * l'administrateur a remise en attente à la main.
+ */
 export async function processArrival(
   env: Env,
   fetcher: FetchLike,
   sender: PushSender,
   arrival: Arrival,
   now: number,
+  origin: "hook" | "library" = "hook",
 ): Promise<ArrivalOutcome> {
   const key = eventKey(arrival);
   const [, inserted] = await env.DB.batch([
@@ -152,13 +163,16 @@ export async function processArrival(
       "INSERT OR IGNORE INTO notified (event_key, media_type, tmdb_id, season, created_at) VALUES (?, ?, ?, ?, ?)",
     ).bind(key, arrival.mediaType, arrival.tmdbId, arrival.season ?? null, now),
   ]);
-  if (!inserted || inserted.meta.changes !== 1) return "duplicate";
+  const duplicate = !inserted || inserted.meta.changes !== 1;
 
-  const request = await env.DB.prepare("SELECT id, title, status FROM requests WHERE media_type = ? AND tmdb_id = ?")
+  const request = await env.DB.prepare("SELECT id, title, status, reopened_at FROM requests WHERE media_type = ? AND tmdb_id = ?")
     .bind(arrival.mediaType, arrival.tmdbId)
-    .first<{ id: string; title: string; status: RequestStatus }>();
+    .first<{ id: string; title: string; status: RequestStatus; reopened_at: number | null }>();
+  if (request && !(origin === "library" && request.reopened_at !== null)) {
+    await markAvailable(env, fetcher, arrival, request, now);
+  }
+  if (duplicate) return "duplicate";
   if (!request) return "no_request";
-  await markAvailable(env, fetcher, arrival, request, now);
 
   if (await recentlyPushed(env, arrival, key, now)) return "grouped";
   const devices = await devicesOf(env, await waitingUsers(env, arrival), now);

@@ -463,18 +463,24 @@ impl Account {
 
     /// Requête authentifiée quelconque sur le Worker (méthode, chemin, corps
     /// JSON) : statut et corps brut. Les routes d'administration s'en servent,
-    /// avec la même session que le reste de l'app.
+    /// avec la même session que le reste de l'app. `timeout` remplace le délai
+    /// commun pour une route lente.
     #[cfg(feature = "admin")]
     pub(crate) async fn send_json(
         &self,
         method: reqwest::Method,
         target: &str,
         body: Option<&serde_json::Value>,
+        timeout: Option<Duration>,
     ) -> Result<(u16, Vec<u8>), AccountError> {
         let url = self.base.join(target);
         let response = self
             .authorized(|http, token| {
                 let builder = http.request(method.clone(), &url).bearer_auth(token);
+                let builder = match timeout {
+                    Some(timeout) => builder.timeout(timeout),
+                    None => builder,
+                };
                 match body {
                     Some(body) => builder.json(body),
                     None => builder,

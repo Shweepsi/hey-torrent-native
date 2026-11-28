@@ -147,17 +147,22 @@ async function withFollowers(env: Env, rows: RequestRow[]): Promise<AdminRequest
  * traiter (demandées puis en cours), les plus anciennes d'abord ; `status=all`
  * pour tout voir, les plus récemment changées d'abord. Quand la recherche
  * automatique tourne, une demande n'est « à traiter » qu'une fois qu'une
- * release convenable a été trouvée.
+ * release convenable a été trouvée, ou quand sa recherche n'a pas pu se faire
+ * (Claude ou toutes les sources en échec).
  */
 async function listRequests(request: Request, env: Env, now: number): Promise<Response> {
   const admin = await requireAdmin(request, env, now);
   const filter = new URL(request.url).searchParams.get("status");
   let statement: D1PreparedStatement;
   if (filter === null || filter === "open") {
-    const waitForCandidate = automationEnabled(await loadSettings(env, admin.id)) ? 1 : 0;
+    // Clé Anthropic refusée : la recherche automatique est arrêtée, rien n'attend plus de release.
+    const automation = await env.DB.prepare("SELECT assistant_status FROM automation WHERE id = 1").first<{ assistant_status: string | null }>();
+    const running = automation?.assistant_status !== "auth_failed" && automationEnabled(await loadSettings(env, admin.id));
+    const waitForCandidate = running ? 1 : 0;
     statement = env.DB.prepare(
       `SELECT ${REQUEST_COLUMNS} FROM requests
-       WHERE status = 'in_progress' OR (status = 'requested' AND (?1 = 0 OR candidate_title IS NOT NULL))
+       WHERE status = 'in_progress'
+         OR (status = 'requested' AND (?1 = 0 OR candidate_title IS NOT NULL OR auto_failed = 1))
        ORDER BY CASE status WHEN 'requested' THEN 0 ELSE 1 END, created_at LIMIT ${MAX_REQUESTS}`,
     ).bind(waitForCandidate);
   } else if (filter === "all") {
@@ -245,7 +250,7 @@ async function refuse(request: Request, env: Env, now: number, id: string): Prom
 async function available(request: Request, env: Env, now: number, id: string): Promise<Response> {
   await requireAdmin(request, env, now);
   const result = await env.DB.prepare(
-    `UPDATE requests SET status = 'available', refusal_reason = NULL, handled_at = ?, updated_at = ?
+    `UPDATE requests SET status = 'available', refusal_reason = NULL, reopened_at = NULL, handled_at = ?, updated_at = ?
      WHERE id = ? AND status IN ('requested', 'in_progress', 'refused')`,
   )
     .bind(now, now, id)
@@ -285,9 +290,11 @@ async function clearRequests(request: Request, env: Env, now: number): Promise<R
  */
 async function reopen(request: Request, env: Env, now: number, id: string): Promise<Response> {
   await requireAdmin(request, env, now);
-  // La recherche automatique repart de zéro.
+  // La recherche automatique repart de zéro. Depuis « disponible », la lecture
+  // de la bibliothèque Plex ne repasse pas la demande « disponible » d'elle-même.
   const result = await env.DB.prepare(
-    `UPDATE requests SET status = 'requested', refusal_reason = NULL, release_title = NULL, torrent_hash = NULL,
+    `UPDATE requests SET reopened_at = CASE WHEN status = 'available' THEN ?1 ELSE reopened_at END,
+       status = 'requested', refusal_reason = NULL, release_title = NULL, torrent_hash = NULL,
        handled_at = ?1, updated_at = ?1, ${RESET_SEARCH}
      WHERE id = ?2 AND status IN ('in_progress', 'refused', 'available')`,
   )
@@ -326,6 +333,8 @@ async function putSettings(request: Request, env: Env, now: number): Promise<Res
   )
     .bind(user.id, sealed.iv, sealed.ciphertext, now)
     .run();
+  // La clé Anthropic a peut-être changé : la recherche automatique retente.
+  await env.DB.prepare("UPDATE automation SET assistant_status = NULL WHERE id = 1 AND assistant_status = 'auth_failed'").run();
   return json({ updated_at: now });
 }
 

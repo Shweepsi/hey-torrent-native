@@ -11,8 +11,8 @@ import type { FetchLike } from "./apple";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
 import { authenticate } from "./sessions";
-import { RESET_SEARCH } from "./autosearch";
-import { airedEpisodes, missingSeasons, type AiredEpisodes } from "./seasons";
+import { RESET_CANDIDATE, RESET_SEARCH } from "./autosearch";
+import { airedEpisodes, missingSeasons, wantedSeasons, type AiredEpisodes } from "./seasons";
 import { cachedTmdb } from "./tmdb";
 
 export const WATCHLIST_PATH = "/v1/watchlist";
@@ -165,6 +165,7 @@ async function put(
   const tmdb = readTmdbTitle(await cachedTmdb(env, fetcher, `${mediaType}/${tmdbId}`, new URLSearchParams(), now), mediaType);
   if (seasons && seasons.some((season) => !tmdb.seasons.has(season))) throw new ApiError("invalid_request");
 
+  const scopeBefore = mediaType === "tv" ? await seriesScope(env, tmdbId) : null;
   // Un seul lot, donc une transaction : la demande existe forcément quand
   // l'entrée la désigne, même si quelqu'un retire le titre au même moment.
   await env.DB.batch([
@@ -186,13 +187,36 @@ async function put(
     ).bind(claims.userId, mediaType, tmdbId, seasons ? JSON.stringify(seasons) : null, now),
   ]);
 
-  if (mediaType === "tv") await reopenIfMissing(env, tmdbId, seasons, tmdb.aired, now);
+  if (mediaType === "tv") {
+    await reopenIfMissing(env, tmdbId, seasons, tmdb.aired, now);
+    await researchIfScopeChanged(env, tmdbId, scopeBefore);
+  }
 
   const row = await env.DB.prepare(`${ITEM_SELECT} AND w.media_type = ? AND w.tmdb_id = ?`)
     .bind(claims.userId, mediaType, tmdbId)
     .first<ItemRow>();
   if (!row) throw new ApiError("internal");
   return json({ item: item(row) });
+}
+
+/** Saisons cherchées pour une série (JSON ; `"null"` : la série entière) ; `null` sans demande. */
+async function seriesScope(env: Env, tmdbId: number): Promise<string | null> {
+  const request = await env.DB.prepare("SELECT id FROM requests WHERE media_type = 'tv' AND tmdb_id = ?")
+    .bind(tmdbId)
+    .first<{ id: string }>();
+  return request ? JSON.stringify(await wantedSeasons(env, request.id)) : null;
+}
+
+/**
+ * Les saisons voulues d'une série en attente ont changé (quelqu'un en ajoute
+ * ou en retire) : la release trouvée ne vaut plus, la recherche automatique
+ * reprend. Sans effet sur une demande nouvelle ou déjà traitée.
+ */
+async function researchIfScopeChanged(env: Env, tmdbId: number, before: string | null): Promise<void> {
+  if (before === null || before === (await seriesScope(env, tmdbId))) return;
+  await env.DB.prepare(`UPDATE requests SET ${RESET_CANDIDATE} WHERE media_type = 'tv' AND tmdb_id = ? AND status = 'requested'`)
+    .bind(tmdbId)
+    .run();
 }
 
 /**
@@ -238,6 +262,7 @@ function orphanRequestsDelete(env: Env, mediaType?: MediaType, tmdbId?: number):
 /** `DELETE /v1/watchlist/{type}/{id}` : retire le titre ; sans effet s'il n'y était pas. */
 async function remove(request: Request, env: Env, now: number, mediaType: MediaType, tmdbId: number): Promise<Response> {
   const claims = await authenticate(request, env, now);
+  const scopeBefore = mediaType === "tv" ? await seriesScope(env, tmdbId) : null;
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE watchlist_items SET deleted_at = ?, updated_at = ?
@@ -245,6 +270,7 @@ async function remove(request: Request, env: Env, now: number, mediaType: MediaT
     ).bind(now, now, claims.userId, mediaType, tmdbId),
     orphanRequestsDelete(env, mediaType, tmdbId),
   ]);
+  if (mediaType === "tv") await researchIfScopeChanged(env, tmdbId, scopeBefore);
   return noContent();
 }
 

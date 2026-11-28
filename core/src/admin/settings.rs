@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::AdminError;
+use super::qbittorrent::valid_category;
 use crate::api::BaseUrl;
 
 /// Catégories qBittorrent par défaut (dossiers de destination).
@@ -159,16 +160,6 @@ impl std::fmt::Debug for ServerSettings {
             .field("plex", &self.plex)
             .finish_non_exhaustive()
     }
-}
-
-/// Catégorie qBittorrent acceptable : lettres, chiffres, espaces, `-` et `_`.
-fn valid_category(value: &str) -> bool {
-    let value = value.trim();
-    !value.is_empty()
-        && value.chars().count() <= 50
-        && value
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == ' ' || c == '-' || c == '_')
 }
 
 fn bounded(value: &str) -> bool {

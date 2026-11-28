@@ -332,6 +332,62 @@ async fn a_change_refused_by_the_server_is_dropped() {
 }
 
 #[tokio::test]
+async fn an_unexpected_answer_keeps_the_change_for_later() {
+    let server = MockServer::start().await;
+    let (account, _) = signed_in(&server).await;
+    // Réponse d'un intermédiaire (limitation), pas un refus du Worker : une
+    // fois, puis le Worker répond.
+    Mock::given(method("PUT"))
+        .and(path("/v1/watchlist/movie/603"))
+        .respond_with(ResponseTemplate::new(429).set_body_string("<html>trop de requêtes</html>"))
+        .up_to_n_times(1)
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PUT"))
+        .and(path("/v1/watchlist/movie/604"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "item": wire_item("movie", 604, "Matrix Reloaded", "requested", json!(null))
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    mount_list(
+        &server,
+        vec![wire_item(
+            "movie",
+            604,
+            "Matrix Reloaded",
+            "requested",
+            json!(null),
+        )],
+    )
+    .await;
+
+    let watchlist = Watchlist::new(account, None);
+    let snapshot = watchlist
+        .add(title(MediaType::Movie, 603, "Matrix"), None)
+        .await
+        .unwrap();
+    // L'ajout n'est pas perdu : il attend, comme hors ligne.
+    assert!(snapshot.offline);
+    assert!(snapshot.items.iter().any(|i| i.tmdb_id == 603 && i.pending));
+
+    // Il ne bloque pas le changement suivant.
+    let snapshot = watchlist
+        .add(title(MediaType::Movie, 604, "Matrix Reloaded"), None)
+        .await
+        .unwrap();
+    assert!(
+        snapshot
+            .items
+            .iter()
+            .any(|i| i.tmdb_id == 604 && !i.pending)
+    );
+    assert!(snapshot.items.iter().any(|i| i.tmdb_id == 603 && i.pending));
+}
+
+#[tokio::test]
 async fn removing_a_title_deletes_it_on_the_server() {
     let server = MockServer::start().await;
     let (account, _) = signed_in(&server).await;

@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { MAX_PER_RUN, SEARCH_INTERVAL, STALE_AFTER, runAutomation, shortlist } from "../src/autosearch";
+import { DAILY_INTERVAL, MAX_PER_RUN, PLEX_INTERVAL, QUICK_ATTEMPTS, SEARCH_INTERVAL, STALE_AFTER, runAutomation, shortlist } from "../src/autosearch";
 import { RECOMMEND_MODEL } from "../src/claude";
 import { containsWord, parseFeed } from "../src/torznab";
 import { NOW, bootstrapAdmin, call, deps, fetchCalls, pushes, replyToFetch, setNow, signInMember, type SessionBody } from "./fakes";
@@ -248,6 +248,124 @@ describe("recherche automatique", () => {
     expect(status.sources).toContainEqual({ id: "src-2", failure: "invalid_response" });
   });
 
+  it("un échec de Claude sur une demande ne bloque pas les suivantes, et la laisse « à traiter »", async () => {
+    await saveSettings(AUTO);
+    await request("r-casse", "movie", 110, "Cassé", NOW - 10);
+    await request("r-bon", "movie", 111, "Bon");
+    let calls = 0;
+    world({
+      feed: () => rss([{ title: "Une.Release.1080p" }]),
+      // Premier appel refusé (requête invalide, sans nouvel essai), le suivant répond.
+      claude: () => (calls++ === 0 ? Response.json({ type: "error", error: { type: "invalid_request_error", message: "x" } }, { status: 400 }) : claudeChoice("c0", "Convient.")),
+    });
+    await run();
+    expect(await row("r-casse")).toMatchObject({ candidate_title: null, auto_checked_at: NOW });
+    expect((await row("r-bon"))?.candidate_title).toBe("Une.Release.1080p");
+    // La recherche n'a pas pu se faire : la demande reste visible.
+    expect(await openIds()).toEqual(["r-casse", "r-bon"]);
+
+    // Claude est rappelé à l'essai suivant, même si les noms n'ont pas changé.
+    fetchCalls.length = 0;
+    await run(NOW + SEARCH_INTERVAL);
+    expect(callsTo("api.anthropic.com")).toHaveLength(1);
+    expect((await row("r-casse"))?.candidate_title).toBe("Une.Release.1080p");
+  });
+
+  it("Claude en panne : le passage s'arrête après deux échecs de suite", async () => {
+    await saveSettings(AUTO);
+    for (let i = 0; i < 4; i++) await request(`r-${i}`, "movie", 120 + i, `Titre ${i}`, NOW - 10 + i);
+    world({
+      feed: () => rss([{ title: "Une.Release.1080p" }]),
+      claude: () => Response.json({ type: "error", error: { type: "invalid_request_error", message: "x" } }, { status: 400 }),
+    });
+    await run();
+    expect(callsTo("api.anthropic.com")).toHaveLength(2);
+    expect((await row("r-2"))?.auto_checked_at).toBeNull();
+    const status = (await (await call("GET", "/v1/admin/automation", undefined, admin.access_token)).json()) as { assistant_status: string };
+    expect(status.assistant_status).toBe("unavailable");
+  });
+
+  it("clé Anthropic refusée : toutes les demandes restent « à traiter », jusqu'aux nouveaux réglages", async () => {
+    await saveSettings(AUTO);
+    await request("r-a", "movie", 104, "A", NOW - 10);
+    await request("r-b", "movie", 105, "B");
+    world({
+      feed: () => rss([{ title: "A.2024.1080p" }]),
+      claude: () => Response.json({ type: "error", error: { type: "authentication_error", message: "clé" } }, { status: 401 }),
+    });
+    expect(await openIds()).toEqual([]);
+    await run();
+    expect(await openIds()).toEqual(["r-a", "r-b"]);
+    await saveSettings(AUTO);
+    expect(await openIds()).toEqual([]);
+  });
+
+  it("toutes les sources en échec : la demande reste « à traiter » ; aucun résultat : elle attend", async () => {
+    await saveSettings(AUTO);
+    await request("r-coupe", "movie", 112, "Coupé");
+    world({ feed: () => new Response("refusé", { status: 403 }) });
+    await run();
+    expect(await openIds()).toEqual(["r-coupe"]);
+
+    world({ feed: () => rss([]) });
+    await run(NOW + SEARCH_INTERVAL);
+    expect(await openIds()).toEqual([]);
+  });
+
+  it("des règles changées font rejuger les mêmes releases", async () => {
+    await saveSettings(AUTO);
+    await request("r-regles", "movie", 113, "Règles");
+    world({ feed: () => rss([{ title: "Une.Release.2160p" }]), claude: () => claudeChoice("none", "Trop lourde.") });
+    await run();
+    await saveSettings({ ...AUTO, release_rules: "tout me va" });
+    world({ feed: () => rss([{ title: "Une.Release.2160p" }]), claude: () => claudeChoice("c0", "Convient.") });
+    fetchCalls.length = 0;
+    await run(NOW + SEARCH_INTERVAL);
+    expect(callsTo("api.anthropic.com")).toHaveLength(1);
+    expect((await row("r-regles"))?.candidate_title).toBe("Une.Release.2160p");
+  });
+
+  it("les essais sans résultat s'espacent : 6 h, puis 24 h", async () => {
+    await saveSettings(AUTO);
+    await request("r-lent", "movie", 114, "Lent");
+    world({});
+    let now = NOW;
+    for (let i = 0; i < QUICK_ATTEMPTS; i++) {
+      await run(now);
+      expect((await row("r-lent"))?.auto_checked_at).toBe(now);
+      now += SEARCH_INTERVAL;
+    }
+    // Après les premiers essais, 6 h ne suffisent plus.
+    fetchCalls.length = 0;
+    await run(now);
+    expect(callsTo("source.test")).toHaveLength(0);
+    await run(now - SEARCH_INTERVAL + DAILY_INTERVAL);
+    expect(callsTo("source.test").length).toBeGreaterThan(0);
+  });
+
+  it("série : Claude reçoit les saisons voulues, et un changement de saisons relance la recherche", async () => {
+    await saveSettings(AUTO);
+    const show = { id: 202, name: "La Série", first_air_date: "2020-01-01", seasons: [{ season_number: 1, episode_count: 2 }, { season_number: 2, episode_count: 2 }, { season_number: 3, episode_count: 2 }] };
+    world({ tmdb: show, feed: () => rss([{ title: "La.Serie.S01.MULTi" }]), claude: () => claudeChoice("c0", "Saison 1.") });
+    expect((await call("PUT", "/v1/watchlist/tv/202", { seasons: [1, 3] }, member.access_token)).status).toBe(200);
+    await run();
+    const search = new URL(callsTo("source.test")[0]!.url);
+    expect(search.searchParams.get("season")).toBeNull();
+    const prompt = JSON.parse((JSON.parse(callsTo("api.anthropic.com")[0]!.body) as { messages: { content: string }[] }).messages[0]!.content) as {
+      demande: Record<string, unknown>;
+    };
+    expect(prompt.demande.saisons_voulues).toEqual([1, 3]);
+    const found = () => env.DB.prepare("SELECT candidate_title FROM requests WHERE tmdb_id = 202").first<{ candidate_title: string | null }>();
+    expect((await found())?.candidate_title).toBe("La.Serie.S01.MULTi");
+
+    // Mêmes saisons renvoyées (file hors ligne rejouée) : rien ne change.
+    await call("PUT", "/v1/watchlist/tv/202", { seasons: [1, 3] }, member.access_token);
+    expect((await found())?.candidate_title).toBe("La.Serie.S01.MULTi");
+    // Quelqu'un veut toute la série : la release trouvée ne vaut plus.
+    await call("PUT", "/v1/watchlist/tv/202", {}, admin.access_token);
+    expect((await found())?.candidate_title).toBeNull();
+  });
+
   it(`au plus ${MAX_PER_RUN} demandes par passage`, async () => {
     await saveSettings(AUTO);
     for (let i = 0; i < MAX_PER_RUN + 3; i++) await request(`r-${i}`, "movie", 300 + i, `Titre ${i}`);
@@ -381,6 +499,34 @@ describe("connexion Plex", () => {
     fetchCalls.length = 0;
     await run(NOW + 3600);
     expect(callsTo("plex.test")).toHaveLength(0);
+  });
+
+  it("un film arrivé avant d'être demandé passe « disponible », sans seconde notification", async () => {
+    await saveSettings({ plex: PLEX });
+    // Arrivée annoncée par un webhook quand personne ne le demandait.
+    await env.DB.prepare("INSERT INTO notified (event_key, media_type, tmdb_id, season, created_at) VALUES ('movie:603', 'movie', 603, NULL, ?)")
+      .bind(NOW - 86_400)
+      .run();
+    await request("r-matrix", "movie", 603, "Matrix");
+    world({ plex });
+    await run();
+    expect((await row("r-matrix"))?.status).toBe("available");
+    expect(pushes).toHaveLength(0);
+  });
+
+  const HELD_ID = "0c0c0c0c-1111-4222-8333-444444444444";
+  it("une demande remise en attente à la main n'est pas repassée « disponible » par la lecture de Plex", async () => {
+    await saveSettings({ plex: PLEX });
+    await request(HELD_ID, "movie", 603, "Matrix");
+    world({ plex });
+    await run();
+    expect((await row(HELD_ID))?.status).toBe("available");
+    expect((await call("POST", `/v1/admin/requests/${HELD_ID}/reopen`, {}, admin.access_token)).status).toBe(200);
+    await run(NOW + PLEX_INTERVAL);
+    expect((await row(HELD_ID))?.status).toBe("requested");
+    // « Déjà sur Plex » reste possible à la main.
+    expect((await call("POST", `/v1/admin/requests/${HELD_ID}/available`, {}, admin.access_token)).status).toBe(200);
+    expect((await row(HELD_ID))?.status).toBe("available");
   });
 
   it("Plex injoignable : rien ne change et l'état est noté", async () => {
