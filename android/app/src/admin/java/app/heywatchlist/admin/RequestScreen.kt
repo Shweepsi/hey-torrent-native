@@ -325,22 +325,27 @@ private fun SearchStatus(reports: List<SourceReport>, pending: Int?, count: Int)
 @Composable
 private fun ReleaseRow(release: Release, enabled: Boolean, onClick: () -> Unit) {
     AdminCard(onClick = onClick.takeIf { enabled }) {
-        HeyText(text = softBreaks(release.title), style = HeyTheme.typography.body, maxLines = 3, overflow = TextOverflow.Ellipsis)
-        ReleaseTags(release)
-        HeyText(
-            text = releaseDetails(release),
-            style = HeyTheme.typography.caption,
-            color = HeyTheme.colors.onBackgroundMuted,
-        )
+        ReleaseSummary(release)
     }
 }
 
-/** Contenu de la feuille d'envoi : la qualité en pastilles, les chiffres, puis le nom brut en petit. */
+/**
+ * Une release, dans la liste comme dans la feuille d'envoi : la qualité en
+ * pastilles, les chiffres, puis le nom brut en petit (sans pastille, il passe
+ * en tête pour rester repérable).
+ */
 @Composable
 private fun ReleaseSummary(release: Release) {
+    val hasTags = release.info.tags().isNotEmpty()
     ReleaseTags(release)
-    HeyText(text = releaseDetails(release), style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
-    HeyText(text = softBreaks(release.title), style = HeyTheme.typography.caption, color = HeyTheme.colors.onBackgroundMuted)
+    HeyText(text = releaseDetails(release), style = HeyTheme.typography.label)
+    HeyText(
+        text = softBreaks(release.title),
+        style = if (hasTags) HeyTheme.typography.caption else HeyTheme.typography.body,
+        color = HeyTheme.colors.onBackgroundMuted,
+        maxLines = 3,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

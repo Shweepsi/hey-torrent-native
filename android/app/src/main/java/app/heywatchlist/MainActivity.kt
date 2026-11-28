@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = TransparentBars, navigationBarStyle = TransparentBars)
         super.onCreate(savedInstanceState)
         setContent {
-            HeyTheme(darkTheme = true) {
+            HeyTheme(darkTheme = false) {
                 AppRoot()
             }
         }

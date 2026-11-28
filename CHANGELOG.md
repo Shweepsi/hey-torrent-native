@@ -11,10 +11,12 @@ Deuxième passe sur le design Android, d'après les captures de l'APK admin.
 
 ### Modifié
 
-- Android : l'app est sombre partout, comme la fiche d'un titre, quel que soit
-  le réglage du téléphone.
+- Android : l'app est claire partout, fiche d'un titre comprise (elle était
+  forcée en sombre), quel que soit le réglage du téléphone.
 - Android : affichage bord à bord. Les barres système sont transparentes, sans
   le voile gris ou blanc de la barre à trois boutons.
+- Releases : la qualité en pastilles et les chiffres d'abord, le nom brut en
+  petit dessous.
 - Boutons : « Retirer » et « Annuler » deviennent des liens discrets ; le bleu
   plein reste à l'action principale. Le choix segmenté (Identifiant / Jeton,
   À traiter / Toutes) est une pastille de verre, plus compacte.

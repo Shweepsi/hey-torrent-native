@@ -46,7 +46,7 @@ class AdminActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val gateway = adminGateway(this)
         setContent {
-            HeyTheme(darkTheme = true) {
+            HeyTheme(darkTheme = false) {
                 AdminRoot(gateway = gateway, onClose = ::finish)
             }
         }

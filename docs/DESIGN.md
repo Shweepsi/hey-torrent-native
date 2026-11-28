@@ -35,10 +35,12 @@ Compléments aujourd'hui dans le code Android (`HeyTheme.kt`) : texte
 `#0c0c0f`, erreur `#ff8a80`, accent décoratif `#7c5cff`, formes à 28 dp
 (cartes) et 20 dp (boutons).
 
-**Thème clair** : les jetons existent côté Android (fond `#f3f5fa`, `primary`
-`#1a66cc`, verre blanc à 55 %, filet foncé à 12 %), mais l'app est forcée en
-sombre sur les deux plateformes depuis la v0.11.0 : un seul rendu, cohérent
-avec la fiche d'un titre. Barres système transparentes (bord à bord).
+**Thème clair** : décliné côté Android (fond `#f3f5fa`, `primary` `#1a66cc`,
+verre blanc à 55 %, filet foncé à 12 %). Depuis la v0.11.0, l'app Android est
+**claire partout**, fiche d'un titre comprise, quel que soit le réglage du
+téléphone (choix du propriétaire) ; barres système transparentes (bord à
+bord). Côté iPhone, l'app est pour l'instant forcée en sombre (voir
+`docs/TODO.md`).
 
 **Hiérarchie des boutons** : une seule action pleine (`primary`) par écran ou
 par feuille ; les autres en verre (`Secondary`) ou en lien (`Link`,
